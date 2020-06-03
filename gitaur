@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+case $1 in
+	-S)
+	mkdir -p ~/.cache/gitaur/build
+	cd ~/.cache/gitaur/build
+        rm -r  ~/.cache/gitaur/build/$2
+	git clone https://aur.archlinux.org/$2.git
+	cd ~/.cache/gitaur/build/$2
+	makepkg -sif
+	exit 0
+	;;
+esac
+echo ":: Welcome to gitaur!"
