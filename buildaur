@@ -45,7 +45,7 @@ case $1 in
 				read ans
 				if [ $ans == y ]
 				then
-					gitaur -S $key && echo ":: Package installed succesfully!"
+					$0 -S $key && echo ":: Package installed succesfully!"
 				fi
 			fi
 		fi
@@ -55,7 +55,7 @@ case $1 in
 	exit 0
 	;;
 	-Syu)
-	gitaur -Sy $(pacman -Qqm)
+	$0 -Sy $(pacman -Qqm)
 	exit 0
 	;;
 esac
