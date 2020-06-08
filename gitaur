@@ -1,14 +1,61 @@
 #!/usr/bin/env bash
 
+#echo ":: Welcome to gitaur!"
 case $1 in
 	-S)
 	mkdir -p ~/.cache/gitaur/build
 	cd ~/.cache/gitaur/build
-        rm -r  ~/.cache/gitaur/build/$2
+  rm -rf  ~/.cache/gitaur/build/$2
+	echo ":: Clonig git repository"
 	git clone https://aur.archlinux.org/$2.git
 	cd ~/.cache/gitaur/build/$2
+	echo ":: Making and installing the package"
 	makepkg -sif
 	exit 0
 	;;
+	-Q)
+	while [[ $# -gt 1 ]]
+	do
+		key=$2
+		echo $key $(curl -s 'https://aur.archlinux.org/rpc/?v=5&type=multiinfo&arg[]='$key'' | cut -d'"' -f26) "(local: $(pacman -Qs $key | cut -d" " -f2 | xargs))"
+		echo "    "$(curl -s 'https://aur.archlinux.org/rpc/?v=5&type=multiinfo&arg[]='$key'' | cut -d'"' -f30)
+		shift
+	done
+	exit 0
+	;;
+	-Sy)
+	maxcount=$(expr $# - 1)
+	count=1
+	while [[ $# -gt 1 ]]
+	do
+		key=$2
+		ver=$(pacman -Q $key | cut -d" " -f2 | xargs)
+		res=$(curl -s 'https://aur.archlinux.org/rpc/?v=5&type=multiinfo&arg[]='$key'')
+		remotever=$(echo $res | cut -d'"' -f26)
+		if [ $(echo $res | cut -d'"' -f9) = ":0," ]
+		then
+			echo "($count/$maxcount) $key is not in the AUR!"
+		else
+			if [ $remotever = "$ver" ]
+			then
+				echo "($count/$maxcount) $key-$ver is up to date"
+			else
+				echo "($count/$maxcount) $key-$ver is out of date! $remotever is available!"
+				echo ":: Should it be updated? [y/n]"
+				read ans
+				if [ $ans == y ]
+				then
+					gitaur -S $key && echo ":: Package installed succesfully!"
+				fi
+			fi
+		fi
+		count=$(expr $count + 1)
+		shift
+	done
+	exit 0
+	;;
+	-Syu)
+	gitaur -Sy $(pacman -Qqm)
+	exit 0
+	;;
 esac
-echo ":: Welcome to gitaur!"
