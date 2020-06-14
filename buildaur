@@ -1,27 +1,94 @@
 #!/usr/bin/env bash
 black=($(cat /usr/share/buildaur/blacklist))
 
-install(){
-	mkdir -p ~/.cache/gitaur/build
-	cd ~/.cache/gitaur/build
-	rm -rf  ~/.cache/gitaur/build/$2
-	echo ":: Clonig git repository..."
-	git clone https://aur.archlinux.org/$2.git
-	cd ~/.cache/gitaur/build/$2
-	echo ":: Edit the PKGBUILD? [y/N]"
-	read ans
-	if [[ $ans == n ]] || [[ $ans == "" ]]
+info(){
+	while [[ $# -gt 1 ]]
+	do
+		key=$2
+		remoteinfo=$(curl -s 'https://aur.archlinux.org/rpc/?v=5&type=multiinfo&arg[]='$key'' | cut -d'"' -f30)
+		echo "  "$key $(curl -s 'https://aur.archlinux.org/rpc/?v=5&type=multiinfo&arg[]='$key'' | cut -d'"' -f26) "(local: $(pacman -Q $key | cut -d" " -f2 | xargs))"
+		if [[ $remoteinfo = "" ]]
+		then
+			echo "     Warning: AUR does not provide information about this package!"
+		else
+			echo "     "$remoteinfo
+		fi
+		shift
+	done
+}
+
+depts(){
+	. ./PKGBUILD
+	depcount=1
+	depmaxcount=$(echo ${depends[@]} | wc -w)
+	echo ":: Checking for dependecies..."
+	echo "  $depmaxcount Packages: ${depends[@]}"
+	while [[ $depcount -le $depmaxcount ]]
+	do
+	if [[ $(pacman -Qq ${depends[$depcount]}) = "" ]]
 	then
-		echo ":: Going on..."
-	else
-		nano ./PKGBUILD
+		if [[ $(sudo pacman -Sqs | egrep -xE ${depends[$depcount]}) = "" ]]
+		then
+			sudo pacman -S ${depends[$depcount]}
+		else
+			install -t ${depends[$depcount]}
+		fi
 	fi
-	echo ":: Making and installing the package..."
-	makepkg -sif
+	depcount=$(expr $depcount + 1)
+	done
+}
+
+install(){
+	while [[ $# -gt 1 ]]
+	do
+		if [[ $(ping -c 1 google.com 2>/dev/null) = "" ]]
+		then
+			echo "ERROR: Network is not reachable!"
+			exit 2
+		fi
+		key=$2
+		ver=$(pacman -Q $key 2>/dev/null | cut -d" " -f2 | xargs)
+		res=$(curl -s 'https://aur.archlinux.org/rpc/?v=5&type=multiinfo&arg[]='$key'')
+		remotever=$(echo $res | cut -d'"' -f26)
+		if [[ $(echo $res | cut -d'"' -f9) = ":0," ]]
+		then
+			echo "ERROR: $key ist not in the AUR!"
+			exit 1
+		elif [[ $ver = "" ]]
+		then
+			echo ":: Info: $key-$remotever will be installed!"
+		elif [[ $ver = $remotever ]]
+		then
+			echo ":: Warning: $key-$ver is allready on $remotever --reinstalling"
+		else
+			echo ":: Info: $key-$ver will be updated to $remotever !"
+		fi
+		mkdir -p ~/.cache/gitaur/build
+		cd ~/.cache/gitaur/build
+		rm -rf  ~/.cache/gitaur/build/$2
+		echo ":: Clonig git repository..."
+		git clone https://aur.archlinux.org/$2.git
+		cd ~/.cache/gitaur/build/$2
+		echo ":: Edit the PKGBUILD? [y/N]"
+		read ans
+		if [[ $ans == n ]] || [[ $ans == "" ]]
+		then
+			echo ":: Going on..."
+		else
+			nano ./PKGBUILD
+		fi
+		depts
+		echo ":: Making and installing the package..."
+		makepkg -sif
+		shift
+	done
 }
 
 
 update(){
+	echo ":: Checking installed AUR packages..."
+	echo "  $(pacman -Qqm | wc -l) packages are curently installed from the AUR!"
+	echo ":: Checking for outdated packages..."
 	maxcount=$(expr $# - 1)
 	count=1
 	while [[ $# -gt 1 ]]
@@ -32,7 +99,7 @@ update(){
 		remotever=$(echo $res | cut -d'"' -f26)
 		if [[ $(echo ${black[*]} | sed -e 's/ /\n/g'| egrep -xE $key) = "$key" ]]
 		then
-			echo "($count/$maxcount) $key is at the blacklist and will not be updated!"
+			echo "($count/$maxcount) $key-$ver is out of date! $remotever is available! But it's on the blacklist and will not be updated!"
 		else
 			if [ $(echo $res | cut -d'"' -f9) = ":0," ]
 			then
@@ -64,21 +131,38 @@ case $1 in
 	exit 0
 	;;
 	-Q)
-	while [[ $# -gt 1 ]]
-	do
-		key=$2
-		echo $key $(curl -s 'https://aur.archlinux.org/rpc/?v=5&type=multiinfo&arg[]='$key'' | cut -d'"' -f26) "(local: $(pacman -Qs $key | cut -d" " -f2 | xargs))"
-		echo "    "$(curl -s 'https://aur.archlinux.org/rpc/?v=5&type=multiinfo&arg[]='$key'' | cut -d'"' -f30)
-		shift
-	done
+	if [[ $2 = "" ]]
+	then
+		echo ":: Checking installed AUR packages..."
+		echo "  $(pacman -Qqm | wc -l) packages are curently installed from the AUR!"
+		echo ":: Giving out package infos..."
+		info -t $(pacman -Qqm)
+	else
+		info $@
+	fi
 	exit 0
 	;;
 	-Sy)
 	update $@
 	exit 0
 	;;
+	-R)
+	sudo pacman $@
+	exit 0
+	;;
 	-Syu)
 	update -t $(pacman -Qqm)
 	exit 0
+	;;
+	*)
+	if [[ $1 = "" ]]
+	then
+		echo ":: ERROR: No options are given! Try --help to see all options!"
+		exit 2
+	else
+		# give an error if the option in unknown
+		echo ":: ERROR: '$@' is no known option! Try --help to see all options!"
+		exit 2
+	fi
 	;;
 esac
