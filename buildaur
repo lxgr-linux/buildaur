@@ -22,12 +22,12 @@ depts(){
 	depcount=1
 	depmaxcount=$(echo ${depends[@]} | wc -w)
 	echo ":: Checking for dependecies..."
-	echo "  $depmaxcount Packages: ${depends[@]}"
+	echo "  ($depmaxcount) Packages: ${depends[@]}"
 	while [[ $depcount -le $depmaxcount ]]
 	do
 	if [[ $(pacman -Qq ${depends[$depcount]} 2>/dev/null) = "" ]]
 	then
-		if [[ $(sudo pacman -Sqs | egrep -xE ${depends[$depcount]}) = "" ]]
+		if [[ $(sudo pacman -Sqs | egrep -xE ${depends[$depcount]}) = ${depends[$depcount]} ]]
 		then
 			sudo pacman -S ${depends[$depcount]}
 		else
