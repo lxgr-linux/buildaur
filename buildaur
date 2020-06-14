@@ -25,7 +25,7 @@ depts(){
 	echo "  $depmaxcount Packages: ${depends[@]}"
 	while [[ $depcount -le $depmaxcount ]]
 	do
-	if [[ $(pacman -Qq ${depends[$depcount]}) = "" ]]
+	if [[ $(pacman -Qq ${depends[$depcount]} 2>/dev/null) = "" ]]
 	then
 		if [[ $(sudo pacman -Sqs | egrep -xE ${depends[$depcount]}) = "" ]]
 		then
