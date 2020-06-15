@@ -6,7 +6,12 @@ info(){
 	do
 		key=$2
 		remoteinfo=$(curl -s 'https://aur.archlinux.org/rpc/?v=5&type=multiinfo&arg[]='$key'' | cut -d'"' -f30)
-		echo "  "$key $(curl -s 'https://aur.archlinux.org/rpc/?v=5&type=multiinfo&arg[]='$key'' | cut -d'"' -f26) "(local: $(pacman -Q $key | cut -d" " -f2 | xargs))"
+		ver=$(pacman -Q $key 2>/dev/null | cut -d" " -f2 | xargs)
+		if [[ $ver = "" ]]
+		then
+			ver="--- "
+		fi
+		echo "  "$key $(curl -s 'https://aur.archlinux.org/rpc/?v=5&type=multiinfo&arg[]='$key'' | cut -d'"' -f26) "(local: $ver)"
 		if [[ $remoteinfo = "" ]]
 		then
 			echo "     Warning: AUR does not provide information about this package!"
@@ -63,12 +68,12 @@ install(){
 		else
 			echo ":: Info: $key-$ver will be updated to $remotever !"
 		fi
-		mkdir -p ~/.cache/gitaur/build
-		cd ~/.cache/gitaur/build
-		rm -rf  ~/.cache/gitaur/build/$2
+		mkdir -p ~/.cache/buildaur/build
+		cd ~/.cache/buildaur/build
+		rm -rf  ~/.cache/buildaur/build/$2
 		echo ":: Clonig git repository..."
 		git clone https://aur.archlinux.org/$2.git
-		cd ~/.cache/gitaur/build/$2
+		cd ~/.cache/buildaur/build/$2
 		echo ":: Edit the PKGBUILD? [y/N]"
 		read ans
 		if [[ $ans == n ]] || [[ $ans == "" ]]
@@ -77,9 +82,19 @@ install(){
 		else
 			nano ./PKGBUILD
 		fi
+		echo ":: Running prehooks..."
+		prehooks
 		depts
 		echo ":: Making and installing the package..."
 		makepkg -sif
+		if [[ $? = 0 ]]
+		then
+			echo ":: Running posthooks..."
+			posthooks
+		else
+			echo ":: Error: Package installation FAILED!"
+			errorcount=$(expr $errorcount + 1)
+		fi
 		shift
 	done
 }
@@ -89,6 +104,7 @@ update(){
 	echo ":: Checking installed AUR packages..."
 	echo "  $(pacman -Qqm | wc -l) packages are curently installed from the AUR!"
 	echo ":: Checking for outdated packages..."
+	errorcount=0
 	maxcount=$(expr $# - 1)
 	count=1
 	while [[ $# -gt 1 ]]
@@ -115,13 +131,57 @@ update(){
 					if [[ $ans == y ]] || [[ $ans == "" ]]
 					then
 						sudo pacman -Sy
-						install -t $key && echo ":: Package installed succesfully!" || echo ":: WARNING: Package installation FAILED!"
+						install -t $key
 					fi
 				fi
 			fi
 		fi
 		count=$(expr $count + 1)
 		shift
+	done
+	if [[ $errorcount = 0 ]]
+	then
+		echo " No errors accured"
+	else
+		echo " $errorcount error(s) accured!"
+	fi
+}
+
+help(){
+	echo "buildaur - An AUR helper"
+	echo "Usage: $0 <option> <string>"
+	echo "   General options:"
+	echo "      -S                : Install a package"
+	echo "      -R                : Remove a package"
+	echo "      -Q                : Lists installed packages or searches for ones in the AUR"
+	echo "      -Syu              : Updates all AUR packages"
+	echo "      --clear           : Cleanes build dir"
+	echo "      -v|--version      : Displays version of this program"
+	echo "      -l|--license      : Displays license of this program"
+	echo ""
+	echo "   Help options:"
+	echo "      -h|--help         : Displays this help-dialog"
+}
+
+prehooks(){
+	prehooks=($(ls /etc/buildaur/prehooks))
+	hookcount=0
+	while [[ $hookcount -lt $(echo ${prehooks[@]} | wc -w) ]]
+	do
+		echo " ${prehooks[$hookcount]}..."
+		/etc/buildaur/prehooks/${prehooks[$hookcount]}
+		hookcount=$(expr $hookcount + 1)
+	done
+}
+
+posthooks(){
+	prehooks=($(ls /etc/buildaur/posthooks))
+	hookcount=0
+	while [[ $hookcount -lt $(echo ${prehooks[@]} | wc -w) ]]
+	do
+		echo " ${prehooks[$hookcount]}..."
+		/etc/buildaur/posthooks/${prehooks[$hookcount]}
+		hookcount=$(expr $hookcount + 1)
 	done
 }
 
@@ -142,16 +202,35 @@ case $1 in
 	fi
 	exit 0
 	;;
-	-Sy)
-	update $@
-	exit 0
-	;;
+	#-Sy)
+	#update $@
+	#exit 0
+	#;;
 	-R)
 	sudo pacman $@
 	exit 0
 	;;
 	-Syu)
 	update -t $(pacman -Qqm)
+	exit 0
+	;;
+	--help | -h)
+	help
+	exit 0
+	;;
+	-v | --version)
+	pacman -Q buildaur | cut -d" " -f2 | xargs
+	exit 0
+	;;
+	-l | --license)
+	less /usr/share/licenses/buildaur/LICENSE
+	exit 0
+	;;
+	--clear)
+	echo ":: Cleaning builddir..."
+	echo "  $(ls -lh ~/.cache/buildaur/ | xargs | cut -d" " -f2)B will be removed!"
+	rm -rf ~/.cache/buildaur/*
+	echo ":: Done!"
 	exit 0
 	;;
 	*)
