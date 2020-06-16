@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+echo 'make(){' >> ./PKGBUILD
+echo 'sh -c "make -j $(nproc) $@"' >> ./PKGBUILD
+echo '}' >> ./PKGBUILD
