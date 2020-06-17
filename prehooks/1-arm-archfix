@@ -1,2 +1,8 @@
 #!/usr/bin/env bash
+type=pre
+desc="Fixes architecture issues for alarm"
+
+if [[ $1 = "-u" ]]
+then
 echo "arch=(any)" >> ./PKGBUILD
+fi

@@ -193,47 +193,123 @@ update(){
 	fi
 }
 
-help(){
-	echo "buildaur - An AUR helper"
-	echo "Usage: $0 <option> <string>"
-	echo "   General options:"
-	echo "      -S                : Install a package"
-	echo "      -R                : Remove a package"
-	echo "      -Q                : Lists installed packages or searches for ones in the AUR"
-	echo "      -Qs               : Search the AUR"
-	echo "      -Syu              : Updates all AUR packages"
-	echo ""
-	echo "   Additional options for -S,-R,-Syu:"
-	echo "      n                 : Doesn't ask questions"
-	echo ""
-	echo "      --clear           : Cleanes build dir"
-	echo "      -v|--version      : Displays version of this program"
-	echo "      -l|--license      : Displays license of this program"
-	echo ""
-	echo "   Help options:"
-	echo "      -h|--help         : Displays this help-dialog"
-}
-
 prehooks(){
 	prehooks=($(ls /etc/buildaur/prehooks))
 	hookcount=0
 	while [[ $hookcount -lt $(echo ${prehooks[@]} | wc -w) ]]
 	do
 		echo " ${prehooks[$hookcount]}..."
-		/etc/buildaur/prehooks/${prehooks[$hookcount]}
+		/etc/buildaur/prehooks/${prehooks[$hookcount]} -u
 		hookcount=$(expr $hookcount + 1)
 	done
 }
 
 posthooks(){
-	prehooks=($(ls /etc/buildaur/posthooks))
+	posthooks=($(ls /etc/buildaur/posthooks))
+	hookcount=0
+	while [[ $hookcount -lt $(echo ${posthooks[@]} | wc -w) ]]
+	do
+		echo " ${posthooks[$hookcount]}..."
+		/etc/buildaur/posthooks/${posthooks[$hookcount]} -u
+		hookcount=$(expr $hookcount + 1)
+	done
+}
+
+listhooks(){
+	echo "Prehooks:"
+	prehooks=($(ls /etc/buildaur/prehooks))
 	hookcount=0
 	while [[ $hookcount -lt $(echo ${prehooks[@]} | wc -w) ]]
 	do
-		echo " ${prehooks[$hookcount]}..."
-		/etc/buildaur/posthooks/${prehooks[$hookcount]}
+		. /etc/buildaur/prehooks/${prehooks[$hookcount]}
+		echo " ${prehooks[$hookcount]}"
+		echo "  $desc"
 		hookcount=$(expr $hookcount + 1)
 	done
+	echo "Posthooks:"
+	posthooks=($(ls /etc/buildaur/posthooks))
+	hookcount=0
+	while [[ $hookcount -lt $(echo ${posthooks[@]} | wc -w) ]]
+	do
+		. /etc/buildaur/posthooks/${posthooks[$hookcount]}
+		echo " ${posthooks[$hookcount]}"
+		echo "  $desc"
+		hookcount=$(expr $hookcount + 1)
+	done
+	echo "Deactivated hooks:"
+	hooks=($(ls /etc/buildaur/hooks))
+	hookcount=0
+	while [[ $hookcount -lt $(echo ${hooks[@]} | wc -w) ]]
+	do
+		. /etc/buildaur/hooks/${hooks[$hookcount]}
+		echo " ${hooks[$hookcount]}"
+		echo "  $desc"
+		hookcount=$(expr $hookcount + 1)
+	done
+}
+
+activate(){
+	. /etc/buildaur/hooks/$@ 2>/dev/null
+	sudo mv /etc/buildaur/hooks/$@ /etc/buildaur/${type}hooks/ 2>/dev/null
+	if [[ $? = 0 ]]
+	then
+		echo ":: Finished!"
+	else
+		echo ":: Failed! $@ is not available!"
+		exit 1
+	fi
+}
+
+deactivate(){
+	. /etc/buildaur/prehooks/$@ 2>/dev/null
+	. /etc/buildaur/posthooks/$@ 2>/dev/null
+	sudo mv /etc/buildaur/${type}hooks/$@ /etc/buildaur/hooks/ 2>/dev/null
+	if [[ $? = 0 ]]
+	then
+		echo ":: Finished!"
+	else
+		echo ":: Failed! $@ is not available!"
+		exit 1
+	fi
+}
+
+hookhelp(){
+	echo "Help-dialog for hooks"
+	echo ""
+	echo "  Hooks are skripts that run before and after the packagebuild."
+	echo "  They are made to for example modify the PKGBUILD"
+	echo "  All hooks are stored in /etc/buildaur/hooks"
+	echo "  In /etc/buildaur/prehooks are the hooks stored wich run before the packagebuild"
+	echo "  and in /etc/buildaur/posthooks those wich run after the packagebuild."
+	echo "  A hook always contains a 'type' (pre oder post) and a 'desc' variable."
+	echo "  It also contains an if-function wich contains the modifications for the PKGBUILD and so on"
+	echo "  See /etc/buildaur/prehooks/1-arm-archfix as an example."
+}
+
+help(){
+	echo "buildaur - An AUR helper"
+	echo "Usage: $0 <option> <string>"
+	echo "   General options:"
+	echo "      -S                : Installs a package"
+	echo "      -R                : Removes a package"
+	echo "      -Q                : Lists installed packages or searches for ones in the AUR"
+	echo "      -Qs               : Search the AUR"
+	echo "      -Syu              : Updates all AUR packages"
+	echo "      --clear           : Cleanes build dir"
+	echo "      -v|--version      : Displays version of this program"
+	echo "      -l|--license      : Displays license of this program"
+	echo ""
+	echo "   Additional options for -S,-R,-Syu:"
+	echo "      n                 : Doesn't ask questions"
+	echo ""
+	echo "   Hookoptions:"
+	echo "      --listhooks       : Lists all available and installed hooks"
+	echo "      --hook-activate   : Activates a hook"
+  echo "      --hook-deactivate : Deactivates a hook"
+	echo ""
+	echo "   Help options:"
+	echo "      -h|--help         : Displays this help-dialog"
+	echo "      --help-hooks      : Displays help-dialog for hooks"
 }
 
 case $1 in
@@ -270,10 +346,6 @@ case $1 in
 	fi
 	exit 0
 	;;
-	#-Sy)
-	#update $@
-	#exit 0
-	#;;
 	-R)
 	sudo pacman $@
 	exit 0
@@ -308,6 +380,22 @@ case $1 in
 	echo "  $(ls -lh ~/.cache/buildaur/ | xargs | cut -d" " -f2)B will be removed!"
 	rm -rf ~/.cache/buildaur/*
 	echo ":: Done!"
+	exit 0
+	;;
+	--listhooks)
+	listhooks
+	exit 0
+	;;
+	--hook-activate)
+	activate $2
+	exit 0
+	;;
+	--hook-deactivate)
+	deactivate $2
+	exit 0
+	;;
+	--help-hooks)
+	hookhelp
 	exit 0
 	;;
 	*)

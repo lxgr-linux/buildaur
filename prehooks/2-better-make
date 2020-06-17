@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+type=pre
+desc="optimises make for faster compiling"
+
+if [[ $1 = "-u" ]]
+then
 echo 'make(){' >> ./PKGBUILD
 echo '/usr/bin/make -j $(nproc) $@' >> ./PKGBUILD
 echo '}' >> ./PKGBUILD
+fi
