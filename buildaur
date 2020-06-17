@@ -159,11 +159,11 @@ update(){
 		then
 			echo "($count/$maxcount) $key-$ver is out of date! $remotever is available! But it's on the blacklist and will not be updated!"
 		else
-			if [ $(echo $res | cut -d'"' -f9) = ":0," ]
+			if [[ $(echo $res | cut -d'"' -f9) = ":0," ]]
 			then
 				echo "($count/$maxcount) $key is not in the AUR!"
 			else
-				if [ $remotever = "$ver" ]
+				if [[ $remotever = "$ver" ]]
 				then
 					echo "($count/$maxcount) $key-$ver is up to date"
 				else
