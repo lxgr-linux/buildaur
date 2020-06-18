@@ -60,6 +60,7 @@ search(){
 
 depts(){
 	. ./PKGBUILD
+	aurdeps=()
 	depcount=1
 	depmaxcount=$(echo ${depends[@]} | wc -w)
 	echo ":: Checking for dependecies..."
@@ -72,11 +73,12 @@ depts(){
 		then
 			sudo pacman -S ${depends[$depcount]}
 		else
-			install -t ${depends[$depcount]}
+			aurdeps=( ${aurdeps[@]} ${depends[$depcount]})
 		fi
 	fi
 	depcount=$(expr $depcount + 1)
 	done
+	install -t ${aurdeps[@]}
 }
 
 install(){
@@ -127,6 +129,7 @@ install(){
 		echo ":: Running prehooks..."
 		prehooks
 		depts
+		cd ~/.cache/buildaur/build/$2
 		echo ":: Making and installing the package..."
 		makepkg -sif $ask
 		if [[ $? = 0 ]]
