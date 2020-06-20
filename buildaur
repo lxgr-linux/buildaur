@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 black=($(cat /usr/share/buildaur/blacklist))
+bold=$(tput bold)
+normal=$(tput sgr0)
 
 info(){
 	while [[ $# -gt 1 ]]
@@ -78,19 +80,18 @@ depts(){
 	fi
 	depcount=$(expr $depcount + 1)
 	done
-	install -t ${aurdeps[@]}
+	if [[ ${aurdeps[@]} != "" ]]
+	then
+		install ${aurdeps[@]}
+	fi
 }
 
-install(){
-	while [[ $# -gt 1 ]]
+preinst(){
+	echo ":: Checking packages..."
+	installpac=()
+	while [[ $# -gt 0 ]]
 	do
-		if [[ $(ping -c 1 google.com 2>/dev/null) = "" ]]
-		then
-			echo "ERROR: Network is not reachable!"
-			exit 2
-		fi
-		sudo pacman -Sy
-		key=$2
+		key=$1
 		ver=$(pacman -Q $key 2>/dev/null | cut -d" " -f2 | xargs)
 		res=$(curl -s 'https://aur.archlinux.org/rpc/?v=5&type=multiinfo&arg[]='$key'')
 		remotever=$(echo $res | cut -d'"' -f26)
@@ -98,21 +99,46 @@ install(){
 		then
 			echo "ERROR: $key ist not in the AUR!"
 			exit 1
-		elif [[ $ver = "" ]]
+		fi
+		if [[ $ver = "" ]]
 		then
-			echo ":: Info: $key-$remotever will be installed!"
+			printf ""
 		elif [[ $ver = $remotever ]]
 		then
-			echo ":: Warning: $key-$ver is allready on $remotever --reinstalling"
+			echo "Warning: $key-$ver is allready on $remotever --reinstalling"
 		else
-			echo ":: Info: $key-$ver will be updated to $remotever !"
+			echo "Info: $key-$ver will be updated to $remotever!"
 		fi
+		installpac=(${installpac[@]} $key)
+		shift
+	done
+	echo ""
+	echo "Packages ($(echo ${installpac[@]} | wc -w)): ${installpac[@]}"
+	echo ""
+	if [[ $ask = "--noconfirm" ]]
+	then
+		ans=y
+	else
+		echo ":: Continnue installation? [Y/n]"
+		read ans
+	fi
+	if [[ $ans == y ]] || [[ $ans == "" ]]
+	then
+		realinst ${installpac[@]}
+	fi
+}
+
+realinst(){
+	while [[ $# -gt 0 ]]
+	do
+		echo ""
+		echo "($installcount/$(expr $# + $installcount - 1)) Installing ${bold}$1-$remotever${normal} ..."
 		mkdir -p ~/.cache/buildaur/build
 		cd ~/.cache/buildaur/build
-		rm -rf  ~/.cache/buildaur/build/$2
+		rm -rf  ~/.cache/buildaur/build/$1
 		echo ":: Clonig git repository..."
-		git clone https://aur.archlinux.org/$2.git
-		cd ~/.cache/buildaur/build/$2
+		git clone https://aur.archlinux.org/$1.git
+		cd ~/.cache/buildaur/build/$1
 		if [[ $ask = "--noconfirm" ]]
 		then
 			ans=n
@@ -129,19 +155,32 @@ install(){
 		echo ":: Running prehooks..."
 		prehooks
 		depts
-		cd ~/.cache/buildaur/build/$2
+		cd ~/.cache/buildaur/build/$1
 		echo ":: Making and installing the package..."
 		makepkg -sif $ask
 		if [[ $? = 0 ]]
 		then
 			echo ":: Running posthooks..."
 			posthooks
+			echo ":: Installation finished!"
 		else
 			echo ":: Error: Package installation FAILED!"
 			errorcount=$(expr $errorcount + 1)
 		fi
 		shift
+		installcount=$(expr $installcount + 1)
 	done
+}
+
+install(){
+	if [[ $(ping -c 1 google.com 2>/dev/null) = "" ]]
+	then
+		echo "ERROR: Network is not reachable!"
+		exit 2
+	fi
+	sudo pacman -Sy
+	installcount=1
+	preinst $@
 }
 
 
@@ -149,6 +188,7 @@ update(){
 	echo ":: Checking installed AUR packages..."
 	echo "  $(pacman -Qqm | wc -l) packages are curently installed from the AUR!"
 	echo ":: Checking for outdated packages..."
+	willinst=()
 	errorcount=0
 	maxcount=$(expr $# - 1)
 	count=1
@@ -180,7 +220,7 @@ update(){
 					fi
 					if [[ $ans == y ]] || [[ $ans == "" ]]
 					then
-						install -t $key
+						willinst=(${willinst[@]} $key)
 					fi
 				fi
 			fi
@@ -188,6 +228,8 @@ update(){
 		count=$(expr $count + 1)
 		shift
 	done
+	echo ""
+	install ${willinst[@]}
 	if [[ $errorcount = 0 ]]
 	then
 		echo " No errors accured"
@@ -317,10 +359,12 @@ help(){
 
 case $1 in
 	-S)
+	shift
 	install $@
 	exit 0
 	;;
 	-Sn)
+	shift
 	ask=--noconfirm
 	install $@
 	exit 0

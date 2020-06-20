@@ -1,8 +1,13 @@
 #!/usr/bin/env bash
 type=pre
-desc="Fixes architecture issues for alarm"
+desc="Fixes architecture issues for alarm. This may cause trouble with binary packages for x86_64 wich will then be installed as arm ones!"
 
+. ./PKGBUILD
 if [[ $1 = "-u" ]]
 then
+if [[ $(uname -m) = armhf ]] && [[ $arch = x86_64 ]]
+then
+  echo Warning arch is $arch
+fi 
 echo "arch=(any)" >> ./PKGBUILD
 fi
