@@ -7,8 +7,14 @@ info(){
 	while [[ $# -gt 1 ]]
 	do
 		key=$2
-		remoteinfo=$(curl -s 'https://aur.archlinux.org/rpc/?v=5&type=multiinfo&arg[]='$key'' | cut -d'"' -f30)
+		res=$(curl -s 'https://aur.archlinux.org/rpc/?v=5&type=multiinfo&arg[]='$key'')
+		remoteinfo=$(echo $res | cut -d'"' -f30)
 		ver=$(pacman -Q $key 2>/dev/null | cut -d" " -f2 | xargs)
+		if [[ $(echo $res | cut -d'"' -f9) = ":0," ]]
+		then
+			echo "ERROR: $key ist not in the AUR!"
+			exit 1
+		fi
 		if [[ $ver = "" ]]
 		then
 			ver="--- "
@@ -73,9 +79,10 @@ depts(){
 	then
 		if [[ $(sudo pacman -Sqs | egrep -xE ${depends[$depcount]}) = ${depends[$depcount]} ]]
 		then
-			sudo pacman -S ${depends[$depcount]}
+			#sudo pacman -S ${depends[$depcount]}
+			printf 2 >> /dev/null
 		else
-			aurdeps=( ${aurdeps[@]} ${depends[$depcount]})
+			aurdeps=(${aurdeps[@]} ${depends[$depcount]})
 		fi
 	fi
 	depcount=$(expr $depcount + 1)
@@ -92,22 +99,25 @@ preinst(){
 	while [[ $# -gt 0 ]]
 	do
 		key=$1
-		ver=$(pacman -Q $key 2>/dev/null | cut -d" " -f2 | xargs)
-		res=$(curl -s 'https://aur.archlinux.org/rpc/?v=5&type=multiinfo&arg[]='$key'')
-		remotever=$(echo $res | cut -d'"' -f26)
-		if [[ $(echo $res | cut -d'"' -f9) = ":0," ]]
+		if [[ $mode != asp ]]
 		then
-			echo "ERROR: $key ist not in the AUR!"
-			exit 1
-		fi
-		if [[ $ver = "" ]]
-		then
-			printf ""
-		elif [[ $ver = $remotever ]]
-		then
-			echo "Warning: $key-$ver is allready on $remotever --reinstalling"
-		else
-			echo "Info: $key-$ver will be updated to $remotever!"
+			ver=$(pacman -Q $key 2>/dev/null | cut -d" " -f2 | xargs)
+			res=$(curl -s 'https://aur.archlinux.org/rpc/?v=5&type=multiinfo&arg[]='$key'')
+			remotever=$(echo $res | cut -d'"' -f26)
+			if [[ $(echo $res | cut -d'"' -f9) = ":0," ]]
+			then
+				echo "ERROR: $key ist not in the AUR!"
+				exit 1
+			fi
+			if [[ $ver = "" ]]
+			then
+				printf ""
+			elif [[ $ver = $remotever ]]
+			then
+				echo "Warning: $key-$ver is allready on $remotever --reinstalling"
+			else
+				echo "Info: $key-$ver will be updated to $remotever!"
+			fi
 		fi
 		installpac=(${installpac[@]} $key)
 		shift
@@ -132,12 +142,28 @@ realinst(){
 	while [[ $# -gt 0 ]]
 	do
 		echo ""
-		echo "($installcount/$(expr $# + $installcount - 1)) Installing ${bold}$1-$remotever${normal} ..."
+		if [[ $mode = asp ]]
+		then
+			echo "($installcount/$(expr $# + $installcount - 1)) Installing ${bold}$1${normal} ..."
+		else
+			echo "($installcount/$(expr $# + $installcount - 1)) Installing ${bold}$1-$remotever${normal} ..."
+		fi
 		mkdir -p ~/.cache/buildaur/build
 		cd ~/.cache/buildaur/build
 		rm -rf  ~/.cache/buildaur/build/$1
-		echo ":: Clonig git repository..."
-		git clone https://aur.archlinux.org/$1.git
+		if [[ $mode = asp ]]
+		then
+			echo ":: Exporting package..."
+			asp export $1 2>/dev/null
+			if [[ $? != 0 ]]
+			then
+				echo "ERROR: $1 not found!"
+				exit 2
+			fi
+		else
+			echo ":: Clonig git repository..."
+			git clone https://aur.archlinux.org/$1.git
+		fi
 		cd ~/.cache/buildaur/build/$1
 		if [[ $ask = "--noconfirm" ]]
 		then
@@ -157,7 +183,12 @@ realinst(){
 		depts
 		cd ~/.cache/buildaur/build/$1
 		echo ":: Making and installing the package..."
-		makepkg -sif $ask
+		if [[ $mode = asp ]]
+		then
+			makepkg -sif $ask #--skippgpcheck
+		else
+			makepkg -sif $ask
+		fi
 		if [[ $? = 0 ]]
 		then
 			echo ":: Running posthooks..."
@@ -182,7 +213,6 @@ install(){
 	installcount=1
 	preinst $@
 }
-
 
 update(){
 	echo ":: Checking installed AUR packages..."
@@ -229,7 +259,12 @@ update(){
 		shift
 	done
 	echo ""
-	install ${willinst[@]}
+	if [[ $willinst = "" ]]
+	then
+		printf 2 >> /dev/null
+	else
+		install ${willinst[@]}
+	fi
 	if [[ $errorcount = 0 ]]
 	then
 		echo " No errors accured"
@@ -360,6 +395,19 @@ help(){
 case $1 in
 	-S)
 	shift
+	install $@
+	exit 0
+	;;
+	-asp)
+	shift
+	mode=asp
+	install $@
+	exit 0
+	;;
+	-aspn)
+	shift
+	ask=--noconfirm
+	mode=asp
 	install $@
 	exit 0
 	;;
