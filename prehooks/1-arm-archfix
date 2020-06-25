@@ -5,7 +5,7 @@ desc="Fixes architecture issues for alarm. This may cause trouble with binary pa
 if [[ $1 = "-u" ]]
 then
   . ./PKGBUILD
-  if [[ $(uname -m) = armhf ]] && [[ $arch = x86_64 ]]
+  if [[ $(uname -m) != $arch ]] && [[ $arch != any ]]
   then
     echo Warning arch is $arch
   fi
