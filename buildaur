@@ -12,8 +12,13 @@ info(){
 		ver=$(pacman -Q $key 2>/dev/null | cut -d" " -f2 | xargs)
 		if [[ $(echo $res | cut -d'"' -f9) = ":0," ]]
 		then
-			echo "ERROR: $key ist not in the AUR!"
-			exit 1
+			if [[ $all = true ]]
+			then
+				echo "Warning: $key ist not in the AUR!"
+			else
+				echo "Error: $key ist not in the AUR!"
+				exit 2
+			fi
 		fi
 		if [[ $ver = "" ]]
 		then
@@ -36,7 +41,6 @@ search(){
 		key=$2
 		echo ":: Checking AUR packages..."
 		res=$(curl -s 'https://aur.archlinux.org/rpc/?v=5&type=search&arg='$key'')
-		#rsults=$(echo $res | cut -d'[' -f2)
 		resultcount=$(echo $res | cut -d'"' -f9 | sed -e 's/://g' | sed -e 's/,//g')
 		echo "  $resultcount packages found"
   	echo ":: Giving out package infos..."
@@ -47,8 +51,6 @@ search(){
 			name=$(echo $cutted | cut -d'"' -f6)
 			ver=$(pacman -Q $name 2>/dev/null | cut -d" " -f2 | xargs)
 			remoteinfo=$(echo $cutted | cut -d'"' -f20)
-			#echo $cutted
-			#echo $counter
 			if [[ $name = "" ]] || [[ $ver = "" ]]
 			then
 			ver="--- "
@@ -79,7 +81,6 @@ depts(){
 	then
 		if [[ $(sudo pacman -Sqs | egrep -xE ${depends[$depcount]}) = ${depends[$depcount]} ]]
 		then
-			#sudo pacman -S ${depends[$depcount]}
 			printf 2 >> /dev/null
 		else
 			aurdeps=(${aurdeps[@]} ${depends[$depcount]})
@@ -91,6 +92,17 @@ depts(){
 	then
 		install ${aurdeps[@]}
 	fi
+}
+
+install(){
+	if [[ $(ping -c 1 google.com 2>/dev/null) = "" ]]
+	then
+		echo "ERROR: Network is not reachable!"
+		exit 2
+	fi
+	sudo pacman -Sy
+	installcount=1
+	preinst $@
 }
 
 preinst(){
@@ -114,9 +126,13 @@ preinst(){
 				printf ""
 			elif [[ $ver = $remotever ]]
 			then
-				echo "Warning: $key-$ver is allready on $remotever --reinstalling"
+				echo "Warning: $key-$ver is allready on $remotever -- reinstalling"
 			else
 				echo "Info: $key-$ver will be updated to $remotever!"
+			fi
+			if [[ $(echo $res | cut -d'"' -f41) != :null, ]]
+			then
+				echo  "Warning: $key is flagged out of date!"
 			fi
 		fi
 		installpac=(${installpac[@]} $key)
@@ -185,7 +201,7 @@ realinst(){
 		echo ":: Making and installing the package..."
 		if [[ $mode = asp ]]
 		then
-			makepkg -sif $ask #--skippgpcheck
+			makepkg -sif $ask --skippgpcheck
 		else
 			makepkg -sif $ask
 		fi
@@ -201,17 +217,6 @@ realinst(){
 		shift
 		installcount=$(expr $installcount + 1)
 	done
-}
-
-install(){
-	if [[ $(ping -c 1 google.com 2>/dev/null) = "" ]]
-	then
-		echo "ERROR: Network is not reachable!"
-		exit 2
-	fi
-	sudo pacman -Sy
-	installcount=1
-	preinst $@
 }
 
 update(){
@@ -375,11 +380,12 @@ help(){
 	echo "      -Q                : Lists installed packages or searches for ones in the AUR"
 	echo "      -Qs               : Search the AUR"
 	echo "      -Syu              : Updates all AUR packages"
+	echo "      -asp              : Builds a package from source using asp (suefull for archlinux arm)"
 	echo "      --clear           : Cleanes build dir"
 	echo "      -v|--version      : Displays version of this program"
 	echo "      -l|--license      : Displays license of this program"
 	echo ""
-	echo "   Additional options for -S,-R,-Syu:"
+	echo "   Additional options for -S,-R,-Syu,-asp:"
 	echo "      n                 : Doesn't ask questions"
 	echo ""
 	echo "   Hookoptions:"
@@ -423,6 +429,7 @@ case $1 in
 		echo ":: Checking installed AUR packages..."
 		echo "  $(pacman -Qqm | wc -l) packages are curently installed from the AUR!"
 		echo ":: Giving out package infos..."
+		all=true
 		info -t $(pacman -Qqm)
 	else
 		info $@
@@ -432,10 +439,8 @@ case $1 in
 	-Qs)
 	if [[ $2 = "" ]]
 	then
-		echo ":: Checking installed AUR packages..."
-		echo "  $(pacman -Qqm | wc -l) packages are curently installed from the AUR!"
-		echo ":: Giving out package infos..."
-		info -t $(pacman -Qqm)
+		echo "Error: No search subject given!"
+		exit 2
 	else
 		search $@
 	fi
@@ -449,7 +454,7 @@ case $1 in
 	sudo pacman --noconfirm $@
 	exit 0
 	;;
-	-Syu)
+	-Syu | -Syyu)
 	update -t $(pacman -Qqm)
 	exit 0
 	;;

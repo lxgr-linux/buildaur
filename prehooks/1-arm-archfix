@@ -7,7 +7,7 @@ then
   . ./PKGBUILD
   if [[ $(uname -m) != $arch ]] && [[ $arch != any ]]
   then
-    echo Warning arch is $arch
+    echo "Warning: architecture is $arch"
   fi
 echo "arch=(any)" >> ./PKGBUILD
 fi
