@@ -26,34 +26,34 @@ Then the installation will be finished.
 
 Like most other shell programs buildaur has some options which can be used to specify what the program should exactly do:
 
-Usage: /usr/bin/buildaur <option> <string>
-   General options:
-      -S                : Installs a package
-      -R                : Removes a package
-      -Q                : Lists installed packages or searches for ones in the AUR
-      -Qs               : Search the AUR
-      -Syu              : Updates all AUR packages
-      -asp              : Builds a package from source using asp (suefull for archlinux arm)
-      --clear           : Cleanes build dir
-      -v|--version      : Displays version of this program
-      -l|--license      : Displays license of this program
+Usage: /usr/bin/buildaur <option> <string><br>
+   General options:<br>
+      -S                : Installs a package<br>
+      -R                : Removes a package<br>
+      -Q                : Lists installed packages or searches for ones in the AUR<br>
+      -Qs               : Search the AUR<br>
+      -Syu              : Updates all AUR packages<br>
+      -asp              : Builds a package from source using asp (suefull for archlinux arm)<br>
+      --clear           : Cleanes build dir<br>
+      -v|--version      : Displays version of this program<br>
+      -l|--license      : Displays license of this program<br>
 
-   Additional options for -S,-R,-Syu,-asp:
-      n                 : Doesn't ask questions
+   Additional options for -S,-R,-Syu,-asp:<br>
+      n                 : Doesn't ask questions<br>
 
-   Hookoptions:
-      --listhooks       : Lists all available and installed hooks
-      --hook-activate   : Activates a hook
-      --hook-deactivate : Deactivates a hook
+   Hookoptions:<br>
+      --listhooks       : Lists all available and installed hooks<br>
+      --hook-activate   : Activates a hook<br>
+      --hook-deactivate : Deactivates a hook<br>
 
-   Help options:
-      -h|--help         : Displays this help-dialog
-      --help-hooks      : Displays help-dialog for hooks
+   Help options:<br>
+      -h|--help         : Displays this help-dialog<br>
+      --help-hooks      : Displays help-dialog for hooks<br>
 
-Examples:
-    buildaur -S cava    : Installes the package 'cava'
-    buildaur -Sn cava   : Installes 'cava' without anking any questions
-    buildaur -Syu       : Updates all packages which were instaleld from the AUR
+Examples:<br>
+    buildaur -S cava    : Installes the package 'cava'<br>
+    buildaur -Sn cava   : Installes 'cava' without anking any questions<br>
+    buildaur -Syu       : Updates all packages which were instaleld from the AUR<br>
 
 # Special options
 
@@ -71,7 +71,7 @@ hooks:
   It also contains an if-function wich contains the modifications for the PKGBUILD and so on
   See /etc/buildaur/prehooks/1-arm-archfix as an example.
 
-  Hookoptions:
-     --listhooks       : Lists all available and installed hooks
-     --hook-activate   : Activates a hook
-     --hook-deactivate : Deactivates a hook
+  Hookoptions:<br>
+     --listhooks       : Lists all available and installed hooks<br>
+     --hook-activate   : Activates a hook<br>
+     --hook-deactivate : Deactivates a hook<br>
