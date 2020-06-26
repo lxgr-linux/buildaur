@@ -1,4 +1,5 @@
-# Buildaur -- An AUR helper by LXGR <lxgr@protonmail.com>
+# Buildaur -- An AUR helper
+by LXGR <lxgr@protonmail.com>
 
 # Introduction
 
