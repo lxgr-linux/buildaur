@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+. /etc/buildaur/buildaur.conf
 black=($(cat /usr/share/buildaur/blacklist))
 bold=$(tput bold)
 normal=$(tput sgr0)
@@ -198,12 +199,22 @@ realinst(){
 		prehooks
 		depts
 		cd ~/.cache/buildaur/build/$1
-		echo ":: Making and installing the package..."
-		if [[ $mode = asp ]]
+		if [[ $buildchroot = yes ]]
 		then
-			makepkg -sif $ask --skippgpcheck
+			if [[ $CHROOT = "" ]]
+			then
+				echo "Error: CHROOT variable is not defined! Use '--make-chroot' to create a chroot first"
+				exit 1
+			fi
+			echo ":: Updating chrootpackages..."
+			arch-nspawn $CHROOT/root pacman -Syu
+			echo ":: Making and installing the package..."
+			makechrootpkg -c -r $CHROOT -- -sf $ask $pgp
+			. ./PKGBUILD
+			sudo pacman -U $ask ./${pkgname}-${pkgver}-${pkgrel}-${arch}.pkg.tar.xz
 		else
-			makepkg -sif $ask
+			echo ":: Making and installing the package..."
+			makepkg -sif $ask $pgp
 		fi
 		if [[ $? = 0 ]]
 		then
@@ -384,9 +395,13 @@ help(){
 	echo "      --clear           : Cleanes build dir"
 	echo "      -v|--version      : Displays version of this program"
 	echo "      -l|--license      : Displays license of this program"
+	echo "      --make-chroot     : Creates a chroot dir which can be used for building packages"
 	echo ""
 	echo "   Additional options for -S,-R,-Syu,-asp:"
 	echo "      n                 : Doesn't ask questions"
+	echo "      spgp              : Skips pgp checks of sourcecode"
+	echo "      c                 : Builds the package in a clean chroot"
+	echo "			The options have to be given in the right order!!!"
 	echo ""
 	echo "   Hookoptions:"
 	echo "      --listhooks       : Lists all available and installed hooks"
@@ -399,114 +414,140 @@ help(){
 }
 
 case $1 in
-	-S)
-	shift
-	install $@
-	exit 0
+	-S | -Sn | -Snspgp | -Sspgp | -Sc | -Snc | -Snspgpc | -Sspgpc)
+		if [[ $1 = "-Sn" ]] || [[ $1 = "-Snc" ]] || [[ $1 = "-Snspgp" ]] || [[ $1 = "-Snspgpc" ]]
+		then
+			ask=--noconfirm
+		fi
+		if  [[ $1 = "-Sspgp" ]] || [[ $1 = "-Snspgp" ]] || [[ $1 = "-Snspgpc" ]] || [[ $1 = "-Sspgpc" ]]
+		then
+			pgp=--skippgpcheck
+		fi
+		if [[ $1 = "-Sc" ]] || [[ $1 = "-Snc" ]] || [[ $1 = "-Snspgpc" ]] || [[ $1 = "-Sspgpc" ]]
+		then
+			buildchroot=yes
+		fi
+		shift
+		install $@
+		exit 0
 	;;
-	-asp)
-	shift
-	mode=asp
-	install $@
-	exit 0
-	;;
-	-aspn)
-	shift
-	ask=--noconfirm
-	mode=asp
-	install $@
-	exit 0
-	;;
-	-Sn)
-	shift
-	ask=--noconfirm
-	install $@
-	exit 0
+	-asp | -aspn | -aspnspgp | -aspspgp | -aspc | -aspnc | -aspnspgpc | -aspspgpc)
+		if [[ $1 = "-aspn" ]] || [[ $1 = "-aspnspgp" ]] || [[ $1 = "-aspnc" ]] || [[ $1 = "-aspnspgpc" ]]
+		then
+			ask=--noconfirm
+		fi
+		if  [[ $1 = "-aspspgp" ]] || [[ $1 = "-aspnspgp" ]] || [[ $1 = "-aspspgpc" ]] || [[ $1 = "-aspnspgpc" ]]
+		then
+			pgp=--skippgpcheck
+		fi
+		if [[ $1 = "-aspc" ]] || [[ $1 = "-aspnc" ]] || [[ $1 = "-aspnspgpc" ]] || [[ $1 = "-aspspgpc" ]]
+		then
+			buildchroot=yes
+		fi
+		shift
+		mode=asp
+		install $@
+		exit 0
 	;;
 	-Q)
-	if [[ $2 = "" ]]
-	then
-		echo ":: Checking installed AUR packages..."
-		echo "  $(pacman -Qqm | wc -l) packages are curently installed from the AUR!"
-		echo ":: Giving out package infos..."
-		all=true
-		info -t $(pacman -Qqm)
-	else
-		info $@
-	fi
-	exit 0
+		if [[ $2 = "" ]]
+		then
+			echo ":: Checking installed AUR packages..."
+			echo "  $(pacman -Qqm | wc -l) packages are curently installed from the AUR!"
+			echo ":: Giving out package infos..."
+			all=true
+			info -t $(pacman -Qqm)
+		else
+			info $@
+		fi
+		exit 0
 	;;
-	-Qs)
-	if [[ $2 = "" ]]
-	then
-		echo "Error: No search subject given!"
-		exit 2
-	else
-		search $@
-	fi
-	exit 0
+		-Qs)
+		if [[ $2 = "" ]]
+		then
+			echo "Error: No search subject given!"
+			exit 2
+		else
+			search $@
+		fi
+		exit 0
 	;;
 	-R)
-	sudo pacman $@
-	exit 0
+		sudo pacman $@
+		exit 0
 	;;
 	-Rn)
-	sudo pacman --noconfirm $@
-	exit 0
+		sudo pacman --noconfirm $@
+		exit 0
 	;;
-	-Syu | -Syyu)
-	update -t $(pacman -Qqm)
-	exit 0
-	;;
-	-Syun)
-	ask=--noconfirm
-	update -t $(pacman -Qqm)
-	exit 0
+	-Syu | -Syun | -Syunspgp | -Syuspgp | -Syuc | -Syunc | -Syunspgpc | -Syuspgpc)
+	if [[ $1 = "-Syun" ]] || [[ $1 = "-Syunc" ]] || [[ $1 = "-Syunspgp" ]] || [[ $1 = "-Syunspgpc" ]]
+	then
+		ask=--noconfirm
+	fi
+	if  [[ $1 = "-Syuspgp" ]] || [[ $1 = "-Syunspgp" ]] || [[ $1 = "-Syunspgpc" ]] || [[ $1 = "-Syuspgpc" ]]
+	then
+		pgp=--skippgpcheck
+	fi
+	if [[ $1 = "-Syuc" ]] || [[ $1 = "-Syunc" ]] || [[ $1 = "-Syunspgpc" ]] || [[ $1 = "-Syuspgpc" ]]
+	then
+		buildchroot=yes
+	fi
+		update -t $(pacman -Qqm)
+		exit 0
 	;;
 	--help | -h)
-	help
-	exit 0
+		help
+		exit 0
 	;;
 	-v | --version)
-	pacman -Q buildaur | cut -d" " -f2 | xargs
-	exit 0
+		pacman -Q buildaur | cut -d" " -f2 | xargs
+		exit 0
 	;;
 	-l | --license)
-	less /usr/share/licenses/buildaur/LICENSE
-	exit 0
+		less /usr/share/licenses/buildaur/LICENSE
+		exit 0
 	;;
 	--clear)
-	echo ":: Cleaning builddir..."
-	echo "  $(ls -lh ~/.cache/buildaur/ | xargs | cut -d" " -f2)B will be removed!"
-	rm -rf ~/.cache/buildaur/*
-	echo ":: Done!"
-	exit 0
+		echo ":: Cleaning builddir..."
+		echo "  $(ls -lh ~/.cache/buildaur/ | xargs | cut -d" " -f2)B will be removed!"
+		rm -rf ~/.cache/buildaur/*
+		echo ":: Done!"
+		exit 0
 	;;
 	--listhooks)
-	listhooks
-	exit 0
+		listhooks
+		exit 0
 	;;
 	--hook-activate)
-	activate $2
-	exit 0
+		activate $2
+		exit 0
 	;;
 	--hook-deactivate)
-	deactivate $2
-	exit 0
+		deactivate $2
+		exit 0
 	;;
 	--help-hooks)
-	hookhelp
-	exit 0
+		hookhelp
+		exit 0
+	;;
+	--make-chroot)
+		echo ":: Creating a chrootdir"
+		mkdir ~/chroot
+		export CHROOT=$HOME/chroot
+		mkarchroot $CHROOT/root base-devel
+		echo "export CHROOT=$HOME/chroot" >> $HOME/.bashrc
+		exit 0
 	;;
 	*)
-	if [[ $1 = "" ]]
-	then
-		echo ":: ERROR: No options are given! Try --help to see all options!"
-		exit 2
-	else
-		# give an error if the option in unknown
-		echo ":: ERROR: '$@' is no known option! Try --help to see all options!"
-		exit 2
-	fi
+		if [[ $1 = "" ]]
+		then
+			echo ":: ERROR: No options are given! Try --help to see all options!"
+			exit 2
+		else
+			# give an error if the option in unknown
+			echo ":: ERROR: '$@' is no known option! Try --help to see all options!"
+			exit 2
+		fi
 	;;
 esac

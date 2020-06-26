@@ -37,9 +37,14 @@ Usage: /usr/bin/buildaur <option> <string><br>
       --clear           : Cleanes build dir<br>
       -v|--version      : Displays version of this program<br>
       -l|--license      : Displays license of this program<br>
+       --make-chroot     : Creates a chroot dir which can be used for building packages<br>
 
    Additional options for -S,-R,-Syu,-asp:<br>
       n                 : Doesn't ask questions<br>
+      spgp              : Skips pgp checks of sourcecode<br>
+      c                 : Builds the package in a clean chroot<br>
+      The options have to be given in the right order!!!
+
 
    Hookoptions:<br>
       --listhooks       : Lists all available and installed hooks<br>
@@ -75,3 +80,7 @@ hooks:
      --listhooks       : Lists all available and installed hooks<br>
      --hook-activate   : Activates a hook<br>
      --hook-deactivate : Deactivates a hook<br>
+
+# Config file
+
+The config file for buildaur is ' /etc/buildaur/buildaur.conf'. It can be used to set variables which apeare in buildaur, like 'ask', 'pgp' and 'buildchroot'. It can also contain code that should be integrated into buildaur.
