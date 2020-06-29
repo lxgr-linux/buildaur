@@ -6,7 +6,7 @@ normal=$(tput sgr0)
 
 
 options(){
-	install=i
+	installindex=i
 	if [[ $(echo $1 | egrep n) != "" ]]
 	then
 		ask=--noconfirm
@@ -18,10 +18,14 @@ options(){
 	if [[ $(echo $1 | egrep c) != "" ]]
 	then
 		buildchroot=yes
+		if [[ $(uname -m) = armv7l ]]
+		then
+			echo ":: Warning: You may run into some issues using chroots on ALARM!"
+		fi
 	fi
 	if [[ $(echo $1 | egrep di) != "" ]]
 	then
-		install=""
+		installindex=""
 	fi
 }
 
@@ -143,7 +147,7 @@ preinst(){
 	while [[ $# -gt 0 ]]
 	do
 		key=$1
-		if [[ $mode != asp ]] & [[ $mode != url ]]
+		if [[ $mode != asp ]] && [[ $mode != url ]]
 		then
 			ver=$(pacman -Q $key 2>/dev/null | cut -d" " -f2 | xargs)
 			res=$(curl -s 'https://aur.archlinux.org/rpc/?v=5&type=multiinfo&arg[]='$key'')
@@ -204,6 +208,7 @@ realinst(){
 		then
 			echo ":: Exporting package..."
 			asp export $1 2>/dev/null
+			cd ~/.cache/buildaur/build/$1
 			if [[ $? != 0 ]]
 			then
 				echo "ERROR: $1 not found!"
@@ -254,13 +259,13 @@ realinst(){
 			echo ":: Making and installing the package..."
 			makechrootpkg -c -r $CHROOT -- -sf $ask $pgp
 			. ./PKGBUILD
-			if [[ $install = i ]]
+			if [[ $installindex = i ]]
 			then
 				sudo pacman -U $ask ./${pkgname}-${pkgver}-${pkgrel}-${arch}.pkg.tar.xz
 			fi
 		else
 			echo ":: Making and installing the package..."
-			makepkg -s${install}f $ask $pgp
+			makepkg -s${installindex}f $ask $pgp
 		fi
 		if [[ $? = 0 ]]
 		then
@@ -453,7 +458,7 @@ help(){
 	echo "   Additional options for -S,-R,-Syu,-asp:"
 	echo "      n                 : Doesn't ask questions"
 	echo "      spgp              : Skips pgp checks of sourcecode"
-	echo "      c                 : Builds the package in a clean chroot"
+	echo "      c                 : Builds the package in a clean chroot (you may run into some problems using this on archlinux arm!)"
 	echo ""
 	echo "   Hookoptions:"
 	echo "      --listhooks       : Lists all available and installed hooks"
