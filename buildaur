@@ -4,7 +4,41 @@ black=($(cat /usr/share/buildaur/blacklist))
 bold=$(tput bold)
 normal=$(tput sgr0)
 
+
+options(){
+	install=i
+	if [[ $(echo $1 | egrep n) != "" ]]
+	then
+		ask=--noconfirm
+	fi
+	if [[ $(echo $1 | egrep spgp) != "" ]]
+	then
+		pgp=--skippgpcheck
+	fi
+	if [[ $(echo $1 | egrep c) != "" ]]
+	then
+		buildchroot=yes
+	fi
+	if [[ $(echo $1 | egrep di) != "" ]]
+	then
+		install=""
+	fi
+}
+
+netcheck(){
+	if [[ $net != true ]]
+	then
+		if [[ $(ping -c 1 google.de >/dev/null 2>/dev/null ; echo $?) != 0 ]]
+		then
+			echo "ERROR: Network is not reachable!"
+			exit 1
+		fi
+		net=true
+	fi
+}
+
 info(){
+	netcheck
 	while [[ $# -gt 1 ]]
 	do
 		key=$2
@@ -17,7 +51,7 @@ info(){
 			then
 				echo "Warning: $key ist not in the AUR!"
 			else
-				echo "Error: $key ist not in the AUR!"
+				echo "ERROR: $key ist not in the AUR!"
 				exit 2
 			fi
 		fi
@@ -37,6 +71,7 @@ info(){
 }
 
 search(){
+	netcheck
 	while [[ $# -gt 1 ]]
 	do
 		key=$2
@@ -96,11 +131,7 @@ depts(){
 }
 
 install(){
-	if [[ $(ping -c 1 google.com 2>/dev/null) = "" ]]
-	then
-		echo "ERROR: Network is not reachable!"
-		exit 2
-	fi
+	netcheck
 	sudo pacman -Sy
 	installcount=1
 	preinst $@
@@ -112,7 +143,7 @@ preinst(){
 	while [[ $# -gt 0 ]]
 	do
 		key=$1
-		if [[ $mode != asp ]]
+		if [[ $mode != asp ]] & [[ $mode != url ]]
 		then
 			ver=$(pacman -Q $key 2>/dev/null | cut -d" " -f2 | xargs)
 			res=$(curl -s 'https://aur.archlinux.org/rpc/?v=5&type=multiinfo&arg[]='$key'')
@@ -159,7 +190,7 @@ realinst(){
 	while [[ $# -gt 0 ]]
 	do
 		echo ""
-		if [[ $mode = asp ]]
+		if [[ $mode = asp ]] || [[ $mode = url ]]
 		then
 			echo "($installcount/$(expr $# + $installcount - 1)) Installing ${bold}$1${normal} ..."
 		else
@@ -168,6 +199,7 @@ realinst(){
 		mkdir -p ~/.cache/buildaur/build
 		cd ~/.cache/buildaur/build
 		rm -rf  ~/.cache/buildaur/build/$1
+		rm -rf  ~/.cache/buildaur/build/urlbuild
 		if [[ $mode = asp ]]
 		then
 			echo ":: Exporting package..."
@@ -179,9 +211,15 @@ realinst(){
 			fi
 		else
 			echo ":: Clonig git repository..."
-			git clone https://aur.archlinux.org/$1.git
+			if [[ $mode = url ]]
+			then
+				git clone $1 ~/.cache/buildaur/build/urlbuild
+				cd ~/.cache/buildaur/build/urlbuild
+			else
+				git clone https://aur.archlinux.org/$1.git
+				cd ~/.cache/buildaur/build/$1
+			fi
 		fi
-		cd ~/.cache/buildaur/build/$1
 		if [[ $ask = "--noconfirm" ]]
 		then
 			ans=n
@@ -198,31 +236,44 @@ realinst(){
 		echo ":: Running prehooks..."
 		prehooks
 		depts
-		cd ~/.cache/buildaur/build/$1
+		if [[ $mode = url ]]
+		then
+			cd ~/.cache/buildaur/build/urlbuild
+		else
+			cd ~/.cache/buildaur/build/$1
+		fi
 		if [[ $buildchroot = yes ]]
 		then
 			if [[ $CHROOT = "" ]]
 			then
-				echo "Error: CHROOT variable is not defined! Use '--make-chroot' to create a chroot first"
+				echo "ERROR: CHROOT variable is not defined! Use '--make-chroot' to create a chroot first"
 				exit 1
 			fi
 			echo ":: Updating chrootpackages..."
-			arch-nspawn $CHROOT/root pacman -Syu
+			arch-nspawn $CHROOT/root pacman -Syu $ask
 			echo ":: Making and installing the package..."
 			makechrootpkg -c -r $CHROOT -- -sf $ask $pgp
 			. ./PKGBUILD
-			sudo pacman -U $ask ./${pkgname}-${pkgver}-${pkgrel}-${arch}.pkg.tar.xz
+			if [[ $install = i ]]
+			then
+				sudo pacman -U $ask ./${pkgname}-${pkgver}-${pkgrel}-${arch}.pkg.tar.xz
+			fi
 		else
 			echo ":: Making and installing the package..."
-			makepkg -sif $ask $pgp
+			makepkg -s${install}f $ask $pgp
 		fi
 		if [[ $? = 0 ]]
 		then
 			echo ":: Running posthooks..."
 			posthooks
-			echo ":: Installation finished!"
+			if [[ $install = "" ]]
+			then
+				echo ":: Info: Succesfully created package in $(pwd)!"
+			else
+				echo ":: Installation finished!"
+			fi
 		else
-			echo ":: Error: Package installation FAILED!"
+			echo ":: ERROR: Package installation FAILED!"
 			errorcount=$(expr $errorcount + 1)
 		fi
 		shift
@@ -231,6 +282,7 @@ realinst(){
 }
 
 update(){
+	netcheck
 	echo ":: Checking installed AUR packages..."
 	echo "  $(pacman -Qqm | wc -l) packages are curently installed from the AUR!"
 	echo ":: Checking for outdated packages..."
@@ -391,7 +443,8 @@ help(){
 	echo "      -Q                : Lists installed packages or searches for ones in the AUR"
 	echo "      -Qs               : Search the AUR"
 	echo "      -Syu              : Updates all AUR packages"
-	echo "      -asp              : Builds a package from source using asp (suefull for archlinux arm)"
+	echo "      -url              : Installs a package from a given git-repository"
+	echo "      -asp              : Builds a package from source using asp (usefull for archlinux arm)"
 	echo "      --clear           : Cleanes build dir"
 	echo "      -v|--version      : Displays version of this program"
 	echo "      -l|--license      : Displays license of this program"
@@ -401,7 +454,6 @@ help(){
 	echo "      n                 : Doesn't ask questions"
 	echo "      spgp              : Skips pgp checks of sourcecode"
 	echo "      c                 : Builds the package in a clean chroot"
-	echo "			The options have to be given in the right order!!!"
 	echo ""
 	echo "   Hookoptions:"
 	echo "      --listhooks       : Lists all available and installed hooks"
@@ -414,36 +466,21 @@ help(){
 }
 
 case $1 in
-	-S | -Sn | -Snspgp | -Sspgp | -Sc | -Snc | -Snspgpc | -Sspgpc)
-		if [[ $1 = "-Sn" ]] || [[ $1 = "-Snc" ]] || [[ $1 = "-Snspgp" ]] || [[ $1 = "-Snspgpc" ]]
-		then
-			ask=--noconfirm
-		fi
-		if  [[ $1 = "-Sspgp" ]] || [[ $1 = "-Snspgp" ]] || [[ $1 = "-Snspgpc" ]] || [[ $1 = "-Sspgpc" ]]
-		then
-			pgp=--skippgpcheck
-		fi
-		if [[ $1 = "-Sc" ]] || [[ $1 = "-Snc" ]] || [[ $1 = "-Snspgpc" ]] || [[ $1 = "-Sspgpc" ]]
-		then
-			buildchroot=yes
-		fi
+	-S | -Sn* | -Sspgp* | -Sc* | -Sdi* )
+		options $@
 		shift
 		install $@
 		exit 0
 	;;
-	-asp | -aspn | -aspnspgp | -aspspgp | -aspc | -aspnc | -aspnspgpc | -aspspgpc)
-		if [[ $1 = "-aspn" ]] || [[ $1 = "-aspnspgp" ]] || [[ $1 = "-aspnc" ]] || [[ $1 = "-aspnspgpc" ]]
-		then
-			ask=--noconfirm
-		fi
-		if  [[ $1 = "-aspspgp" ]] || [[ $1 = "-aspnspgp" ]] || [[ $1 = "-aspspgpc" ]] || [[ $1 = "-aspnspgpc" ]]
-		then
-			pgp=--skippgpcheck
-		fi
-		if [[ $1 = "-aspc" ]] || [[ $1 = "-aspnc" ]] || [[ $1 = "-aspnspgpc" ]] || [[ $1 = "-aspspgpc" ]]
-		then
-			buildchroot=yes
-		fi
+	-url*)
+		options $@
+		shift
+		mode=url
+		install $@
+		exit 0
+	;;
+	-asp*)
+		options $@
 		shift
 		mode=asp
 		install $@
@@ -462,10 +499,10 @@ case $1 in
 		fi
 		exit 0
 	;;
-		-Qs)
+	-Qs)
 		if [[ $2 = "" ]]
 		then
-			echo "Error: No search subject given!"
+			echo "ERROR: No search subject given!"
 			exit 2
 		else
 			search $@
@@ -480,19 +517,8 @@ case $1 in
 		sudo pacman --noconfirm $@
 		exit 0
 	;;
-	-Syu | -Syun | -Syunspgp | -Syuspgp | -Syuc | -Syunc | -Syunspgpc | -Syuspgpc)
-	if [[ $1 = "-Syun" ]] || [[ $1 = "-Syunc" ]] || [[ $1 = "-Syunspgp" ]] || [[ $1 = "-Syunspgpc" ]]
-	then
-		ask=--noconfirm
-	fi
-	if  [[ $1 = "-Syuspgp" ]] || [[ $1 = "-Syunspgp" ]] || [[ $1 = "-Syunspgpc" ]] || [[ $1 = "-Syuspgpc" ]]
-	then
-		pgp=--skippgpcheck
-	fi
-	if [[ $1 = "-Syuc" ]] || [[ $1 = "-Syunc" ]] || [[ $1 = "-Syunspgpc" ]] || [[ $1 = "-Syuspgpc" ]]
-	then
-		buildchroot=yes
-	fi
+	-Syu*)
+		options $@
 		update -t $(pacman -Qqm)
 		exit 0
 	;;
@@ -510,8 +536,8 @@ case $1 in
 	;;
 	--clear)
 		echo ":: Cleaning builddir..."
-		echo "  $(ls -lh ~/.cache/buildaur/ | xargs | cut -d" " -f2)B will be removed!"
-		rm -rf ~/.cache/buildaur/*
+		echo "  $(du -hcs ~/.cache/buildaur/build | xargs | awk {'print $1'})B will be removed!"
+		rm -rf ~/.cache/buildaur/build/*
 		echo ":: Done!"
 		exit 0
 	;;
@@ -533,6 +559,7 @@ case $1 in
 	;;
 	--make-chroot)
 		echo ":: Creating a chrootdir"
+		sudo rm -rf ~/chroot 2>/dev/null
 		mkdir ~/chroot
 		export CHROOT=$HOME/chroot
 		mkarchroot $CHROOT/root base-devel

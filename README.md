@@ -26,14 +26,15 @@ Then the installation will be finished.
 
 Like most other shell programs buildaur has some options which can be used to specify what the program should exactly do:
 
-Usage: /usr/bin/buildaur <option> <string><br>
+Usage: /usr/bin/buildaur "<option> <string>"<br>
    General options:<br>
       -S                : Installs a package<br>
       -R                : Removes a package<br>
       -Q                : Lists installed packages or searches for ones in the AUR<br>
       -Qs               : Search the AUR<br>
       -Syu              : Updates all AUR packages<br>
-      -asp              : Builds a package from source using asp (suefull for archlinux arm)<br>
+      -url              : Installs a package from a given git-repository<br>
+      -asp              : Builds a package from source using asp (usefull for archlinux arm)<br>
       --clear           : Cleanes build dir<br>
       -v|--version      : Displays version of this program<br>
       -l|--license      : Displays license of this program<br>
@@ -43,8 +44,6 @@ Usage: /usr/bin/buildaur <option> <string><br>
       n                 : Doesn't ask questions<br>
       spgp              : Skips pgp checks of sourcecode<br>
       c                 : Builds the package in a clean chroot<br>
-      The options have to be given in the right order!!!
-
 
    Hookoptions:<br>
       --listhooks       : Lists all available and installed hooks<br>
