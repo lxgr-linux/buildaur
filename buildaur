@@ -135,6 +135,11 @@ depts(){
 }
 
 install(){
+	if [[ $@ = "" ]]
+	then
+		echo " Nothing to do"
+		exit 0
+	fi
 	netcheck
 	sudo pacman -Sy
 	installcount=1
@@ -221,7 +226,7 @@ realinst(){
 				git clone $1 ~/.cache/buildaur/build/urlbuild
 				cd ~/.cache/buildaur/build/urlbuild
 			else
-				git clone https://aur.archlinux.org/$1.git
+				git clone https://aur.archlinux.org/$1.git ~/.cache/buildaur/build/$1
 				cd ~/.cache/buildaur/build/$1
 			fi
 		fi
@@ -332,12 +337,7 @@ update(){
 		shift
 	done
 	echo ""
-	if [[ $willinst = "" ]]
-	then
-		printf 2 >> /dev/null
-	else
-		install ${willinst[@]}
-	fi
+	install ${willinst[@]}
 	if [[ $errorcount = 0 ]]
 	then
 		echo " No errors accured"
