@@ -66,12 +66,13 @@ Examples:<br>
   It builds a specified package which may or may not be in the official Archlinux ARM repository, but is in the one for x86_64, completly from source and installes it. This is usefull because some packages are not already ported to ARM but may work.
 
 hooks:
-  Hooks are skripts that run before and after the packagebuild.
+  Pre- and Posthooks are skripts that run before and after the packagebuild.
   They are made to for example modify the PKGBUILD
+  Pre- and Postrunhooks are skripts that run before the installaion it self to fix dependency issues etc.
   All hooks are stored in /etc/buildaur/hooks
   In /etc/buildaur/prehooks are the hooks stored wich run before the packagebuild
   and in /etc/buildaur/posthooks those wich run after the packagebuild.
-  A hook always contains a 'type' (pre oder post) and a 'desc' variable.
+  A hook always contains a 'type' (pre, post, prerun or postrun) and a 'desc' variable.
   It also contains an if-function wich contains the modifications for the PKGBUILD and so on
   See /etc/buildaur/prehooks/1-arm-archfix as an example.
 
@@ -79,6 +80,8 @@ hooks:
      --listhooks       : Lists all available and installed hooks<br>
      --hook-activate   : Activates a hook<br>
      --hook-deactivate : Deactivates a hook<br>
+
+     When 'all' is given as argument for --hook-activate and --hook-deactivate the action applyes to all hooks.
 
 # Config file
 

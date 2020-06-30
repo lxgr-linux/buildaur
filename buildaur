@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
+#maintainer lxgr <lxgr@protonmail.com>
 . /etc/buildaur/buildaur.conf
 black=($(cat /usr/share/buildaur/blacklist))
 bold=$(tput bold)
+red=$(tput setaf 1)
 normal=$(tput sgr0)
-
 
 options(){
 	installindex=i
@@ -20,7 +21,7 @@ options(){
 		buildchroot=yes
 		if [[ $(uname -m) = armv7l ]]
 		then
-			echo ":: Warning: You may run into some issues using chroots on ALARM!"
+			echo ":: ${bold}Warning:${normal} You may run into some issues using chroots on ALARM!"
 		fi
 	fi
 	if [[ $(echo $1 | egrep di) != "" ]]
@@ -34,7 +35,7 @@ netcheck(){
 	then
 		if [[ $(ping -c 1 google.de >/dev/null 2>/dev/null ; echo $?) != 0 ]]
 		then
-			echo "ERROR: Network is not reachable!"
+			echo ":: ${red}${bold}ERROR:${normal} Network is not reachable!"
 			exit 1
 		fi
 		net=true
@@ -53,9 +54,9 @@ info(){
 		then
 			if [[ $all = true ]]
 			then
-				echo "Warning: $key ist not in the AUR!"
+				echo "  ${bold}Warning:${normal} $key ist not in the AUR!"
 			else
-				echo "ERROR: $key ist not in the AUR!"
+				echo "${red}${bold}ERROR:${normal} $key ist not in the AUR!"
 				exit 2
 			fi
 		fi
@@ -66,7 +67,7 @@ info(){
 		echo "  "$key $(curl -s 'https://aur.archlinux.org/rpc/?v=5&type=multiinfo&arg[]='$key'' | cut -d'"' -f26) "(local: $ver)"
 		if [[ $remoteinfo = "" ]]
 		then
-			echo "     Warning: AUR does not provide information about this package!"
+			echo "     ${bold}Warning:${normal} AUR does not provide information about this package!"
 		else
 			echo "     "$remoteinfo
 		fi
@@ -98,7 +99,7 @@ search(){
 			echo "  "$name $(echo $cutted | cut -d'"' -f16) "(local: $ver)"
 			if [[ $remoteinfo = "" ]]
 			then
-				echo "     Warning: AUR does not provide information about this package!"
+				echo "     ${bold}Warning:${normal} AUR does not provide information about this package!"
 			else
 				echo "     "$remoteinfo
 			fi
@@ -112,7 +113,7 @@ depts(){
 	. ./PKGBUILD
 	aurdeps=()
 	depcount=1
-	depmaxcount=$(echo ${depends[@]} | wc -w)
+	depmaxcount=${#depends[*]}
 	echo ":: Checking for dependecies..."
 	echo "  ($depmaxcount) Packages: ${depends[@]}"
 	while [[ $depcount -le $depmaxcount ]]
@@ -135,15 +136,18 @@ depts(){
 }
 
 install(){
+	echo ":: Running prerunhooks..."
+	prerun
 	if [[ $@ = "" ]]
 	then
 		echo " Nothing to do"
 		exit 0
 	fi
 	netcheck
-	sudo pacman -Sy
 	installcount=1
 	preinst $@
+	echo ":: Running postrunhooks..."
+	postrun
 }
 
 preinst(){
@@ -159,7 +163,7 @@ preinst(){
 			remotever=$(echo $res | cut -d'"' -f26)
 			if [[ $(echo $res | cut -d'"' -f9) = ":0," ]]
 			then
-				echo "ERROR: $key ist not in the AUR!"
+				echo "${red}${bold}ERROR:${normal} $key ist not in the AUR!"
 				exit 1
 			fi
 			if [[ $ver = "" ]]
@@ -167,20 +171,25 @@ preinst(){
 				printf ""
 			elif [[ $ver = $remotever ]]
 			then
-				echo "Warning: $key-$ver is allready on $remotever -- reinstalling"
+				echo "${bold}Warning:${normal} $key-$ver is allready on $remotever -- reinstalling"
 			else
-				echo "Info: $key-$ver will be updated to $remotever!"
+				if [[ $(echo -e "$ver\n$remotever" | sort | xargs | awk {'print $1'}) = $ver ]]
+				then
+					echo "Info: $key-$ver will be updated to $remotever!"
+				else
+					echo "${bold}Warning:${normal} $key-$ver is higher than AUR $remotever!"
+				fi
 			fi
 			if [[ $(echo $res | cut -d'"' -f41) != :null, ]]
 			then
-				echo  "Warning: $key is flagged out of date!"
+				echo  "${bold}Warning:${normal} $key is flagged out of date!"
 			fi
 		fi
 		installpac=(${installpac[@]} $key)
 		shift
 	done
 	echo ""
-	echo "Packages ($(echo ${installpac[@]} | wc -w)): ${installpac[@]}"
+	echo "Packages (${#installpac[*]}): ${installpac[@]}"
 	echo ""
 	if [[ $ask = "--noconfirm" ]]
 	then
@@ -196,6 +205,7 @@ preinst(){
 }
 
 realinst(){
+	sudo pacman -Sy
 	while [[ $# -gt 0 ]]
 	do
 		echo ""
@@ -216,7 +226,7 @@ realinst(){
 			cd ~/.cache/buildaur/build/$1
 			if [[ $? != 0 ]]
 			then
-				echo "ERROR: $1 not found!"
+				echo ":: ${red}${bold}ERROR:${normal} $1 not found!"
 				exit 2
 			fi
 		else
@@ -256,7 +266,7 @@ realinst(){
 		then
 			if [[ $CHROOT = "" ]]
 			then
-				echo "ERROR: CHROOT variable is not defined! Use '--make-chroot' to create a chroot first"
+				echo ":: ${red}${bold}ERROR:${normal}: CHROOT variable is not defined! Use '--make-chroot' to create a chroot first"
 				exit 1
 			fi
 			echo ":: Updating chrootpackages..."
@@ -276,14 +286,14 @@ realinst(){
 		then
 			echo ":: Running posthooks..."
 			posthooks
-			if [[ $install = "" ]]
+			if [[ $installindex = "" ]]
 			then
 				echo ":: Info: Succesfully created package in $(pwd)!"
 			else
 				echo ":: Installation finished!"
 			fi
 		else
-			echo ":: ERROR: Package installation FAILED!"
+			echo ":: ${red}${bold}ERROR:${normal} Package installation FAILED!"
 			errorcount=$(expr $errorcount + 1)
 		fi
 		shift
@@ -318,7 +328,12 @@ update(){
 				then
 					echo "($count/$maxcount) $key-$ver is up to date"
 				else
-					echo "($count/$maxcount) $key-$ver is out of date! $remotever is available!"
+					if [[ $(echo -e "$ver\n$remotever" | sort | xargs | awk {'print $1'}) = $ver ]]
+					then
+						echo "($count/$maxcount) $key-$ver is out of date! $remotever is available!"
+					else
+						echo "($count/$maxcount) ${bold}Warning:${normal} $key-$ver is higher than AUR $remotever!"
+					fi
 					if [[ $ask = "--noconfirm" ]]
 					then
 						ans=y
@@ -349,7 +364,7 @@ update(){
 prehooks(){
 	prehooks=($(ls /etc/buildaur/prehooks))
 	hookcount=0
-	while [[ $hookcount -lt $(echo ${prehooks[@]} | wc -w) ]]
+	while [[ $hookcount -lt ${#prehooks[*]} ]]
 	do
 		echo " ${prehooks[$hookcount]}..."
 		/etc/buildaur/prehooks/${prehooks[$hookcount]} -u
@@ -360,10 +375,32 @@ prehooks(){
 posthooks(){
 	posthooks=($(ls /etc/buildaur/posthooks))
 	hookcount=0
-	while [[ $hookcount -lt $(echo ${posthooks[@]} | wc -w) ]]
+	while [[ $hookcount -lt ${#posthooks[*]} ]]
 	do
 		echo " ${posthooks[$hookcount]}..."
 		/etc/buildaur/posthooks/${posthooks[$hookcount]} -u
+		hookcount=$(expr $hookcount + 1)
+	done
+}
+
+prerun(){
+	prerunhooks=($(ls /etc/buildaur/prerunhooks))
+	hookcount=0
+	while [[ $hookcount -lt ${#prerunhooks[*]} ]]
+	do
+		echo " ${prerunhooks[$hookcount]}..."
+		/etc/buildaur/prerunhooks/${prerunhooks[$hookcount]} -u
+		hookcount=$(expr $hookcount + 1)
+	done
+}
+
+postrun(){
+	postrunhooks=($(ls /etc/buildaur/postrunhooks))
+	hookcount=0
+	while [[ $hookcount -lt ${#prerunhooks[*]} ]]
+	do
+		echo " ${postrunhooks[$hookcount]}..."
+		/etc/buildaur/postrunhooks/${postrunhooks[$hookcount]} -u
 		hookcount=$(expr $hookcount + 1)
 	done
 }
@@ -372,7 +409,7 @@ listhooks(){
 	echo "Prehooks:"
 	prehooks=($(ls /etc/buildaur/prehooks))
 	hookcount=0
-	while [[ $hookcount -lt $(echo ${prehooks[@]} | wc -w) ]]
+	while [[ $hookcount -lt ${#prehooks[*]} ]]
 	do
 		. /etc/buildaur/prehooks/${prehooks[$hookcount]}
 		echo " ${prehooks[$hookcount]}"
@@ -382,17 +419,37 @@ listhooks(){
 	echo "Posthooks:"
 	posthooks=($(ls /etc/buildaur/posthooks))
 	hookcount=0
-	while [[ $hookcount -lt $(echo ${posthooks[@]} | wc -w) ]]
+	while [[ $hookcount -lt ${#posthooks[*]} ]]
 	do
 		. /etc/buildaur/posthooks/${posthooks[$hookcount]}
 		echo " ${posthooks[$hookcount]}"
 		echo "  $desc"
 		hookcount=$(expr $hookcount + 1)
 	done
+	echo "Prerunhooks:"
+	prerunhooks=($(ls /etc/buildaur/prerunhooks))
+	hookcount=0
+	while [[ $hookcount -lt ${#prerunhooks[*]} ]]
+	do
+		. /etc/buildaur/prerunhooks/${prerunhooks[$hookcount]}
+		echo " ${prerunhooks[$hookcount]}"
+		echo "  $desc"
+		hookcount=$(expr $hookcount + 1)
+	done
+	echo "Postrunhooks:"
+	postrunhooks=($(ls /etc/buildaur/postrunhooks))
+	hookcount=0
+	while [[ $hookcount -lt ${#postrunhooks[*]} ]]
+	do
+		. /etc/buildaur/postrunhooks/${postrunhooks[$hookcount]}
+		echo " ${postrunhooks[$hookcount]}"
+		echo "  $desc"
+		hookcount=$(expr $hookcount + 1)
+	done
 	echo "Deactivated hooks:"
 	hooks=($(ls /etc/buildaur/hooks))
 	hookcount=0
-	while [[ $hookcount -lt $(echo ${hooks[@]} | wc -w) ]]
+	while [[ $hookcount -lt ${#hooks[*]} ]]
 	do
 		. /etc/buildaur/hooks/${hooks[$hookcount]}
 		echo " ${hooks[$hookcount]}"
@@ -402,28 +459,42 @@ listhooks(){
 }
 
 activate(){
-	. /etc/buildaur/hooks/$@ 2>/dev/null
-	sudo mv /etc/buildaur/hooks/$@ /etc/buildaur/${type}hooks/ 2>/dev/null
-	if [[ $? = 0 ]]
-	then
-		echo ":: Finished!"
-	else
-		echo ":: Failed! $@ is not available!"
-		exit 1
-	fi
+	hookcount=$#
+	while [[ $hookcount -gt 0 ]]
+	do
+		. /etc/buildaur/hooks/$1 2>/dev/null
+		sudo mv /etc/buildaur/hooks/$1 /etc/buildaur/${type}hooks/ 2>/dev/null
+		if [[ $? = 0 ]]
+		then
+			echo ":: Activated $1!"
+		else
+			echo ":: ${red}${bold}ERROR:${normal} $1 is not available!"
+			exit 1
+		fi
+		hookcount=$(expr $hookcount - 1)
+		shift
+	done
 }
 
 deactivate(){
-	. /etc/buildaur/prehooks/$@ 2>/dev/null
-	. /etc/buildaur/posthooks/$@ 2>/dev/null
-	sudo mv /etc/buildaur/${type}hooks/$@ /etc/buildaur/hooks/ 2>/dev/null
-	if [[ $? = 0 ]]
-	then
-		echo ":: Finished!"
-	else
-		echo ":: Failed! $@ is not available!"
-		exit 1
-	fi
+	hookcount=$#
+	while [[ $hookcount -gt 0 ]]
+	do
+		. /etc/buildaur/prehooks/$1 2>/dev/null
+		. /etc/buildaur/posthooks/$1 2>/dev/null
+		. /etc/buildaur/prerunhooks/$1 2>/dev/null
+		. /etc/buildaur/postrunhooks/$1 2>/dev/null
+		sudo mv /etc/buildaur/${type}hooks/$1 /etc/buildaur/hooks/ 2>/dev/null
+		if [[ $? = 0 ]]
+		then
+			echo ":: Deactivated $1!"
+		else
+			echo ":: ${red}${bold}ERROR:${normal} is not available!"
+			exit 1
+		fi
+		hookcount=$(expr $hookcount - 1)
+		shift
+	done
 }
 
 hookhelp(){
@@ -437,6 +508,11 @@ hookhelp(){
 	echo "  A hook always contains a 'type' (pre oder post) and a 'desc' variable."
 	echo "  It also contains an if-function wich contains the modifications for the PKGBUILD and so on"
 	echo "  See /etc/buildaur/prehooks/1-arm-archfix as an example."
+	echo ""
+	echo "   Hookoptions:"
+	echo "      --listhooks       : Lists all available and installed hooks"
+	echo "      --hook-activate   : Activates a hook"
+	echo "      --hook-deactivate : Deactivates a hook"
 }
 
 help(){
@@ -507,7 +583,7 @@ case $1 in
 	-Qs)
 		if [[ $2 = "" ]]
 		then
-			echo "ERROR: No search subject given!"
+			echo ":: ${red}${bold}ERROR:${normal} No search subject given!"
 			exit 2
 		else
 			search $@
@@ -551,11 +627,23 @@ case $1 in
 		exit 0
 	;;
 	--hook-activate)
-		activate $2
+		shift
+		if [[ $1 = all ]]
+		then
+			activate $(ls /etc/buildaur/hooks)
+		else
+			activate $@
+		fi
 		exit 0
 	;;
 	--hook-deactivate)
-		deactivate $2
+		shift
+		if [[ $1 = all ]]
+		then
+			deactivate $(ls /etc/buildaur/prehooks) $(ls /etc/buildaur/posthooks)
+		else
+			deactivate $@
+		fi
 		exit 0
 	;;
 	--help-hooks)
@@ -574,11 +662,11 @@ case $1 in
 	*)
 		if [[ $1 = "" ]]
 		then
-			echo ":: ERROR: No options are given! Try --help to see all options!"
+			echo ":: ${red}${bold}ERROR:${normal} No options are given! Try --help to see all options!"
 			exit 2
 		else
 			# give an error if the option in unknown
-			echo ":: ERROR: '$@' is no known option! Try --help to see all options!"
+			echo ":: ${red}${bold}ERROR:${normal} '$@' is no known option! Try --help to see all options!"
 			exit 2
 		fi
 	;;

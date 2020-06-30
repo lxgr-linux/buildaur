@@ -5,9 +5,17 @@ desc="Fixes architecture issues for alarm. This may cause trouble with binary pa
 if [[ $1 = "-u" ]]
 then
   . ./PKGBUILD
-  if [[ $(uname -m) != $arch ]] && [[ $arch != any ]]
+  archerrorcount=0
+  for i in ${#arch[*]}
+  do
+    if [[ $(uname -m) != ${arch[i]} ]] && [[ ${arch[i]} != any ]]
+    then
+      archerrorcount=$(expr $archerrorcount + 1)
+    fi
+  done
+  if [[ $archerrorcount = ${#arch[*]} ]]
   then
-    echo "Warning: architecture is $arch"
+    echo "Warning: architecture is ${arch[@]}"
   fi
-echo "arch=(any)" >> ./PKGBUILD
+  echo "arch=(any)" >> ./PKGBUILD
 fi
