@@ -5,13 +5,15 @@ desc="Fixes architecture issues for alarm. This may cause trouble with binary pa
 if [[ $1 = "-u" ]]
 then
   . ./PKGBUILD
+  counter=0
   archerrorcount=0
   for i in ${#arch[*]}
   do
-    if [[ $(uname -m) != ${arch[i]} ]] && [[ ${arch[i]} != any ]]
+    if [[ $(uname -m) != ${arch[$counter]} ]] && [[ ${arch[$counter]} != any ]]
     then
-      archerrorcount=$(expr $archerrorcount + 1)
+      ((archerrorcount++))
     fi
+    ((counter++))
   done
   if [[ $archerrorcount = ${#arch[*]} ]]
   then
