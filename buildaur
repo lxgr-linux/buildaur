@@ -303,53 +303,60 @@ realinst(){
 
 update(){
 	netcheck
-	echo ":: Checking installed AUR packages..."
-	echo "  $(pacman -Qqm | wc -l) packages are curently installed from the AUR!"
-	echo ":: Checking for outdated packages..."
+	pkgnames=($(pacman -Qqm))
+	res="https://aur.archlinux.org/rpc/?v=5&type=multiinfo"
+	counter=0
+	while [[ $counter -lt ${#pkgnames[*]} ]]
+	do
+		res=${res}"&arg[]="${pkgnames[$counter]}
+		((counter++))
+	done
+	res=$(curl -s $res)
+	resultcount=$(echo $res | cut -d'"' -f9 | sed -e 's/://g' | sed -e 's/,//g')
 	willinst=()
 	errorcount=0
-	maxcount=$(expr $# - 1)
+	counter=0
 	count=1
-	while [[ $# -gt 1 ]]
+	echo ":: Checking installed AUR packages..."
+	echo "  $resultcount packages are curently installed from the AUR!"
+	echo ":: Checking for outdated packages..."
+	while [[ $counter -lt $resultcount ]]
 	do
-		key=$2
-		ver=$(pacman -Q $key | cut -d" " -f2 | xargs)
-		res=$(curl -s 'https://aur.archlinux.org/rpc/?v=5&type=multiinfo&arg[]='$key'')
-		remotever=$(echo $res | cut -d'"' -f26)
-		if [[ $(echo ${black[*]} | sed -e 's/ /\n/g'| egrep -xE $key) = "$key" ]]
+		cutted=$(echo $res | cut -d{ -f$(expr $counter + 3))
+	  name=$(echo $cutted | cut -d'"' -f6)
+	  ver=$(pacman -Q $name 2>/dev/null | cut -d" " -f2 | xargs)
+		remotever=$(echo $cutted | cut -d'"' -f16)
+	  if [[ $name = "" ]] || [[ $ver = "" ]]
+	  then
+	  ver="--- "
+	  fi
+		if [[ $(echo ${black[*]} | sed -e 's/ /\n/g'| egrep -xE $name) = "$name" ]]
 		then
-			echo "($count/$maxcount) $key-$ver is out of date! $remotever is available! But it's on the blacklist and will not be updated!"
+			echo "($count/$resultcount) $name-$ver is out of date! $remotever is available! But it's on the blacklist and will not be updated!"
+		elif [[ $remotever = "$ver" ]]
+		then
+			echo "($count/$resultcount) $name-$ver is up to date"
 		else
-			if [[ $(echo $res | cut -d'"' -f9) = ":0," ]]
+			if [[ $(echo -e "$ver\n$remotever" | sort | xargs | awk {'print $1'}) = $ver ]]
 			then
-				echo "($count/$maxcount) $key is not in the AUR!"
+				echo "($count/$resultcount) $name-$ver is out of date! $remotever is available!"
 			else
-				if [[ $remotever = "$ver" ]]
-				then
-					echo "($count/$maxcount) $key-$ver is up to date"
-				else
-					if [[ $(echo -e "$ver\n$remotever" | sort | xargs | awk {'print $1'}) = $ver ]]
-					then
-						echo "($count/$maxcount) $key-$ver is out of date! $remotever is available!"
-					else
-						echo "($count/$maxcount) ${bold}Warning:${normal} $key-$ver is higher than AUR $remotever!"
-					fi
-					if [[ $ask = "--noconfirm" ]]
-					then
-						ans=y
-					else
-						echo ":: Should it be updated? [Y/n]"
-						read ans
-					fi
-					if [[ $ans == y ]] || [[ $ans == "" ]]
-					then
-						willinst=(${willinst[@]} $key)
-					fi
-				fi
+				echo "($count/$resultcount) ${bold}Warning:${normal} $name-$ver is higher than AUR $remotever!"
+			fi
+			if [[ $ask = "--noconfirm" ]]
+			then
+				ans=y
+			else
+				echo ":: Should it be updated? [Y/n]"
+				read ans
+			fi
+			if [[ $ans == y ]] || [[ $ans == "" ]]
+			then
+				willinst=(${willinst[@]} $name)
 			fi
 		fi
-		count=$(expr $count + 1)
-		shift
+		((count++))
+    ((counter++))
 	done
 	echo ""
 	install ${willinst[@]}
@@ -600,7 +607,7 @@ case $1 in
 	;;
 	-Syu*)
 		options $@
-		update -t $(pacman -Qqm)
+		update
 		exit 0
 	;;
 	--help | -h)
