@@ -86,3 +86,7 @@ hooks:
 # Config file
 
 The config file for buildaur is ' /etc/buildaur/buildaur.conf'. It can be used to set variables which apeare in buildaur, like 'ask', 'pgp' and 'buildchroot'. It can also contain code that should be integrated into buildaur.
+
+# Blacklist
+
+The blacklist stored in /usr/share/buildaur/blacklist contains packagenames which are excluded at updates.

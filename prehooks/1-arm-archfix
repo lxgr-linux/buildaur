@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+bold=$(tput bold)
+red=$(tput setaf 1)
+normal=$(tput sgr0)
 type=pre
 desc="Fixes architecture issues for alarm. This may cause trouble with binary packages for x86_64 wich will then be installed as arm ones!"
 
@@ -7,7 +10,7 @@ then
   . ./PKGBUILD
   counter=0
   archerrorcount=0
-  for i in ${#arch[*]}
+  for i in "${arch[@]}"
   do
     if [[ $(uname -m) != ${arch[$counter]} ]] && [[ ${arch[$counter]} != any ]]
     then
@@ -17,7 +20,7 @@ then
   done
   if [[ $archerrorcount = ${#arch[*]} ]]
   then
-    echo "Warning: architecture is ${arch[@]}"
+    echo "${bold}Warning:${normal} architecture is ${arch[@]}"
   fi
   echo "arch=(any)" >> ./PKGBUILD
 fi
