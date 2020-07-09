@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-#maintainer lxgr <lxgr@protonmail.com>
+# maintainer lxgr <lxgr@protonmail.com>
+
+editor=nano
 . /etc/buildaur/buildaur.conf
 black=($(cat /usr/share/buildaur/blacklist))
 bold=$(tput bold)
@@ -35,31 +37,44 @@ netcheck(){
 	then
 		if [[ $(ping -c 1 google.de >/dev/null 2>/dev/null ; echo $?) != 0 ]]
 		then
-			echo ":: ${red}${bold}ERROR:${normal} Network is not reachable!"
-			exit 1
+			if [[ $1 = -x ]]
+			then
+				inet=0
+			else
+				echo ":: ${red}${bold}ERROR:${normal} Network is not reachable!"
+				exit 1
+			fi
 		fi
 		net=true
 	fi
 }
 
 info(){
-	netcheck
+	netcheck -x
 	pkgnames=($@)
-	res="https://aur.archlinux.org/rpc/?v=5&type=multiinfo"
-	counter=0
-	while [[ $counter -lt ${#pkgnames[*]} ]]
-	do
-	res=${res}"&arg[]="${pkgnames[$counter]}
-	((counter++))
-	done
-	res=$(curl -s $res)
+	if [[ $inet = 0 ]]
+	then
+		res=$(cat /usr/share/buildaur/res)
+	else
+		echo ":: Syncing database..."
+		res="https://aur.archlinux.org/rpc/?v=5&type=multiinfo"
+		counter=0
+		while [[ $counter -lt ${#pkgnames[*]} ]]
+		do
+			res=${res}"&arg[]="${pkgnames[$counter]}
+			((counter++))
+		done
+		res=$(curl -s $res)
+		sudo sh -c "echo '$res' > /usr/share/buildaur/res"
+	fi
 	resultcount=$(echo $res | cut -d'"' -f9 | sed -e 's/://g' | sed -e 's/,//g')
 	counter=0
+	echo ":: Giving out package infos..."
 	while [[ $counter -lt $resultcount ]]
 	do
 		cutted=$(echo $res | cut -d{ -f$(expr $counter + 3))
 		name=$(echo $cutted | cut -d'"' -f6)
-		ver=$(pacman -Q $name 2>/dev/null | cut -d" " -f2 | xargs)
+		ver=$(pacman -Qqi $name | xargs 2>/dev/null | awk {'print $6'})
 		remoteinfo=$(echo $cutted | cut -d'"' -f20)
 		if [[ $name = "" ]] || [[ $ver = "" ]]
 		then
@@ -79,8 +94,13 @@ info(){
 	counter=0
 	while [[ $counter -lt ${#localpacs[*]} ]]
 	do
-		echo "  $(pacman -Q ${localpacs[$counter]})"
-		echo "     ${bold}Warning:${normal} AUR does not provide information about this package!"
+		name=$(pacman -Qqm ${localpacs[$counter]} 2>/dev/null)
+		ver=$(pacman -Qqi $name | xargs 2>/dev/null | awk {'print $6'})
+		if [[ $name != "" ]]
+		then
+			echo "  $name-$ver --- not in the AUR!"
+			echo "     ${bold}Warning:${normal} AUR does not provide information about this package!"
+		fi
 		((count++))
 		((counter++))
 	done
@@ -169,7 +189,7 @@ preinst(){
 		key=$1
 		if [[ $mode != asp ]] && [[ $mode != url ]]
 		then
-			ver=$(pacman -Q $key 2>/dev/null | cut -d" " -f2 | xargs)
+			ver=$(pacman -Qqi $key | xargs 2>/dev/null | awk {'print $6'})
 			res=$(curl -s 'https://aur.archlinux.org/rpc/?v=5&type=multiinfo&arg[]='$key'')
 			remotever=$(echo $res | cut -d'"' -f26)
 			if [[ $(echo $res | cut -d'"' -f9) = ":0," ]]
@@ -282,9 +302,10 @@ realinst(){
 		then
 			echo ":: Going on..."
 		else
-			nano ./PKGBUILD
+			$editor ./PKGBUILD
 		fi
 		echo ":: Running prehooks..."
+		sudo -k
 		prehooks
 		depts
 		if [[ $mode = url ]]
@@ -345,6 +366,7 @@ update(){
 	done
 	echo ":: Downloading packagelist..."
 	res=$(curl -s $res)
+	sudo sh -c "echo '$res' > /usr/share/buildaur/res"
 	resultcount=$(echo $res | cut -d'"' -f9 | sed -e 's/://g' | sed -e 's/,//g')
 	willinst=()
 	errorcount=0
@@ -357,7 +379,7 @@ update(){
 	do
 		cutted=$(echo $res | cut -d{ -f$(expr $counter + 3))
 	  name=$(echo $cutted | cut -d'"' -f6)
-	  ver=$(pacman -Q $name 2>/dev/null | cut -d" " -f2 | xargs)
+	  ver=$(pacman -Qqi $name | xargs 2>/dev/null | awk {'print $6'})
 		remotever=$(echo $cutted | cut -d'"' -f16)
 	  if [[ $name = "" ]] || [[ $ver = "" ]]
 	  then
@@ -401,7 +423,7 @@ update(){
 	echo ":: Listing them..."
 	while [[ $counter -lt ${#localpacs[*]} ]]
 	do
-		echo "($count/${#localpacs[*]}) $(pacman -Q ${localpacs[$counter]})"
+		echo "($count/${#localpacs[*]}) ${localpacs[$counter]}-$(pacman -Qqi ${localpacs[$counter]} | xargs 2>/dev/null | awk {'print $6'})"
 		((count++))
 		((counter++))
 	done
@@ -627,7 +649,6 @@ case $1 in
 		then
 			echo ":: Checking installed AUR packages..."
 			echo "  $(pacman -Qqm | wc -l) packages are curently installed from the AUR!"
-			echo ":: Giving out package infos..."
 			all=true
 			info $(pacman -Qqm)
 		else

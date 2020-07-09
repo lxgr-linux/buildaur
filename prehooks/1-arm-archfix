@@ -22,5 +22,5 @@ then
   then
     echo "${bold}Warning:${normal} architecture is ${arch[@]}"
   fi
-  echo "arch=(any)" >> ./PKGBUILD
+  echo "arch=($(uname -m))" >> ./PKGBUILD
 fi
