@@ -2,10 +2,13 @@
 # maintainer lxgr <lxgr@protonmail.com>
 
 editor=nano
+showPKGBUILD=1
+sudoreset=1
 . /etc/buildaur/buildaur.conf
 black=($(cat /usr/share/buildaur/blacklist))
 bold=$(tput bold)
 red=$(tput setaf 1)
+grey=$(tput setaf 7)
 normal=$(tput sgr0)
 
 options(){
@@ -46,7 +49,7 @@ netcheck(){
 			fi
 		fi
 		net=true
-	fi
+  fi
 }
 
 info(){
@@ -74,7 +77,7 @@ info(){
 	do
 		cutted=$(echo $res | cut -d{ -f$(expr $counter + 3))
 		name=$(echo $cutted | cut -d'"' -f6)
-		ver=$(pacman -Qqi $name | xargs 2>/dev/null | awk {'print $6'})
+		ver=$(pacman -Qqi $name 2>/dev/null | xargs 2>/dev/null | awk {'print $6'})
 		remoteinfo=$(echo $cutted | cut -d'"' -f20)
 		if [[ $name = "" ]] || [[ $ver = "" ]]
 		then
@@ -167,18 +170,18 @@ depts(){
 }
 
 install(){
-	echo ":: Running prerunhooks..."
-	prerun
 	if [[ $@ = "" ]]
 	then
 		echo " Nothing to do"
-		exit 0
+	else
+		echo ":: Running prerunhooks..."
+		prerun
+		netcheck
+		installcount=1
+		preinst $@
+		echo ":: Running postrunhooks..."
+		postrun
 	fi
-	netcheck
-	installcount=1
-	preinst $@
-	echo ":: Running postrunhooks..."
-	postrun
 }
 
 preinst(){
@@ -189,7 +192,7 @@ preinst(){
 		key=$1
 		if [[ $mode != asp ]] && [[ $mode != url ]]
 		then
-			ver=$(pacman -Qqi $key | xargs 2>/dev/null | awk {'print $6'})
+			ver=$(pacman -Qqi $key 2>/dev/null| xargs 2>/dev/null | awk {'print $6'})
 			res=$(curl -s 'https://aur.archlinux.org/rpc/?v=5&type=multiinfo&arg[]='$key'')
 			remotever=$(echo $res | cut -d'"' -f26)
 			if [[ $(echo $res | cut -d'"' -f9) = ":0," ]]
@@ -197,26 +200,46 @@ preinst(){
 				echo "${red}${bold}ERROR:${normal} $key ist not in the AUR!"
 				exit 1
 			fi
-			if [[ $(pacman -Qq $key) = $key ]]
-			then
 			if [[ $ver = "" ]]
-				then
-					printf ""
-				elif [[ $ver = $remotever ]]
-				then
-					echo "${bold}Warning:${normal} $key-$ver is allready on $remotever -- reinstalling"
-				else
-					if [[ $(echo -e "$ver\n$remotever" | sort | xargs | awk {'print $1'}) = $ver ]]
-					then
-						echo "Info: $key-$ver will be updated to $remotever!"
-					else
-						echo "${bold}Warning:${normal} $key-$ver is higher than AUR $remotever!"
-					fi
-				fi
+			then
+				printf ""
+			elif [[ $ver = $remotever ]]
+			then
+				echo "${bold}Warning:${normal} $key-$ver is allready on $remotever -- reinstalling"
+			elif [[ $(echo -e "$ver\n$remotever" | sort -V | xargs | awk {'print $1'}) = $ver ]]
+			then
+				echo "Info: $key-$ver will be updated to $remotever!"
+			else
+				echo "${bold}Warning:${normal} $key-$ver is higher than AUR $remotever!"
 			fi
 			if [[ $(echo $res | cut -d'"' -f41) != :null, ]]
 			then
 				echo  "${bold}Warning:${normal} $key is flagged out of date!"
+			fi
+		elif [[ $mode = asp ]]
+		then
+			aspout=$(echo "$(asp show $key 2>/dev/null)" | egrep pkgver | head -1)
+			aspoutrel=$(echo "$(asp show $key 2>/dev/null)" | egrep pkgrel | head -1)
+			ver=$(pacman -Qqi $key 2>/dev/null| xargs 2>/dev/null | awk {'print $6'})
+			pkgver=0
+		 	if [[ $aspout = "" ]]
+			then
+				echo "${red}${bold}ERROR:${normal} $key ist not on ASP!"
+				exit 1
+			fi
+			declare $aspout
+			declare $aspoutrel
+			if [[ $ver = "" ]]
+			then
+				printf ""
+			elif [[ $ver = $pkgver-$pkgrel ]]
+			then
+				echo "${bold}Warning:${normal} $key-$ver is allready on $remotever -- reinstalling"
+			elif [[ $(echo -e "$ver\n$pkgver-$pkgrel" | sort -V | xargs | awk {'print $1'}) = $ver ]]
+			then
+				echo "Info: $key-$ver will be updated to $pkgver-$pkgrel!"
+			else
+				echo "${bold}Warning:${normal} $key-$ver is higher than AUR $pkgver-$pkgrel!"
 			fi
 		fi
 		installpac=(${installpac[@]} $key)
@@ -291,6 +314,13 @@ realinst(){
 			fi
 		fi
 		touch ./buildaur.lock
+		if [[ $showPKGBUILD = 1 ]]
+		then
+			echo ":: Printing out PKGBUILD...${grey}"
+			echo ""
+			cat ./PKGBUILD | sed 's/^/  /g'
+			echo "$normal"
+		fi
 		if [[ $ask = "--noconfirm" ]]
 		then
 			ans=n
@@ -305,7 +335,10 @@ realinst(){
 			$editor ./PKGBUILD
 		fi
 		echo ":: Running prehooks..."
-		sudo -k
+		if [[ $sudoreset = 1 ]]
+		then
+			sudo -k
+		fi
 		prehooks
 		depts
 		if [[ $mode = url ]]
@@ -392,7 +425,7 @@ update(){
 		then
 			echo "($count/$resultcount) $name-$ver is up to date"
 		else
-			if [[ $(echo -e "$ver\n$remotever" | sort | xargs | awk {'print $1'}) = $ver ]]
+			if [[ $(echo -e "$ver\n$remotever" | sort -V | xargs | awk {'print $1'}) = $ver ]]
 			then
 				echo "($count/$resultcount) $name-$ver is out of date! $remotever is available!"
 			else
@@ -418,17 +451,55 @@ update(){
 	echo ":: Searching non AUR packages..."
 	localpacs=($(echo ${aurpacs[@]} $(pacman -Qqm) | tr ' ' '\n' | sort | uniq -u))
 	echo "  ${#localpacs[*]} packages are not installed from any repository"
-	counter=0
 	count=1
+	willinstasp=()
 	echo ":: Listing them..."
-	while [[ $counter -lt ${#localpacs[*]} ]]
+	for pac in ${localpacs[@]}
 	do
-		echo "($count/${#localpacs[*]}) ${localpacs[$counter]}-$(pacman -Qqi ${localpacs[$counter]} | xargs 2>/dev/null | awk {'print $6'})"
+		aspout=$(echo "$(asp show $pac 2>/dev/null)" | egrep pkgver | head -1)
+		aspoutrel=$(echo "$(asp show $pac 2>/dev/null)" | egrep pkgrel | head -1)
+		pkgver=0
+		if [[ $aspout = "" ]]
+		then
+			pkgver=$(pacman -Qqi $pac | xargs 2>/dev/null | awk {'print $6'})
+			echo "($count/${#localpacs[*]}) $pac-$ver is not installed from ASP!"
+		else
+			declare $aspout
+			declare $aspoutrel
+			ver=$(pacman -Qqi $pac | xargs 2>/dev/null | awk {'print $6'})
+			if [[ $(echo ${black[*]} | sed -e 's/ /\n/g'| egrep -xE $pac) = "$pac" ]]
+			then
+				echo "($count/${#localpacs[*]})) $pac-$pkgver is out of date! $remotever is available! But it's on the blacklist and will not be updated!"
+			elif [[ $pkgver-$pkgrel = "$ver" ]]
+			then
+				echo "($count/${#localpacs[*]}) $pac-$ver is up to date"
+			else
+				if [[ $(echo -e "$ver\n$pkgver-$pkgrel" | sort -V | xargs | awk {'print $1'}) = $ver ]]
+				then
+					echo "($count/${#localpacs[*]}) $pac-$ver is out of date! $pkgver is available!"
+				else
+					echo "($count/${#localpacs[*]}) ${bold}Warning:${normal} $pac-$ver is higher then ASP $pkgver!"
+				fi
+				if [[ $ask = "--noconfirm" ]]
+				then
+					ans=y
+				else
+					echo ":: Should it be updated? [Y/n]"
+					read ans
+				fi
+				if [[ $ans == y ]] || [[ $ans == "" ]]
+				then
+					willinstasp=(${willinstasp[@]} $pac)
+				fi
+			fi
+		fi
 		((count++))
-		((counter++))
 	done
 	echo ""
 	install ${willinst[@]}
+	mode=asp
+	echo ${willinstasp[@]}
+	install ${willinstasp[@]}
 	if [[ $errorcount = 0 ]]
 	then
 		echo " No errors accured"

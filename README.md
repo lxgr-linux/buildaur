@@ -87,6 +87,11 @@ hooks:
 
 The config file for buildaur is ' /etc/buildaur/buildaur.conf'. It can be used to set variables which apeare in buildaur, like 'ask', 'pgp' and 'buildchroot'. It can also contain code that should be integrated into buildaur.
 
+Available varaibles are:<br>
+editor : Text-editor that will be used to edit the PKGBUILD. Default is 'nano'<br>
+showPKGBUILD : Print out PKGBUILD before asking to edit it. Default is '1'<br>
+sudoreset : Reset sudo before running PKGBUILD. Default is '1'. This may cause typing in your password more often, but is also more secure.<br>
+
 # Blacklist
 
 The blacklist stored in /usr/share/buildaur/blacklist contains packagenames which are excluded at updates.

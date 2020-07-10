@@ -12,7 +12,7 @@ then
   archerrorcount=0
   for i in "${arch[@]}"
   do
-    if [[ $(uname -m) != ${arch[$counter]} ]] && [[ ${arch[$counter]} != any ]]
+    if [[ $(uname -m) != ${arch[$counter]} ]] && [[ $arch != any ]]
     then
       ((archerrorcount++))
     fi
