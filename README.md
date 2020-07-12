@@ -44,6 +44,7 @@ Usage: /usr/bin/buildaur "<option> <string>"<br>
       n                 : Doesn't ask questions<br>
       spgp              : Skips pgp checks of sourcecode<br>
       c                 : Builds the package in a clean chroot (you may run into some problems using this on archlinux arm!)<br>
+      di                : Just builds the package<br>
 
    Hookoptions:<br>
       --listhooks       : Lists all available and installed hooks<br>

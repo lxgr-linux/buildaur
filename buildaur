@@ -145,12 +145,13 @@ search(){
 
 depts(){
 	. ./PKGBUILD
+	depends=(${depends[@]} ${makedepends[@]})
 	aurdeps=()
-	depcount=1
+	depcount=0
 	depmaxcount=${#depends[*]}
 	echo ":: Checking for dependecies..."
 	echo "  ($depmaxcount) Packages: ${depends[@]}"
-	while [[ $depcount -le $depmaxcount ]]
+	while [[ $depcount -lt $depmaxcount ]]
 	do
 	if [[ $(pacman -Qq ${depends[$depcount]} 2>/dev/null) = "" ]]
 	then
@@ -161,7 +162,7 @@ depts(){
 			aurdeps=(${aurdeps[@]} ${depends[$depcount]})
 		fi
 	fi
-	depcount=$(expr $depcount + 1)
+	((depcount++))
 	done
 	if [[ ${aurdeps[@]} != "" ]]
 	then
@@ -187,6 +188,7 @@ install(){
 preinst(){
 	echo ":: Checking packages..."
 	installpac=()
+	niceinstallpac=()
 	while [[ $# -gt 0 ]]
 	do
 		key=$1
@@ -229,24 +231,26 @@ preinst(){
 			fi
 			declare $aspout
 			declare $aspoutrel
+			remotever=$pkgver-$pkgrel
 			if [[ $ver = "" ]]
 			then
 				printf ""
 			elif [[ $ver = $pkgver-$pkgrel ]]
 			then
-				echo "${bold}Warning:${normal} $key-$ver is allready on $remotever -- reinstalling"
+				echo "${bold}Warning:${normal} $key-$ver is allready on $pkgver-$pkgrel -- reinstalling"
 			elif [[ $(echo -e "$ver\n$pkgver-$pkgrel" | sort -V | xargs | awk {'print $1'}) = $ver ]]
 			then
 				echo "Info: $key-$ver will be updated to $pkgver-$pkgrel!"
 			else
-				echo "${bold}Warning:${normal} $key-$ver is higher than AUR $pkgver-$pkgrel!"
+				echo "${bold}Warning:${normal} $key-$ver is higher than ASP $pkgver-$pkgrel!"
 			fi
 		fi
 		installpac=(${installpac[@]} $key)
+		niceinstallpac=(${niceinstallpac[@]} $key-$remotever)
 		shift
 	done
 	echo ""
-	echo "Packages (${#installpac[*]}): ${installpac[@]}"
+	echo "Packages (${#installpac[*]}): ${niceinstallpac[@]}"
 	echo ""
 	if [[ $ask = "--noconfirm" ]]
 	then
@@ -469,16 +473,16 @@ update(){
 			ver=$(pacman -Qqi $pac | xargs 2>/dev/null | awk {'print $6'})
 			if [[ $(echo ${black[*]} | sed -e 's/ /\n/g'| egrep -xE $pac) = "$pac" ]]
 			then
-				echo "($count/${#localpacs[*]})) $pac-$pkgver is out of date! $remotever is available! But it's on the blacklist and will not be updated!"
+				echo "($count/${#localpacs[*]})) $pac-$pkgver-$pkgrel is out of date! $pkgver-$pkgrel is available! But it's on the blacklist and will not be updated!"
 			elif [[ $pkgver-$pkgrel = "$ver" ]]
 			then
 				echo "($count/${#localpacs[*]}) $pac-$ver is up to date"
 			else
 				if [[ $(echo -e "$ver\n$pkgver-$pkgrel" | sort -V | xargs | awk {'print $1'}) = $ver ]]
 				then
-					echo "($count/${#localpacs[*]}) $pac-$ver is out of date! $pkgver is available!"
+					echo "($count/${#localpacs[*]}) $pac-$ver is out of date! $pkgver-$pkgrel is available!"
 				else
-					echo "($count/${#localpacs[*]}) ${bold}Warning:${normal} $pac-$ver is higher then ASP $pkgver!"
+					echo "($count/${#localpacs[*]}) ${bold}Warning:${normal} $pac-$ver is higher than ASP $pkgver-$pkgrel!"
 				fi
 				if [[ $ask = "--noconfirm" ]]
 				then
@@ -495,11 +499,20 @@ update(){
 		fi
 		((count++))
 	done
-	echo ""
-	install ${willinst[@]}
-	mode=asp
-	echo ${willinstasp[@]}
-	install ${willinstasp[@]}
+	if [[ ${willinst[@]} != "" ]]
+	then
+		echo ""
+		install ${willinst[@]}
+	fi
+	if [[ ${willinstasp[@]} != "" ]]
+	then
+		mode=asp
+		install ${willinstasp[@]}
+	fi
+	if [[ ${willinstasp[@]} = "" ]] ; [[ ${willinst[@]} = "" ]]
+	then
+		echo " Nothing to do"
+	fi
 	if [[ $errorcount = 0 ]]
 	then
 		echo " No errors accured"
@@ -682,6 +695,7 @@ help(){
 	echo "      n                 : Doesn't ask questions"
 	echo "      spgp              : Skips pgp checks of sourcecode"
 	echo "      c                 : Builds the package in a clean chroot (you may run into some problems using this on archlinux arm!)"
+	echo "      di                : Just builds the package"
 	echo ""
 	echo "   Hookoptions:"
 	echo "      --listhooks       : Lists all available and installed hooks"
