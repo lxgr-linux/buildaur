@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+type=pre
+desc="replayces old pgk dependencies with newer ones."
+
+if [[ $1 = "-u" ]]
+then
+  dep=""
+  fixdeps=()
+  . ./PKGBUILD
+  for dep in ${depends[@]}
+  do
+    if [[ $dep = vte ]]
+    then
+      fixdeps=(${fixdeps[@]} vte vte-legacy)
+    fi
+  done
+  depends=($(echo ${depends[@]} ${fixdeps[@]} | sed 's/ /\n/g' | uniq -u))
+  echo "depends=(${depends[@]})" >> ./PKGBUILD
+fi
