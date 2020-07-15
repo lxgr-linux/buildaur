@@ -132,30 +132,40 @@ info(){
 	do
 		aspinfo=$(asp show $pac 2>/dev/null)
 		pkgver=0
-		if [[ $q = 1 ]]
+		# if [[ $q = 1 ]]
+		# then
+		# 	if [[ $(pacman -Qi $pac 2>/dev/null) != "" ]]
+		# 	then
+		# 		echo $pac
+		# 	fi
+		if [[ $aspinfo = "" ]]
 		then
 			if [[ $(pacman -Qi $pac 2>/dev/null) != "" ]]
 			then
-				echo $pac
-			fi
-		elif [[ $aspinfo = "" ]]
-		then
-			if [[ $(pacman -Qi $pac 2>/dev/null) != "" ]]
-			then
-				pkgver=$(pacman -Qi $pac 2>/dev/null | xargs | awk {'print $6'})
-				echo "  $pac-$ver is not installed from ASP!"
-				echo "     ${bold}Warning:${normal} AUR does not provide information about this package!"
+				if [[ $q = 1 ]]
+				then
+					echo $pac
+				else
+					pkgver=$(pacman -Qi $pac 2>/dev/null | xargs | awk {'print $6'})
+					echo "  $pac-$ver is not installed from ASP!"
+					echo "     ${bold}Warning:${normal} AUR does not provide information about this package!"
+				fi
 			fi
 		else
-			aspout=$(echo "$aspinfo" | egrep pkgver | head -1)
-			aspoutrel=$(echo "$aspinfo" | egrep pkgrel | head -1)
-			aspoutdesc=$(echo "$aspinfo" | egrep pkgdesc | head -1)
-			declare $aspout
-			declare $aspoutrel
-			declare "$aspoutdesc"
-			ver=$(pacman -Qqi $pac | xargs 2>/dev/null | awk {'print $6'})
-			echo "  $pac $pkgver-$pkgrel (local: $ver)"
-			echo "     $(echo $pkgdesc | sed 's/"//g')"
+			if [[ $q = 1 ]]
+			then
+				echo $pac
+			else
+				aspout=$(echo "$aspinfo" | egrep pkgver | head -1)
+				aspoutrel=$(echo "$aspinfo" | egrep pkgrel | head -1)
+				aspoutdesc=$(echo "$aspinfo" | egrep pkgdesc | head -1)
+				declare $aspout
+				declare $aspoutrel
+				declare "$aspoutdesc"
+				ver=$(pacman -Qqi $pac | xargs 2>/dev/null | awk {'print $6'})
+				echo "  $pac $pkgver-$pkgrel (local: $ver)"
+				echo "     $(echo $pkgdesc | sed 's/"//g')"
+			fi
 		fi
 		((count++))
 	done
@@ -210,6 +220,18 @@ depts(){
 	notext=1
 	q=1
 	mayaurdeps=($(info ${depends[@]}))
+	maybeaurdeps=()
+	if [[ $mode = asp ]]
+	then
+		for pac in ${mayaurdeps[@]}
+		do
+			if [[ $(pacman -Si $pac) = "" ]]
+			then
+				maybeaurdeps=( ${maybeaurdeps[@]} $pac)
+			fi
+		done
+		mayaurdeps=(${maybeaurdeps[@]})
+	fi
 	echo ":: Checking for unresolved dependecies..."
 	for pac in ${mayaurdeps[@]}
 	do
