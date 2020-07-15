@@ -36,6 +36,7 @@ options(){
 }
 
 netcheck(){
+	inet=1
 	if [[ $net != true ]]
 	then
 		if [[ $(ping -c 1 google.de >/dev/null 2>/dev/null ; echo $?) != 0 ]]
@@ -55,11 +56,28 @@ netcheck(){
 info(){
 	netcheck -x
 	pkgnames=($@)
-	if [[ $inet = 0 ]]
+	if [[ $all = true ]] && [[ $inet = 0 ]]
 	then
+		echo 3
 		res=$(cat /usr/share/buildaur/res)
 	else
-		echo ":: Syncing database..."
+		if [[ $inet = 0 ]]
+		then
+			if [[ $notext != 1 ]]
+			then
+			 echo -e ":: ${red}${bold}ERROR:${normal} Network is not reachable!"
+			fi
+			exit 1
+		fi
+		if [[ $notext != 1 ]]
+		then
+			if [[ $all = true ]]
+			then
+				echo -e ":: Syncing database..."
+			else
+				echo ":: Qetting package infos..."
+			fi
+		fi
 		res="https://aur.archlinux.org/rpc/?v=5&type=multiinfo"
 		counter=0
 		while [[ $counter -lt ${#pkgnames[*]} ]]
@@ -68,11 +86,17 @@ info(){
 			((counter++))
 		done
 		res=$(curl -s $res)
-		sudo sh -c "echo '$res' > /usr/share/buildaur/res"
+		if [[ $all = true ]]
+		then
+			sudo sh -c "echo '$res' > /usr/share/buildaur/res"
+		fi
 	fi
 	resultcount=$(echo $res | cut -d'"' -f9 | sed -e 's/://g' | sed -e 's/,//g')
 	counter=0
-	echo ":: Giving out package infos..."
+	if [[ $notext != 1 ]]
+	then
+		echo -e ":: Giving out package infos..."
+	fi
 	while [[ $counter -lt $resultcount ]]
 	do
 		cutted=$(echo $res | cut -d{ -f$(expr $counter + 3))
@@ -83,29 +107,57 @@ info(){
 		then
 			ver="--- "
 		fi
-		echo "  "$name $(echo $cutted | cut -d'"' -f16) "(local: $ver)"
-		if [[ $remoteinfo = "" ]]
+		if [[ $q = 1 ]]
 		then
-			echo "     ${bold}Warning:${normal} AUR does not provide information about this package!"
+			echo $name
 		else
-			echo "     "$remoteinfo
+			echo "  "$name $(echo $cutted | cut -d'"' -f16) "(local: $ver)"
+			if [[ $remoteinfo = "" ]]
+			then
+				echo "     ${bold}Warning:${normal} AUR does not provide information about this package!"
+			else
+				echo "     "$remoteinfo
+			fi
 		fi
 		aurpacs[$counter]=$name
 		((counter++))
 	done
+	if [[ $only = aur ]]
+	then
+		exit
+	fi
 	localpacs=($(echo ${aurpacs[@]} $@ | tr ' ' '\n' | sort | uniq -u))
 	counter=0
-	while [[ $counter -lt ${#localpacs[*]} ]]
+	for pac in ${localpacs[@]}
 	do
-		name=$(pacman -Qqm ${localpacs[$counter]} 2>/dev/null)
-		ver=$(pacman -Qqi $name | xargs 2>/dev/null | awk {'print $6'})
-		if [[ $name != "" ]]
+		aspinfo=$(asp show $pac 2>/dev/null)
+		pkgver=0
+		if [[ $q = 1 ]]
 		then
-			echo "  $name-$ver --- not in the AUR!"
-			echo "     ${bold}Warning:${normal} AUR does not provide information about this package!"
+			if [[ $(pacman -Qi $pac 2>/dev/null) != "" ]]
+			then
+				echo $pac
+			fi
+		elif [[ $aspinfo = "" ]]
+		then
+			if [[ $(pacman -Qi $pac 2>/dev/null) != "" ]]
+			then
+				pkgver=$(pacman -Qi $pac 2>/dev/null | xargs | awk {'print $6'})
+				echo "  $pac-$ver is not installed from ASP!"
+				echo "     ${bold}Warning:${normal} AUR does not provide information about this package!"
+			fi
+		else
+			aspout=$(echo "$aspinfo" | egrep pkgver | head -1)
+			aspoutrel=$(echo "$aspinfo" | egrep pkgrel | head -1)
+			aspoutdesc=$(echo "$aspinfo" | egrep pkgdesc | head -1)
+			declare $aspout
+			declare $aspoutrel
+			declare "$aspoutdesc"
+			ver=$(pacman -Qqi $pac | xargs 2>/dev/null | awk {'print $6'})
+			echo "  $pac $pkgver-$pkgrel (local: $ver)"
+			echo "     $(echo $pkgdesc | sed 's/"//g')"
 		fi
 		((count++))
-		((counter++))
 	done
 }
 
@@ -145,28 +197,34 @@ search(){
 
 depts(){
 	. ./PKGBUILD
-	depends=(${depends[@]} ${makedepends[@]})
+	depends=($(echo -e ${depends[@]} ${makedepends[@]} | sed 's/ /\n/g'| uniq))
 	aurdeps=()
 	depcount=0
 	depmaxcount=${#depends[*]}
 	echo ":: Checking for dependecies..."
 	echo "  ($depmaxcount) Packages: ${depends[@]}"
-	while [[ $depcount -lt $depmaxcount ]]
-	do
-	if [[ $(pacman -Qq ${depends[$depcount]} 2>/dev/null) = "" ]]
+	if [[ $mode != asp ]]
 	then
-		if [[ $(sudo pacman -Sqs | egrep -xE ${depends[$depcount]}) = ${depends[$depcount]} ]]
-		then
-			printf 2 >> /dev/null
-		else
-			aurdeps=(${aurdeps[@]} ${depends[$depcount]})
-		fi
+		only=aur
 	fi
-	((depcount++))
+	notext=1
+	q=1
+	mayaurdeps=($(info ${depends[@]}))
+	echo ":: Checking for unresolved dependecies..."
+	for pac in ${mayaurdeps[@]}
+	do
+		if [[ $(pacman -Qi $pac 2>/dev/null) = "" ]]
+		then
+			aurdeps=(${aurdeps[@]} $pac)
+		fi
 	done
+	echo "  (${#aurdeps[*]}) Packages: ${aurdeps[@]}"
 	if [[ ${aurdeps[@]} != "" ]]
 	then
+		echo ":: Installing them..."
+		echo
 		install ${aurdeps[@]}
+		echo
 	fi
 }
 
@@ -175,9 +233,9 @@ install(){
 	then
 		echo " Nothing to do"
 	else
+		netcheck
 		echo ":: Running prerunhooks..."
 		prerun
-		netcheck
 		installcount=1
 		preinst $@
 		echo ":: Running postrunhooks..."
@@ -460,14 +518,15 @@ update(){
 	echo ":: Listing them..."
 	for pac in ${localpacs[@]}
 	do
-		aspout=$(echo "$(asp show $pac 2>/dev/null)" | egrep pkgver | head -1)
-		aspoutrel=$(echo "$(asp show $pac 2>/dev/null)" | egrep pkgrel | head -1)
+		aspinfo=$(asp show $pac 2>/dev/null)
 		pkgver=0
-		if [[ $aspout = "" ]]
+		if [[ $aspinfo = "" ]]
 		then
 			pkgver=$(pacman -Qqi $pac | xargs 2>/dev/null | awk {'print $6'})
 			echo "($count/${#localpacs[*]}) $pac-$ver is not installed from ASP!"
 		else
+			aspout=$(echo "$aspinfo" | egrep pkgver | head -1)
+			aspoutrel=$(echo "$aspinfo" | egrep pkgrel | head -1)
 			declare $aspout
 			declare $aspoutrel
 			ver=$(pacman -Qqi $pac | xargs 2>/dev/null | awk {'print $6'})
@@ -730,6 +789,20 @@ case $1 in
 	;;
 	-Q)
 		shift
+		if [[ $1 = "" ]]
+		then
+			echo ":: Checking installed AUR packages..."
+			echo "  $(pacman -Qqm | wc -l) packages are curently installed from the AUR!"
+			all=true
+			info $(pacman -Qqm)
+		else
+			info $@
+		fi
+		exit 0
+	;;
+	-Qq)
+		shift
+		q=1
 		if [[ $1 = "" ]]
 		then
 			echo ":: Checking installed AUR packages..."
