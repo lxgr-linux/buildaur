@@ -209,37 +209,23 @@ depts(){
 	. ./PKGBUILD
 	depends=($(echo -e ${depends[@]} ${makedepends[@]} | sed 's/ /\n/g'| uniq))
 	aurdeps=()
+	mayaurdeps=()
 	depcount=0
 	depmaxcount=${#depends[*]}
 	echo ":: Checking for dependecies..."
 	echo "  ($depmaxcount) Packages: ${depends[@]}"
-	if [[ $mode != asp ]]
-	then
-		only=aur
-	fi
-	notext=1
-	q=1
-	mayaurdeps=($(info ${depends[@]}))
-	maybeaurdeps=()
-	if [[ $mode = asp ]]
-	then
-		for pac in ${mayaurdeps[@]}
-		do
-			if [[ $(pacman -Si $pac) = "" ]]
-			then
-				maybeaurdeps=( ${maybeaurdeps[@]} $pac)
-			fi
-		done
-		mayaurdeps=(${maybeaurdeps[@]})
-	fi
 	echo ":: Checking for unresolved dependecies..."
-	for pac in ${mayaurdeps[@]}
+	for pac in ${depends[@]}
 	do
-		if [[ $(pacman -Qi $pac 2>/dev/null) = "" ]]
+		if [[ $(pacman -Si $pac 2>/dev/null) = "" ]] && [[ $(pacman -Qi $pac 2>/dev/null) = "" ]]
 		then
-			aurdeps=(${aurdeps[@]} $pac)
+			mayaurdeps=(${maybeaurdeps[@]} $pac)
 		fi
 	done
+	aurdeps=(${mayaurdeps[@]})
+	notext=1
+	q=1
+	aurdeps=($(info ${aurdeps[@]}))
 	echo "  (${#aurdeps[*]}) Packages: ${aurdeps[@]}"
 	if [[ ${aurdeps[@]} != "" ]]
 	then

@@ -14,6 +14,9 @@ then
       fixdeps=(${fixdeps[@]} vte vte-legacy)
     fi
   done
-  depends=($(echo ${depends[@]} ${fixdeps[@]} | sed 's/ /\n/g' | uniq -u))
-  echo "depends=(${depends[@]})" >> ./PKGBUILD
+  if [[ ${fixdeps[@]} != "" ]]
+  then
+    depends=($(echo ${depends[@]} ${fixdeps[@]} | sed 's/ /\n/g' | uniq -u))
+    echo "depends=(${depends[@]})" >> ./PKGBUILD
+  fi
 fi
