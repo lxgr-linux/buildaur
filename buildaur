@@ -209,7 +209,6 @@ depts(){
 	. ./PKGBUILD
 	depends=($(echo -e ${depends[@]} ${makedepends[@]} | sed 's/ /\n/g'| uniq))
 	aurdeps=()
-	mayaurdeps=()
 	depcount=0
 	depmaxcount=${#depends[*]}
 	echo ":: Checking for dependecies..."
@@ -219,10 +218,9 @@ depts(){
 	do
 		if [[ $(pacman -Si $pac 2>/dev/null) = "" ]] && [[ $(pacman -Qi $pac 2>/dev/null) = "" ]]
 		then
-			mayaurdeps=(${maybeaurdeps[@]} $pac)
+			aurdeps=(${aurdeps[@]} $pac)
 		fi
 	done
-	aurdeps=(${mayaurdeps[@]})
 	notext=1
 	q=1
 	aurdeps=($(info ${aurdeps[@]}))
