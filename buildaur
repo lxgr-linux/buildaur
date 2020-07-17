@@ -93,6 +93,7 @@ info(){
 	fi
 	resultcount=$(echo $res | cut -d'"' -f9 | sed -e 's/://g' | sed -e 's/,//g')
 	counter=0
+	aurpacs=()
 	if [[ $notext != 1 ]]
 	then
 		echo -e ":: Giving out package infos..."
@@ -470,6 +471,7 @@ update(){
 	sudo sh -c "echo '$res' > /usr/share/buildaur/res"
 	resultcount=$(echo $res | cut -d'"' -f9 | sed -e 's/://g' | sed -e 's/,//g')
 	willinst=()
+	aurpacs=()
 	errorcount=0
 	counter=0
 	count=1
@@ -903,7 +905,7 @@ case $1 in
 		if [[ $1 = "" ]]
 		then
 			echo ":: ${red}${bold}ERROR:${normal} No options are given! Try --help to see all options!"
-			exit 2
+			#exit 2
 		else
 			# give an error if the option in unknown
 			echo ":: ${red}${bold}ERROR:${normal} '$@' is no known option! Try --help to see all options!"
