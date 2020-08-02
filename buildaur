@@ -4,6 +4,7 @@
 editor=nano
 showPKGBUILD=1
 sudoreset=1
+ask_warn_inst=1
 . /etc/buildaur/buildaur.conf
 black=($(cat /usr/share/buildaur/blacklist))
 bold=$(tput bold)
@@ -241,11 +242,9 @@ install(){
 		echo " Nothing to do"
 	else
 		netcheck
-		echo ":: Running prerunhooks..."
 		prerun
 		installcount=1
 		preinst $@
-		echo ":: Running postrunhooks..."
 		postrun
 	fi
 }
@@ -403,7 +402,6 @@ realinst(){
 		else
 			$editor ./PKGBUILD
 		fi
-		echo ":: Running prehooks..."
 		if [[ $sudoreset = 1 ]]
 		then
 			sudo -k
@@ -438,7 +436,6 @@ realinst(){
 		fi
 		if [[ $? = 0 ]]
 		then
-			echo ":: Running posthooks..."
 			posthooks
 			if [[ $installindex = "" ]]
 			then
@@ -498,19 +495,13 @@ update(){
 			if [[ $(echo -e "$ver\n$remotever" | sort -V | xargs | awk {'print $1'}) = $ver ]]
 			then
 				echo "($count/$resultcount) $name-$ver is out of date! $remotever is available!"
+				askinst
 			else
 				echo "($count/$resultcount) ${bold}Warning:${normal} $name-$ver is higher than AUR $remotever!"
-			fi
-			if [[ $ask = "--noconfirm" ]]
-			then
-				ans=y
-			else
-				echo ":: Should it be updated? [Y/n]"
-				read ans
-			fi
-			if [[ $ans == y ]] || [[ $ans == "" ]]
-			then
-				willinst=(${willinst[@]} $name)
+				if [[ $ask_warn_inst = 1 ]]
+				then
+					askinst
+				fi
 			fi
 		fi
 		aurpacs[$count]=$name
@@ -548,19 +539,13 @@ update(){
 				if [[ $(echo -e "$ver\n$pkgver-$pkgrel" | sort -V | xargs | awk {'print $1'}) = $ver ]]
 				then
 					echo "($count/${#localpacs[*]}) $pac-$ver is out of date! $pkgver-$pkgrel is available!"
+					askinst
 				else
 					echo "($count/${#localpacs[*]}) ${bold}Warning:${normal} $pac-$ver is higher than ASP $pkgver-$pkgrel!"
-				fi
-				if [[ $ask = "--noconfirm" ]]
-				then
-					ans=y
-				else
-					echo ":: Should it be updated? [Y/n]"
-					read ans
-				fi
-				if [[ $ans == y ]] || [[ $ans == "" ]]
-				then
-					willinstasp=(${willinstasp[@]} $pac)
+					if [[ $ask_warn_inst = 1 ]]
+					then
+						askinst
+					fi
 				fi
 			fi
 		fi
@@ -588,48 +573,78 @@ update(){
 	fi
 }
 
+askinst(){
+	if [[ $ask = "--noconfirm" ]]
+	then
+		ans=y
+	else
+		echo ":: Should it be updated? [Y/n]"
+		read ans
+	fi
+	if [[ $ans == y ]] || [[ $ans == "" ]]
+	then
+		willinst=(${willinst[@]} $name)
+	fi
+}
+
 prehooks(){
 	prehooks=($(ls /etc/buildaur/prehooks))
 	hookcount=0
-	while [[ $hookcount -lt ${#prehooks[*]} ]]
-	do
-		echo " ${prehooks[$hookcount]}..."
-		/etc/buildaur/prehooks/${prehooks[$hookcount]} -u
-		hookcount=$(expr $hookcount + 1)
-	done
+	if [[ $prehooks -gt 0 ]]
+	then
+		echo ":: Running prehooks..."
+		while [[ $hookcount -lt ${#prehooks[*]} ]]
+		do
+			echo " ${prehooks[$hookcount]}..."
+			/etc/buildaur/prehooks/${prehooks[$hookcount]} -u
+			hookcount=$(expr $hookcount + 1)
+		done
+	fi
 }
 
 posthooks(){
 	posthooks=($(ls /etc/buildaur/posthooks))
 	hookcount=0
-	while [[ $hookcount -lt ${#posthooks[*]} ]]
-	do
-		echo " ${posthooks[$hookcount]}..."
-		/etc/buildaur/posthooks/${posthooks[$hookcount]} -u
-		hookcount=$(expr $hookcount + 1)
-	done
+	if [[ $posthooks -gt 0 ]]
+	then
+		echo ":: Running posthooks..."
+		while [[ $hookcount -lt ${#posthooks[*]} ]]
+		do
+			echo " ${posthooks[$hookcount]}..."
+			/etc/buildaur/posthooks/${posthooks[$hookcount]} -u
+			hookcount=$(expr $hookcount + 1)
+		done
+	fi
 }
 
 prerun(){
 	prerunhooks=($(ls /etc/buildaur/prerunhooks))
 	hookcount=0
-	while [[ $hookcount -lt ${#prerunhooks[*]} ]]
-	do
-		echo " ${prerunhooks[$hookcount]}..."
-		/etc/buildaur/prerunhooks/${prerunhooks[$hookcount]} -u
-		hookcount=$(expr $hookcount + 1)
-	done
+	if [[ $prerunhooks -gt 0 ]]
+	then
+		echo ":: Running prerunhooks..."
+		while [[ $hookcount -lt ${#prerunhooks[*]} ]]
+		do
+			echo " ${prerunhooks[$hookcount]}..."
+			/etc/buildaur/prerunhooks/${prerunhooks[$hookcount]} -u
+			hookcount=$(expr $hookcount + 1)
+		done
+	fi
 }
 
 postrun(){
 	postrunhooks=($(ls /etc/buildaur/postrunhooks))
 	hookcount=0
-	while [[ $hookcount -lt ${#prerunhooks[*]} ]]
-	do
-		echo " ${postrunhooks[$hookcount]}..."
-		/etc/buildaur/postrunhooks/${postrunhooks[$hookcount]} -u
-		hookcount=$(expr $hookcount + 1)
-	done
+	if [[ $postrunhooks -gt 0 ]]
+	then
+		echo ":: Running postrunhooks..."
+		while [[ $hookcount -lt ${#prerunhooks[*]} ]]
+		do
+			echo " ${postrunhooks[$hookcount]}..."
+			/etc/buildaur/postrunhooks/${postrunhooks[$hookcount]} -u
+			hookcount=$(expr $hookcount + 1)
+		done
+	fi
 }
 
 listhooks(){

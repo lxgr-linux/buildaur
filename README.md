@@ -92,6 +92,7 @@ Available variables are:<br>
 editor : Text-editor that will be used to edit the PKGBUILD. Default is 'nano'<br>
 showPKGBUILD : Print out PKGBUILD before asking to edit it. Default is '1'<br>
 sudoreset : Reset sudo before running PKGBUILD. Default is '1'. This may cause typing in your password more often, but is also more secure.<br>
+ask_warn_inst : Ask you if you want to update packages wich higher local versions than aur versions.<br>
 
 # Blacklist
 
