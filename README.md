@@ -43,8 +43,9 @@ Usage: /usr/bin/buildaur "<option> <string>"<br>
    Additional options for -S,-R,-Syu,-asp:<br>
       n                 : Doesn't ask questions<br>
       spgp              : Skips pgp checks of sourcecode<br>
-      c                 : Builds the package in a clean chroot (you may run into some problems using this on archlinux arm!)<br>
+      ch                : Builds the package in a clean chroot (you may run into some problems using this on archlinux arm!)<br>
       di                : Just builds the package<br>
+      co                : Toggles colored output on and off<br>
 
    Hookoptions:<br>
       --listhooks       : Lists all available and installed hooks<br>
@@ -93,6 +94,8 @@ editor : Text-editor that will be used to edit the PKGBUILD. Default is 'nano'<b
 showPKGBUILD : Print out PKGBUILD before asking to edit it. Default is '1'<br>
 sudoreset : Reset sudo before running PKGBUILD. Default is '1'. This may cause typing in your password more often, but is also more secure.<br>
 ask_warn_inst : Ask you if you want to update packages wich higher local versions than aur versions.<br>
+layout : Specifies the look of the program at updates. Options are 'old' and 'new'.<br>
+color : Turn on and off colored output.<br>
 
 # Blacklist
 

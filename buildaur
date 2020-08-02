@@ -5,15 +5,49 @@ editor=nano
 showPKGBUILD=1
 sudoreset=1
 ask_warn_inst=1
+layout=new
+color=true
 . /etc/buildaur/buildaur.conf
 black=($(cat /usr/share/buildaur/blacklist))
-bold=$(tput bold)
-red=$(tput setaf 1)
-grey=$(tput setaf 7)
-normal=$(tput sgr0)
+
+colorer(){
+	if [[ $color = true ]]
+	then
+		bold=$(tput bold)
+		red=$(tput setaf 1)
+		grey=$(tput setaf 7)
+		yellow=$(tput setaf 11)
+		normal=$(tput sgr0)
+		colored=
+	else
+		bold=
+		red=
+		grey=
+		yellow=
+		normal=
+		colored=--nocolor
+	fi
+}
+
+colorer
+
+progress(){
+	python3 -c "import os; max=$2; i=$1; width, height = os.get_terminal_size(); string=' $3'+200*' '; print('\r('+(2-len(str(i)))*' '+str(i)+'/'+str(max)+')'+string[:width-19-23]+'['+round((i/max)*28)*'#'+round((28-((i/max)*28)))*'-'+'] '+(3-len(str(round((i/max)*100))))*' '+str(round((i/max)*100))+'%', end='', flush=True)"
+}
 
 options(){
 	installindex=i
+	if [[ $(echo $1 | egrep co) != "" ]]
+	then
+		if [[ $color = true ]]
+		then
+			color=false
+		elif [[ $color = false ]]
+		then
+			color=true
+		fi
+		colorer
+	fi
 	if [[ $(echo $1 | egrep n) != "" ]]
 	then
 		ask=--noconfirm
@@ -22,12 +56,12 @@ options(){
 	then
 		pgp=--skippgpcheck
 	fi
-	if [[ $(echo $1 | egrep c) != "" ]]
+	if [[ $(echo $1 | egrep ch) != "" ]]
 	then
 		buildchroot=yes
 		if [[ $(uname -m) = armv7l ]]
 		then
-			echo ":: ${bold}Warning:${normal} You may run into some issues using chroots on ALARM!"
+			echo ":: ${bold}${yellow}Warning:${normal} You may run into some issues using chroots on ALARM!"
 		fi
 	fi
 	if [[ $(echo $1 | egrep di) != "" ]]
@@ -116,7 +150,7 @@ info(){
 			echo "  "$name $(echo $cutted | cut -d'"' -f16) "(local: $ver)"
 			if [[ $remoteinfo = "" ]]
 			then
-				echo "     ${bold}Warning:${normal} AUR does not provide information about this package!"
+				echo "     ${bold}${yellow}Warning:${normal} AUR does not provide information about this package!"
 			else
 				echo "     "$remoteinfo
 			fi
@@ -134,12 +168,6 @@ info(){
 	do
 		aspinfo=$(asp show $pac 2>/dev/null)
 		pkgver=0
-		# if [[ $q = 1 ]]
-		# then
-		# 	if [[ $(pacman -Qi $pac 2>/dev/null) != "" ]]
-		# 	then
-		# 		echo $pac
-		# 	fi
 		if [[ $aspinfo = "" ]]
 		then
 			if [[ $(pacman -Qi $pac 2>/dev/null) != "" ]]
@@ -150,7 +178,7 @@ info(){
 				else
 					pkgver=$(pacman -Qi $pac 2>/dev/null | xargs | awk {'print $6'})
 					echo "  $pac-$ver is not installed from ASP!"
-					echo "     ${bold}Warning:${normal} AUR does not provide information about this package!"
+					echo "     ${bold}${yellow}Warning:${normal} AUR does not provide information about this package!"
 				fi
 			fi
 		else
@@ -192,12 +220,12 @@ search(){
 			remoteinfo=$(echo $cutted | cut -d'"' -f20)
 			if [[ $name = "" ]] || [[ $ver = "" ]]
 			then
-			ver="--- "
+				ver="--- "
 			fi
 			echo "  "$name $(echo $cutted | cut -d'"' -f16) "(local: $ver)"
 			if [[ $remoteinfo = "" ]]
 			then
-				echo "     ${bold}Warning:${normal} AUR does not provide information about this package!"
+				echo "     ${bold}${yellow}Warning:${normal} AUR does not provide information about this package!"
 			else
 				echo "     "$remoteinfo
 			fi
@@ -242,10 +270,10 @@ install(){
 		echo " Nothing to do"
 	else
 		netcheck
-		prerun
+		hooks prerunhooks
 		installcount=1
 		preinst $@
-		postrun
+		hooks postrunhooks
 	fi
 }
 
@@ -271,16 +299,16 @@ preinst(){
 				printf ""
 			elif [[ $ver = $remotever ]]
 			then
-				echo "${bold}Warning:${normal} $key-$ver is allready on $remotever -- reinstalling"
+				echo " ${bold}${yellow}Warning:${normal} $key-$ver is allready on $remotever -- reinstalling"
 			elif [[ $(echo -e "$ver\n$remotever" | sort -V | xargs | awk {'print $1'}) = $ver ]]
 			then
-				echo "Info: $key-$ver will be updated to $remotever!"
+				echo " ${bold}Info:${normal} $key-$ver will be updated to $remotever!"
 			else
-				echo "${bold}Warning:${normal} $key-$ver is higher than AUR $remotever!"
+				echo " ${bold}${yellow}Warning:${normal} $key-$ver is higher than AUR $remotever!"
 			fi
 			if [[ $(echo $res | cut -d'"' -f41) != :null, ]]
 			then
-				echo  "${bold}Warning:${normal} $key is flagged out of date!"
+				echo " ${bold}${yellow}Warning:${normal} $key is flagged out of date!"
 			fi
 		elif [[ $mode = asp ]]
 		then
@@ -301,12 +329,12 @@ preinst(){
 				printf ""
 			elif [[ $ver = $pkgver-$pkgrel ]]
 			then
-				echo "${bold}Warning:${normal} $key-$ver is allready on $pkgver-$pkgrel -- reinstalling"
+				echo "${bold}${yellow}Warning:${normal} $key-$ver is allready on $pkgver-$pkgrel -- reinstalling"
 			elif [[ $(echo -e "$ver\n$pkgver-$pkgrel" | sort -V | xargs | awk {'print $1'}) = $ver ]]
 			then
 				echo "Info: $key-$ver will be updated to $pkgver-$pkgrel!"
 			else
-				echo "${bold}Warning:${normal} $key-$ver is higher than ASP $pkgver-$pkgrel!"
+				echo "${bold}${yellow}Warning:${normal} $key-$ver is higher than ASP $pkgver-$pkgrel!"
 			fi
 		fi
 		installpac=(${installpac[@]} $key)
@@ -406,7 +434,7 @@ realinst(){
 		then
 			sudo -k
 		fi
-		prehooks
+		hooks prehooks
 		depts
 		if [[ $mode = url ]]
 		then
@@ -424,19 +452,19 @@ realinst(){
 			echo ":: Updating chrootpackages..."
 			arch-nspawn $CHROOT/root pacman -Syu $ask
 			echo ":: Making and installing the package..."
-			makechrootpkg -c -r $CHROOT -- -sf $ask $pgp
+			makechrootpkg -c -r $CHROOT -- -sf $ask $pgp $colored
 			. ./PKGBUILD
 			if [[ $installindex = i ]]
 			then
-				sudo pacman -U $ask ./${pkgname}-${pkgver}-${pkgrel}-${arch}.pkg.tar.xz
+				sudo pacman -U $ask ./${pkgname}-${pkgver}-${pkgrel}-${arch}.pkg.tar.zst
 			fi
 		else
 			echo ":: Making and installing the package..."
-			makepkg -s${installindex}f $ask $pgp
+			makepkg -s${installindex}f $ask $pgp $colored
 		fi
 		if [[ $? = 0 ]]
 		then
-			posthooks
+			hooks posthooks
 			if [[ $installindex = "" ]]
 			then
 				echo ":: Info: Succesfully created package in $(pwd)!"
@@ -466,6 +494,118 @@ update(){
 	echo ":: Downloading packagelist..."
 	res=$(curl -s $res)
 	sudo sh -c "echo '$res' > /usr/share/buildaur/res"
+	if [[ $layout = new ]]
+	then
+		new_checker
+	else
+		old_checker
+	fi
+	if [[ ${willinst[@]} != "" ]]
+	then
+		install ${willinst[@]}
+	fi
+	if [[ ${willinstasp[@]} != "" ]]
+	then
+		mode=asp
+		install ${willinstasp[@]}
+	fi
+	if [[ ${willinstasp[@]} = "" ]] && [[ ${willinst[@]} = "" ]]
+	then
+		echo " Nothing to do"
+	elif [[ $errorcount = 0 ]]
+	then
+		echo " No errors accured"
+	else
+		echo " $errorcount error(s) accured!"
+	fi
+}
+
+new_checker(){
+	resultcount=$(echo $res | cut -d'"' -f9 | sed -e 's/://g' | sed -e 's/,//g')
+	fullcount=$(pacman -Qqm | wc -l)
+	willinst=()
+	aurpacs=()
+	errorcount=0
+	counter=0
+	count=1
+	textcounter=0
+	echo ":: Checking localy installed packages..."
+	echo "  $fullcount packages are curently installed!"
+	echo ":: Checking for outdated packages..."
+	while [[ $counter -lt $resultcount ]]
+	do
+		cutted=$(echo $res | cut -d{ -f$(expr $counter + 3))
+	  name=$(echo $cutted | cut -d'"' -f6)
+	  ver=$(pacman -Qqi $name | xargs 2>/dev/null | awk {'print $6'})
+		remotever=$(echo $cutted | cut -d'"' -f16)
+	  if [[ $name = "" ]] || [[ $ver = "" ]]
+	  then
+	  ver="--- "
+	  fi
+		if [[ $(echo ${black[*]} | sed -e 's/ /\n/g'| egrep -xE $name) = "$name" ]] || [[ $remotever = "$ver" ]]
+		then
+			progress $count $fullcount "Checking packages..."
+		elif [[ $(echo -e "$ver\n$remotever" | sort -V | xargs | awk {'print $1'}) = $ver ]]
+		then
+			progress $count $fullcount "Checking packages..."
+			willinst=(${willinst[@]} $name)
+		else
+			progress $count $fullcount "Checking packages..."
+			text[$textcounter]="${bold}${yellow}Warning:${normal} $name-$ver is higher than AUR $remotever!"
+			((textcounter++))
+			if [[ $ask_warn_inst = 1 ]]
+			then
+				willinst=(${willinst[@]} $name)
+			fi
+		fi
+		aurpacs[$count]=$name
+		((count++))
+    ((counter++))
+	done
+	localpacs=($(echo ${aurpacs[@]} $(pacman -Qqm) | tr ' ' '\n' | sort | uniq -u))
+	willinstasp=()
+	for pac in ${localpacs[@]}
+	do
+		aspinfo=$(asp show $pac 2>/dev/null)
+		pkgver=0
+		if [[ $aspinfo = "" ]]
+		then
+			pkgver=$(pacman -Qqi $pac | xargs 2>/dev/null | awk {'print $6'})
+			progress $count $fullcount "Checking packages..."
+		else
+			aspout=$(echo "$aspinfo" | egrep pkgver | head -1)
+			aspoutrel=$(echo "$aspinfo" | egrep pkgrel | head -1)
+			declare $aspout
+			declare $aspoutrel
+			ver=$(pacman -Qqi $pac | xargs 2>/dev/null | awk {'print $6'})
+			if [[ $(echo ${black[*]} | sed -e 's/ /\n/g'| egrep -xE $pac) = "$pac" ]] || [[ $pkgver-$pkgrel = "$ver" ]]
+			then
+				progress $count $fullcount "Checking packages..."
+			elif [[ $(echo -e "$ver\n$pkgver-$pkgrel" | sort -V | xargs | awk {'print $1'}) = $ver ]]
+			then
+				progress $count $fullcount "Checking packages..."
+				willinstasp=(${willinstasp[@]} $pac)
+			else
+				progress $count $fullcount "Checking packages..."
+				text[$textcounter]="${bold}${yellow}Warning:${normal} $pac-$ver is higher than ASP $pkgver-$pkgrel!"
+				((textcounter++))
+				if [[ $ask_warn_inst = 1 ]]
+				then
+					willinstasp=(${willinstasp[@]} $pac)
+				fi
+			fi
+		fi
+		((count++))
+	done
+	echo
+	echo ":: Done"
+	for message in "${text[@]}"
+	do
+		echo " $message"
+	done
+}
+
+old_checker(){
 	resultcount=$(echo $res | cut -d'"' -f9 | sed -e 's/://g' | sed -e 's/,//g')
 	willinst=()
 	aurpacs=()
@@ -491,17 +631,15 @@ update(){
 		elif [[ $remotever = "$ver" ]]
 		then
 			echo "($count/$resultcount) $name-$ver is up to date"
+		elif [[ $(echo -e "$ver\n$remotever" | sort -V | xargs | awk {'print $1'}) = $ver ]]
+		then
+			echo "($count/$resultcount) $name-$ver is out of date! $remotever is available!"
+			askinst
 		else
-			if [[ $(echo -e "$ver\n$remotever" | sort -V | xargs | awk {'print $1'}) = $ver ]]
+			echo "($count/$resultcount) ${bold}${yellow}Warning:${normal} $name-$ver is higher than AUR $remotever!"
+			if [[ $ask_warn_inst = 1 ]]
 			then
-				echo "($count/$resultcount) $name-$ver is out of date! $remotever is available!"
 				askinst
-			else
-				echo "($count/$resultcount) ${bold}Warning:${normal} $name-$ver is higher than AUR $remotever!"
-				if [[ $ask_warn_inst = 1 ]]
-				then
-					askinst
-				fi
 			fi
 		fi
 		aurpacs[$count]=$name
@@ -535,42 +673,20 @@ update(){
 			elif [[ $pkgver-$pkgrel = "$ver" ]]
 			then
 				echo "($count/${#localpacs[*]}) $pac-$ver is up to date"
+			elif [[ $(echo -e "$ver\n$pkgver-$pkgrel" | sort -V | xargs | awk {'print $1'}) = $ver ]]
+			then
+				echo "($count/${#localpacs[*]}) $pac-$ver is out of date! $pkgver-$pkgrel is available!"
+				askinst_asp
 			else
-				if [[ $(echo -e "$ver\n$pkgver-$pkgrel" | sort -V | xargs | awk {'print $1'}) = $ver ]]
+				echo "($count/${#localpacs[*]}) ${bold}${yellow}Warning:${normal} $pac-$ver is higher than ASP $pkgver-$pkgrel!"
+				if [[ $ask_warn_inst = 1 ]]
 				then
-					echo "($count/${#localpacs[*]}) $pac-$ver is out of date! $pkgver-$pkgrel is available!"
-					askinst
-				else
-					echo "($count/${#localpacs[*]}) ${bold}Warning:${normal} $pac-$ver is higher than ASP $pkgver-$pkgrel!"
-					if [[ $ask_warn_inst = 1 ]]
-					then
-						askinst
-					fi
+					askinst_asp
 				fi
 			fi
 		fi
 		((count++))
 	done
-	if [[ ${willinst[@]} != "" ]]
-	then
-		echo ""
-		install ${willinst[@]}
-	fi
-	if [[ ${willinstasp[@]} != "" ]]
-	then
-		mode=asp
-		install ${willinstasp[@]}
-	fi
-	if [[ ${willinstasp[@]} = "" ]] ; [[ ${willinst[@]} = "" ]]
-	then
-		echo " Nothing to do"
-	fi
-	if [[ $errorcount = 0 ]]
-	then
-		echo " No errors accured"
-	else
-		echo " $errorcount error(s) accured!"
-	fi
 }
 
 askinst(){
@@ -587,108 +703,51 @@ askinst(){
 	fi
 }
 
-prehooks(){
-	prehooks=($(ls /etc/buildaur/prehooks))
-	hookcount=0
-	if [[ $prehooks -gt 0 ]]
+askinst_asp(){
+	if [[ $ask = "--noconfirm" ]]
 	then
-		echo ":: Running prehooks..."
-		while [[ $hookcount -lt ${#prehooks[*]} ]]
-		do
-			echo " ${prehooks[$hookcount]}..."
-			/etc/buildaur/prehooks/${prehooks[$hookcount]} -u
-			hookcount=$(expr $hookcount + 1)
-		done
+		ans=y
+	else
+		echo ":: Should it be updated? [Y/n]"
+		read ans
+	fi
+	if [[ $ans == y ]] || [[ $ans == "" ]]
+	then
+		willinstasp=(${willinstasp[@]} $pac)
 	fi
 }
 
-posthooks(){
-	posthooks=($(ls /etc/buildaur/posthooks))
+hooks(){
+	hooks=($(ls /etc/buildaur/$1))
 	hookcount=0
-	if [[ $posthooks -gt 0 ]]
+	if [[ $hooks -gt 0 ]]
 	then
-		echo ":: Running posthooks..."
-		while [[ $hookcount -lt ${#posthooks[*]} ]]
+		echo ":: Running $1..."
+		while [[ $hookcount -lt ${#hooks[*]} ]]
 		do
-			echo " ${posthooks[$hookcount]}..."
-			/etc/buildaur/posthooks/${posthooks[$hookcount]} -u
-			hookcount=$(expr $hookcount + 1)
-		done
-	fi
-}
-
-prerun(){
-	prerunhooks=($(ls /etc/buildaur/prerunhooks))
-	hookcount=0
-	if [[ $prerunhooks -gt 0 ]]
-	then
-		echo ":: Running prerunhooks..."
-		while [[ $hookcount -lt ${#prerunhooks[*]} ]]
-		do
-			echo " ${prerunhooks[$hookcount]}..."
-			/etc/buildaur/prerunhooks/${prerunhooks[$hookcount]} -u
-			hookcount=$(expr $hookcount + 1)
-		done
-	fi
-}
-
-postrun(){
-	postrunhooks=($(ls /etc/buildaur/postrunhooks))
-	hookcount=0
-	if [[ $postrunhooks -gt 0 ]]
-	then
-		echo ":: Running postrunhooks..."
-		while [[ $hookcount -lt ${#prerunhooks[*]} ]]
-		do
-			echo " ${postrunhooks[$hookcount]}..."
-			/etc/buildaur/postrunhooks/${postrunhooks[$hookcount]} -u
+			echo " ${hooks[$hookcount]}..."
+			/etc/buildaur/$1/${hooks[$hookcount]} -u
 			hookcount=$(expr $hookcount + 1)
 		done
 	fi
 }
 
 listhooks(){
-	echo "Prehooks:"
-	prehooks=($(ls /etc/buildaur/prehooks))
-	hookcount=0
-	while [[ $hookcount -lt ${#prehooks[*]} ]]
-	do
-		. /etc/buildaur/prehooks/${prehooks[$hookcount]}
-		echo " ${prehooks[$hookcount]}"
-		echo "  $desc"
-		hookcount=$(expr $hookcount + 1)
+	hookers=(prehooks posthooks prerunhooks postrunhooks)
+	for hook in ${hookers[@]}
+		do
+		echo "$hook:"
+		posthooks=($(ls /etc/buildaur/$hook))
+		hookcount=0
+		while [[ $hookcount -lt ${#posthooks[*]} ]]
+		do
+			. /etc/buildaur/$hook/${posthooks[$hookcount]}
+			echo " ${posthooks[$hookcount]}"
+			echo "  $desc"
+			hookcount=$(expr $hookcount + 1)
+		done
 	done
-	echo "Posthooks:"
-	posthooks=($(ls /etc/buildaur/posthooks))
-	hookcount=0
-	while [[ $hookcount -lt ${#posthooks[*]} ]]
-	do
-		. /etc/buildaur/posthooks/${posthooks[$hookcount]}
-		echo " ${posthooks[$hookcount]}"
-		echo "  $desc"
-		hookcount=$(expr $hookcount + 1)
-	done
-	echo "Prerunhooks:"
-	prerunhooks=($(ls /etc/buildaur/prerunhooks))
-	hookcount=0
-	while [[ $hookcount -lt ${#prerunhooks[*]} ]]
-	do
-		. /etc/buildaur/prerunhooks/${prerunhooks[$hookcount]}
-		echo " ${prerunhooks[$hookcount]}"
-		echo "  $desc"
-		hookcount=$(expr $hookcount + 1)
-	done
-	echo "Postrunhooks:"
-	postrunhooks=($(ls /etc/buildaur/postrunhooks))
-	hookcount=0
-	while [[ $hookcount -lt ${#postrunhooks[*]} ]]
-	do
-		. /etc/buildaur/postrunhooks/${postrunhooks[$hookcount]}
-		echo " ${postrunhooks[$hookcount]}"
-		echo "  $desc"
-		hookcount=$(expr $hookcount + 1)
-	done
-	echo "Deactivated hooks:"
+	echo "deactivated hooks:"
 	hooks=($(ls /etc/buildaur/hooks))
 	hookcount=0
 	while [[ $hookcount -lt ${#hooks[*]} ]]
@@ -776,8 +835,9 @@ help(){
 	echo "   Additional options for -S,-R,-Syu,-asp:"
 	echo "      n                 : Doesn't ask questions"
 	echo "      spgp              : Skips pgp checks of sourcecode"
-	echo "      c                 : Builds the package in a clean chroot (you may run into some problems using this on archlinux arm!)"
+	echo "      ch                : Builds the package in a clean chroot (you may run into some problems using this on archlinux arm!)"
 	echo "      di                : Just builds the package"
+	echo "      co                : Toggles colored output on and off"
 	echo ""
 	echo "   Hookoptions:"
 	echo "      --listhooks       : Lists all available and installed hooks"
@@ -920,7 +980,7 @@ case $1 in
 		if [[ $1 = "" ]]
 		then
 			echo ":: ${red}${bold}ERROR:${normal} No options are given! Try --help to see all options!"
-			#exit 2
+			exit 2
 		else
 			# give an error if the option in unknown
 			echo ":: ${red}${bold}ERROR:${normal} '$@' is no known option! Try --help to see all options!"
