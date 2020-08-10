@@ -7,4 +7,8 @@ then
 echo 'make(){' >> ./PKGBUILD
 echo '/usr/bin/make -j $(nproc) "$@"' >> ./PKGBUILD
 echo '}' >> ./PKGBUILD
+echo "" >> ./PKGBUILD
+echo 'ninja(){' >> ./PKGBUILD
+echo '/usr/bin/ninja -j $(nproc) "$@"' >> ./PKGBUILD
+echo '}' >> ./PKGBUILD
 fi

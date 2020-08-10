@@ -31,6 +31,12 @@ colorer(){
 
 colorer
 
+if [[ $(whoami) = root ]]
+then
+	echo ":: ${red}${bold}ERROR:${normal} Don't run this script as root!"
+	exit 1
+fi
+
 progress(){
 	python3 -c "import os; max=$2; i=$1; width, height = os.get_terminal_size(); string=' $3'+200*' '; print('\r('+(2-len(str(i)))*' '+str(i)+'/'+str(max)+')'+string[:width-19-23]+'['+round((i/max)*28)*'#'+round((28-((i/max)*28)))*'-'+'] '+(3-len(str(round((i/max)*100))))*' '+str(round((i/max)*100))+'%', end='', flush=True)"
 }
@@ -52,6 +58,12 @@ options(){
 	then
 		ask=--noconfirm
 	fi
+	# if [[ $(echo $1 | egrep us) != "" ]]
+	# then
+	# 	su $2
+	# 	echo ":: Running buildaur as $2"
+	# 	shift
+	# fi
 	if [[ $(echo $1 | egrep spgp) != "" ]]
 	then
 		pgp=--skippgpcheck
@@ -68,6 +80,7 @@ options(){
 	then
 		installindex=""
 	fi
+	# echo $@
 }
 
 netcheck(){
@@ -93,7 +106,6 @@ info(){
 	pkgnames=($@)
 	if [[ $all = true ]] && [[ $inet = 0 ]]
 	then
-		echo 3
 		res=$(cat /usr/share/buildaur/res)
 	else
 		if [[ $inet = 0 ]]
@@ -177,7 +189,7 @@ info(){
 					echo $pac
 				else
 					pkgver=$(pacman -Qi $pac 2>/dev/null | xargs | awk {'print $6'})
-					echo "  $pac-$ver is not installed from ASP!"
+					echo "  $pac $ver is not installed from ASP!"
 					echo "     ${bold}${yellow}Warning:${normal} AUR does not provide information about this package!"
 				fi
 			fi
@@ -229,20 +241,43 @@ search(){
 			else
 				echo "     "$remoteinfo
 			fi
-			counter=$(expr $counter + 1)
+			((counter++))
 		done
 		shift
 	done
+}
+
+show_PKGBUILD(){
+	notext=1
+	q=1
+	if [[ $1 = "" ]]
+	then
+		echo ":: ${red}${bold}ERROR:${normal} No package is given!"
+		exit 1
+	elif [[ $# -gt 1 ]]
+	then
+		echo ":: ${red}${bold}ERROR:${normal} Just one package should be given!"
+		exit 1
+	elif [[ $(info $1) = $1 ]]
+	then
+		cd ~/.cache/buildaur/build
+		rm -rf ./$1
+		git clone "https://aur.archlinux.org/$1.git" 2>/dev/null
+		cd ./$1
+		less ./PKGBUILD
+	else
+		echo ":: ${red}${bold}ERROR:${normal} $1 ist not in the AUR!"
+		exit 1
+	fi
 }
 
 depts(){
 	. ./PKGBUILD
 	depends=($(echo -e ${depends[@]} ${makedepends[@]} | sed 's/ /\n/g'| uniq))
 	aurdeps=()
-	depcount=0
 	depmaxcount=${#depends[*]}
 	echo ":: Checking for dependecies..."
-	echo "  ($depmaxcount) Packages: ${depends[@]}"
+	echo " ($depmaxcount) Packages: ${depends[@]}"
 	echo ":: Checking for unresolved dependecies..."
 	for pac in ${depends[@]}
 	do
@@ -254,7 +289,7 @@ depts(){
 	notext=1
 	q=1
 	aurdeps=($(info ${aurdeps[@]}))
-	echo "  (${#aurdeps[*]}) Packages: ${aurdeps[@]}"
+	echo " (${#aurdeps[*]}) Packages: ${aurdeps[@]}"
 	if [[ ${aurdeps[@]} != "" ]]
 	then
 		echo ":: Installing them..."
@@ -281,9 +316,8 @@ preinst(){
 	echo ":: Checking packages..."
 	installpac=()
 	niceinstallpac=()
-	while [[ $# -gt 0 ]]
+	for key in $@
 	do
-		key=$1
 		if [[ $mode != asp ]] && [[ $mode != url ]]
 		then
 			ver=$(pacman -Qqi $key 2>/dev/null| xargs 2>/dev/null | awk {'print $6'})
@@ -329,12 +363,12 @@ preinst(){
 				printf ""
 			elif [[ $ver = $pkgver-$pkgrel ]]
 			then
-				echo "${bold}${yellow}Warning:${normal} $key-$ver is allready on $pkgver-$pkgrel -- reinstalling"
+				echo " ${bold}${yellow}Warning:${normal} $key-$ver is allready on $pkgver-$pkgrel -- reinstalling"
 			elif [[ $(echo -e "$ver\n$pkgver-$pkgrel" | sort -V | xargs | awk {'print $1'}) = $ver ]]
 			then
-				echo "Info: $key-$ver will be updated to $pkgver-$pkgrel!"
+				echo " ${bold}Info:${normal} $key-$ver will be updated to $pkgver-$pkgrel!"
 			else
-				echo "${bold}${yellow}Warning:${normal} $key-$ver is higher than ASP $pkgver-$pkgrel!"
+				echo " ${bold}${yellow}Warning:${normal} $key-$ver is higher than ASP $pkgver-$pkgrel!"
 			fi
 		fi
 		installpac=(${installpac[@]} $key)
@@ -386,8 +420,7 @@ realinst(){
 				exit 1
 			fi
 		fi
-		rm -rf  ~/.cache/buildaur/build/$1
-		rm -rf  ~/.cache/buildaur/build/urlbuild
+		rm -rf  ~/.cache/buildaur/build/$1 ~/.cache/buildaur/build/urlbuild
 		if [[ $mode = asp ]]
 		then
 			echo ":: Exporting package..."
@@ -402,10 +435,10 @@ realinst(){
 			echo ":: Clonig git repository..."
 			if [[ $mode = url ]]
 			then
-				git clone $1 ~/.cache/buildaur/build/urlbuild
+				git clone $1 ~/.cache/buildaur/build/urlbuild 2>/dev/null
 				cd ~/.cache/buildaur/build/urlbuild
 			else
-				git clone https://aur.archlinux.org/$1.git ~/.cache/buildaur/build/$1
+				git clone https://aur.archlinux.org/$1.git ~/.cache/buildaur/build/$1 2>/dev/null
 				cd ~/.cache/buildaur/build/$1
 			fi
 		fi
@@ -477,7 +510,7 @@ realinst(){
 		fi
 		rm ./buildaur.lock
 		shift
-		installcount=$(expr $installcount + 1)
+		((installcount++))
 	done
 }
 
@@ -526,15 +559,14 @@ new_checker(){
 	willinst=()
 	aurpacs=()
 	errorcount=0
-	counter=0
 	count=1
 	textcounter=0
 	echo ":: Checking localy installed packages..."
 	echo "  $fullcount packages are curently installed!"
 	echo ":: Checking for outdated packages..."
-	while [[ $counter -lt $resultcount ]]
+	while [[ $count -lt $(expr $resultcount - 1) ]]
 	do
-		cutted=$(echo $res | cut -d{ -f$(expr $counter + 3))
+		cutted=$(echo $res | cut -d{ -f$(expr $count + 2))
 	  name=$(echo $cutted | cut -d'"' -f6)
 	  ver=$(pacman -Qqi $name | xargs 2>/dev/null | awk {'print $6'})
 		remotever=$(echo $cutted | cut -d'"' -f16)
@@ -542,15 +574,14 @@ new_checker(){
 	  then
 	  ver="--- "
 	  fi
+		progress $count $fullcount "Checking packages..."
 		if [[ $(echo ${black[*]} | sed -e 's/ /\n/g'| egrep -xE $name) = "$name" ]] || [[ $remotever = "$ver" ]]
 		then
-			progress $count $fullcount "Checking packages..."
+			printf "" >/dev/null
 		elif [[ $(echo -e "$ver\n$remotever" | sort -V | xargs | awk {'print $1'}) = $ver ]]
 		then
-			progress $count $fullcount "Checking packages..."
 			willinst=(${willinst[@]} $name)
 		else
-			progress $count $fullcount "Checking packages..."
 			text[$textcounter]="${bold}${yellow}Warning:${normal} $name-$ver is higher than AUR $remotever!"
 			((textcounter++))
 			if [[ $ask_warn_inst = 1 ]]
@@ -560,7 +591,6 @@ new_checker(){
 		fi
 		aurpacs[$count]=$name
 		((count++))
-    ((counter++))
 	done
 	localpacs=($(echo ${aurpacs[@]} $(pacman -Qqm) | tr ' ' '\n' | sort | uniq -u))
 	willinstasp=()
@@ -568,25 +598,21 @@ new_checker(){
 	do
 		aspinfo=$(asp show $pac 2>/dev/null)
 		pkgver=0
+		progress $count $fullcount "Checking packages..."
 		if [[ $aspinfo = "" ]]
 		then
 			pkgver=$(pacman -Qqi $pac | xargs 2>/dev/null | awk {'print $6'})
-			progress $count $fullcount "Checking packages..."
 		else
-			aspout=$(echo "$aspinfo" | egrep pkgver | head -1)
-			aspoutrel=$(echo "$aspinfo" | egrep pkgrel | head -1)
-			declare $aspout
-			declare $aspoutrel
+			declare $(echo "$aspinfo" | egrep pkgver | head -1)
+			declare $(echo "$aspinfo" | egrep pkgrel | head -1)
 			ver=$(pacman -Qqi $pac | xargs 2>/dev/null | awk {'print $6'})
 			if [[ $(echo ${black[*]} | sed -e 's/ /\n/g'| egrep -xE $pac) = "$pac" ]] || [[ $pkgver-$pkgrel = "$ver" ]]
 			then
-				progress $count $fullcount "Checking packages..."
+				printf "" >/dev/null
 			elif [[ $(echo -e "$ver\n$pkgver-$pkgrel" | sort -V | xargs | awk {'print $1'}) = $ver ]]
 			then
-				progress $count $fullcount "Checking packages..."
 				willinstasp=(${willinstasp[@]} $pac)
 			else
-				progress $count $fullcount "Checking packages..."
 				text[$textcounter]="${bold}${yellow}Warning:${normal} $pac-$ver is higher than ASP $pkgver-$pkgrel!"
 				((textcounter++))
 				if [[ $ask_warn_inst = 1 ]]
@@ -605,6 +631,7 @@ new_checker(){
 	done
 }
 
+# old check function -- may be removed later
 old_checker(){
 	resultcount=$(echo $res | cut -d'"' -f9 | sed -e 's/://g' | sed -e 's/,//g')
 	willinst=()
@@ -727,35 +754,30 @@ hooks(){
 		do
 			echo " ${hooks[$hookcount]}..."
 			/etc/buildaur/$1/${hooks[$hookcount]} -u
-			hookcount=$(expr $hookcount + 1)
+			((hookcount++))
 		done
 	fi
 }
 
 listhooks(){
-	hookers=(prehooks posthooks prerunhooks postrunhooks)
+	hookers=(prehooks posthooks prerunhooks postrunhooks hooks)
 	for hook in ${hookers[@]}
 		do
-		echo "$hook:"
-		posthooks=($(ls /etc/buildaur/$hook))
+		if [[ $hook = hooks ]]
+		then
+			echo "deactivated hooks:"
+		else
+			echo "$hook:"
+		fi
+		hooks=($(ls /etc/buildaur/$hook))
 		hookcount=0
-		while [[ $hookcount -lt ${#posthooks[*]} ]]
+		while [[ $hookcount -lt ${#hooks[*]} ]]
 		do
-			. /etc/buildaur/$hook/${posthooks[$hookcount]}
-			echo " ${posthooks[$hookcount]}"
+			. /etc/buildaur/$hook/${hooks[$hookcount]}
+			echo " ${hooks[$hookcount]}"
 			echo "  $desc"
-			hookcount=$(expr $hookcount + 1)
+			((hookcount++))
 		done
-	done
-	echo "deactivated hooks:"
-	hooks=($(ls /etc/buildaur/hooks))
-	hookcount=0
-	while [[ $hookcount -lt ${#hooks[*]} ]]
-	do
-		. /etc/buildaur/hooks/${hooks[$hookcount]}
-		echo " ${hooks[$hookcount]}"
-		echo "  $desc"
-		hookcount=$(expr $hookcount + 1)
 	done
 }
 
@@ -772,7 +794,7 @@ activate(){
 			echo ":: ${red}${bold}ERROR:${normal} $1 is not available!"
 			exit 1
 		fi
-		hookcount=$(expr $hookcount - 1)
+		((hookcount--))
 		shift
 	done
 }
@@ -793,7 +815,7 @@ deactivate(){
 			echo ":: ${red}${bold}ERROR:${normal} is not available!"
 			exit 1
 		fi
-		hookcount=$(expr $hookcount - 1)
+		((hookcount--))
 		shift
 	done
 }
@@ -817,7 +839,7 @@ hookhelp(){
 }
 
 help(){
-	echo "buildaur - An AUR helper"
+	echo "buildaur - An AUR helper with asp support"
 	echo "Usage: $0 <option> <string>"
 	echo "   General options:"
 	echo "      -S                : Installs a package"
@@ -827,6 +849,7 @@ help(){
 	echo "      -Syu              : Updates all AUR packages"
 	echo "      -url              : Installs a package from a given git-repository"
 	echo "      -asp              : Builds a package from source using asp (usefull for archlinux arm)"
+	echo "      --show            : Shows the PKGBUILD of a given package"
 	echo "      --clear           : Cleanes build dir"
 	echo "      -v|--version      : Displays version of this program"
 	echo "      -l|--license      : Displays license of this program"
@@ -850,7 +873,7 @@ help(){
 }
 
 case $1 in
-	-S | -Sn* | -Sspgp* | -Sc* | -Sdi* )
+	-S | -Sn* | -Sspgp* | -Sc* | -Sdi* | -Sus* )
 		options $@
 		shift
 		install $@
@@ -957,7 +980,7 @@ case $1 in
 		shift
 		if [[ $1 = all ]]
 		then
-			deactivate $(ls /etc/buildaur/prehooks) $(ls /etc/buildaur/posthooks)
+			deactivate $(ls /etc/buildaur/prehooks) $(ls /etc/buildaur/posthooks) $(ls /etc/buildaur/prerunhooks) $(ls /etc/buildaur/postrunhooks)
 		else
 			deactivate $@
 		fi
@@ -976,13 +999,17 @@ case $1 in
 		echo "export CHROOT=$HOME/chroot" >> $HOME/.bashrc
 		exit 0
 	;;
+	--show)
+		shift
+		show_PKGBUILD $@
+		exit 0
+	;;
 	*)
 		if [[ $1 = "" ]]
 		then
 			echo ":: ${red}${bold}ERROR:${normal} No options are given! Try --help to see all options!"
 			exit 2
 		else
-			# give an error if the option in unknown
 			echo ":: ${red}${bold}ERROR:${normal} '$@' is no known option! Try --help to see all options!"
 			exit 2
 		fi

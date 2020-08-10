@@ -11,7 +11,7 @@ https://wiki.archlinux.org/index.php/Arch_User_Repository
 
 # Installation
 
-First the 'PKHBUILD' should be cloned from the AUR
+First the 'PKGBUILD' should be cloned from the AUR
 
 $ git clone https://aur.archlinux.org/buildaur.git
 
@@ -21,6 +21,16 @@ $ cd ./buildaur
 $ makepkg -si
 
 Then the installation will be finished.
+
+NOTE: If you are using manjaro linux you have to install asp first, which is not in the manjaro repository.
+To do this just asps git repo:
+
+$ git clone https://aur.archlinux.org/asp.git
+
+Then the package has to be build and installed
+
+$ cd ./asp
+$ makepkg -si
 
 # Usage
 
@@ -35,6 +45,7 @@ Usage: /usr/bin/buildaur "<option> <string>"<br>
       -Syu              : Updates all AUR packages<br>
       -url              : Installs a package from a given git-repository<br>
       -asp              : Builds a package from source using asp (usefull for archlinux arm)<br>
+      --show            : Shows the PKGBUILD of a given package<br>
       --clear           : Cleanes build dir<br>
       -v|--version      : Displays the version of this program<br>
       -l|--license      : Displays the license of this program<br>
@@ -81,8 +92,7 @@ hooks:
   Hookoptions:<br>
      --listhooks       : Lists all available and installed hooks<br>
      --hook-activate   : Activates a hook<br>
-     --hook-deactivate : Deactivates a hook<br>
-
+     --hook-deactivate : Deactivates a hook<br><br>
      When 'all' is given as argument for --hook-activate and --hook-deactivate the action applies to all hooks.
 
 # Config file
@@ -99,4 +109,4 @@ color : Turn on and off colored output.<br>
 
 # Blacklist
 
-The blacklist is stored in /usr/share/buildaur/blacklist contains package names which are excluded in updates.
+The blacklist stored in /usr/share/buildaur/blacklist contains package names which are excluded in updates.
