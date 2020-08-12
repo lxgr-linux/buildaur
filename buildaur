@@ -751,15 +751,20 @@ askinst_asp(){
 
 hooks(){
 	hooks=($(ls /etc/buildaur/$1))
-	hookcount=0
 	if [[ $hooks -gt 0 ]]
 	then
 		echo ":: Running $1..."
-		while [[ $hookcount -lt ${#hooks[*]} ]]
+		for hook in ${hooks[@]}
 		do
-			echo " ${hooks[$hookcount]}..."
-			/etc/buildaur/$1/${hooks[$hookcount]} -u
-			((hookcount++))
+			echo " ${hook}..."
+			/etc/buildaur/$1/${hook} -u
+			if [[ $? != 0 ]]
+			then
+				echo "${bold}${red}ERROR:${normal} Hook '$hook' exitet with exitstatus '$?' !"
+				echo ":: Exiting..."
+				rm ./buildaur.lock
+				exit 1
+			fi
 		done
 	fi
 }

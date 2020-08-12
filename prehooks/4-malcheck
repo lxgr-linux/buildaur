@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+bold=$(tput bold)
+yellow=$(tput setaf 11)
+normal=$(tput sgr0)
+type=pre
+desc="checks the PKGBUILD for bad code."
+
+if [[ $1 = "-u" ]]
+then
+  . /etc/buildaur/buildaur.conf
+  content="$(cat ./PKGBUILD)"
+  mal[0]="$(echo "$content" | egrep -n  "rm -rf /")"
+  if [[ ${mal[@]} !=  "" ]]
+  then
+    for mali in "${mal[@]}"
+    do
+      echo ":: ${bold}${yellow}Warning:${normal} Potentional malicious code found in line $mali !"
+    done
+    echo ":: Please check the PKGBUILD manualy before continuing. This package may not be trust worthy and should be reported!"
+    echo ":: Edit the PKGBUILD? [Y/n/c]"
+    read ans
+    if [[ $ans == Y ]] || [[ $ans == "" ]]
+    then
+      $editor ./PKGBUILD
+    elif [[ $ans == n ]]
+    then
+      echo ":: Going on..."
+    elif [[ $ans == c ]]
+    then
+      exit 1
+    fi
+  fi
+fi
