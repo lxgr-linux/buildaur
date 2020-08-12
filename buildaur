@@ -52,11 +52,13 @@ options(){
 		then
 			color=true
 		fi
+		((argleng--)); ((argleng--))
 		colorer
 	fi
 	if [[ $(echo $1 | egrep n) != "" ]]
 	then
 		ask=--noconfirm
+		((argleng--))
 	fi
 	# if [[ $(echo $1 | egrep us) != "" ]]
 	# then
@@ -67,6 +69,7 @@ options(){
 	if [[ $(echo $1 | egrep spgp) != "" ]]
 	then
 		pgp=--skippgpcheck
+		((argleng--)); ((argleng--)); ((argleng--)); ((argleng--))
 	fi
 	if [[ $(echo $1 | egrep ch) != "" ]]
 	then
@@ -75,12 +78,18 @@ options(){
 		then
 			echo ":: ${bold}${yellow}Warning:${normal} You may run into some issues using chroots on ALARM!"
 		fi
+		((argleng--)); ((argleng--))
 	fi
 	if [[ $(echo $1 | egrep di) != "" ]]
 	then
 		installindex=""
+		((argleng--)); ((argleng--))
 	fi
-	# echo $@
+	if [[ $argleng != 0 ]]
+	then
+		echo ":: ${red}${bold}ERROR:${normal} '$fullarg' is no known option! Try --help to see all options!"
+		exit 2
+	fi
 }
 
 netcheck(){
@@ -868,14 +877,18 @@ help(){
 	echo "      --help-hooks      : Displays help-dialog for hooks"
 }
 
+fullarg=$@
+
 case $1 in
 	-S | -Sn* | -Sspgp* | -Sc* | -Sdi* | -Sus* )
+		argleng=$(expr ${#1} - 2)
 		options $@
 		shift
 		install $@
 		exit 0
 	;;
 	-url*)
+		argleng=$(expr ${#1} - 4)
 		options $@
 		shift
 		mode=url
@@ -883,6 +896,7 @@ case $1 in
 		exit 0
 	;;
 	-asp*)
+		argleng=$(expr ${#1} - 4)
 		options $@
 		shift
 		mode=asp
@@ -935,6 +949,7 @@ case $1 in
 		exit 0
 	;;
 	-Syu*)
+		argleng=$(expr ${#1} - 4)
 		options $@
 		update
 		exit 0
