@@ -864,6 +864,7 @@ help(){
 	echo "      -v|--version      : Displays version of this program"
 	echo "      -l|--license      : Displays license of this program"
 	echo "      --make-chroot     : Creates a chroot dir which can be used for building packages"
+	echo "      --about           : Displays an about text"
 	echo ""
 	echo "   Additional options for -S,-R,-Syu,-asp:"
 	echo "      n                 : Doesn't ask questions"
@@ -880,6 +881,10 @@ help(){
 	echo "   Help options:"
 	echo "      -h|--help         : Displays this help-dialog"
 	echo "      --help-hooks      : Displays help-dialog for hooks"
+}
+
+about(){
+	echo -e "Buildaur $(pacman -Q buildaur | cut -d" " -f2 | xargs) -- An AUR helper with asp support\n\nThis package is submited and maintained by lxgr -- <lxgr@protonmail.com>\nThis software is licensed under the GPL3.\n\nThis software is made to help archlinux users to install and update packages from the AUR in a save and consistent way."
 }
 
 fullarg=$@
@@ -976,6 +981,10 @@ case $1 in
 		echo "  $(du -hcs ~/.cache/buildaur/build | xargs | awk {'print $1'})B will be removed!"
 		rm -rf ~/.cache/buildaur/build/*
 		echo ":: Done!"
+		exit 0
+	;;
+	--about)
+		about
 		exit 0
 	;;
 	--listhooks)

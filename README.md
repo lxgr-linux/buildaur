@@ -50,6 +50,7 @@ Usage: /usr/bin/buildaur "<option> <string>"<br>
       -v|--version      : Displays the version of this program<br>
       -l|--license      : Displays the license of this program<br>
       --make-chroot     : Creates a chroot dir which can be used for building packages<br>
+      --about           : Displays an about text<br>
 
    Additional options for -S,-R,-Syu,-asp:<br>
       n                 : Doesn't ask questions<br>
