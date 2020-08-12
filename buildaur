@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # maintainer lxgr <lxgr@protonmail.com>
 
+# test 
+
 editor=nano
 showPKGBUILD=1
 sudoreset=1
