@@ -526,7 +526,7 @@ update(){
 	done
 	echo ":: Downloading packagelist..."
 	res=$(curl -s $res)
-	sudo sh -c "echo '$res' > /usr/share/buildaur/res"
+	sudo sh -c "echo $res > /usr/share/buildaur/res"
 	if [[ $layout = new ]]
 	then
 		new_checker
