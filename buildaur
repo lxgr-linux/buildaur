@@ -564,16 +564,12 @@ new_checker(){
 	echo ":: Checking localy installed packages..."
 	echo "  $fullcount packages are curently installed!"
 	echo ":: Checking for outdated packages..."
-	while [[ $count -lt $(expr $resultcount - 1) ]]
+	while [[ $count -lt $(expr $resultcount + 1 ) ]]
 	do
 		cutted=$(echo $res | cut -d{ -f$(expr $count + 2))
 	  name=$(echo $cutted | cut -d'"' -f6)
 	  ver=$(pacman -Qqi $name | xargs 2>/dev/null | awk {'print $6'})
 		remotever=$(echo $cutted | cut -d'"' -f16)
-	  if [[ $name = "" ]] || [[ $ver = "" ]]
-	  then
-	  ver="--- "
-	  fi
 		progress $count $fullcount "Checking packages..."
 		if [[ $(echo ${black[*]} | sed -e 's/ /\n/g'| egrep -xE $name) = "$name" ]] || [[ $remotever = "$ver" ]]
 		then
