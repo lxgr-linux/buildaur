@@ -8,7 +8,7 @@ ask_warn_inst=1
 layout=new
 color=true
 . /etc/buildaur/buildaur.conf
-black=($(cat /usr/share/buildaur/blacklist))
+black="$(cat /usr/share/buildaur/blacklist)"
 
 colorer(){
 	if [[ $color = true ]]
@@ -38,7 +38,7 @@ then
 fi
 
 progress(){
-	python3 -c "import os; max=$2; i=$1; width, height = os.get_terminal_size(); string=' $3'+200*' '; print('\r('+(2-len(str(i)))*' '+str(i)+'/'+str(max)+')'+string[:width-19-23]+'['+round((i/max)*28)*'#'+round((28-((i/max)*28)))*'-'+'] '+(3-len(str(round((i/max)*100))))*' '+str(round((i/max)*100))+'%', end='', flush=True)"
+	python3 -c "import os; import math; max=$2; i=$1; width, height = os.get_terminal_size(); string=' $3'+200*' ';pl=round(math.log(width/57 ,1.01644658));  print('\r('+(2-len(str(i)))*' '+str(i)+'/'+str(max)+')'+string[:width-14-pl]+'['+round((i/max)*pl)*'#'+round((pl-((i/max)*pl)))*'-'+'] '+(3-len(str(round((i/max)*100))))*' '+str(round((i/max)*100))+'%', end='', flush=True)"
 }
 
 options(){
@@ -60,12 +60,6 @@ options(){
 		ask=--noconfirm
 		((argleng--))
 	fi
-	# if [[ $(echo $1 | egrep us) != "" ]]
-	# then
-	# 	su $2
-	# 	echo ":: Running buildaur as $2"
-	# 	shift
-	# fi
 	if [[ $(echo $1 | egrep spgp) != "" ]]
 	then
 		pgp=--skippgpcheck
@@ -98,7 +92,7 @@ netcheck(){
 	then
 		if [[ $(ping -c 1 google.de >/dev/null 2>/dev/null ; echo $?) != 0 ]]
 		then
-			if [[ $1 = -x ]]
+			if [[ $1 = "-x" ]]
 			then
 				inet=0
 			else
@@ -538,7 +532,7 @@ update(){
 	sudo sh -c "echo $res > /usr/share/buildaur/res"
 	if [[ $layout = new ]]
 	then
-		new_checker
+	  new_checker
 	else
 		old_checker
 	fi
@@ -573,14 +567,14 @@ new_checker(){
 	echo ":: Checking localy installed packages..."
 	echo "  $fullcount packages are curently installed!"
 	echo ":: Checking for outdated packages..."
-	while [[ $count -lt $(expr $resultcount + 1 ) ]]
+	until [[ $count = $(expr $resultcount + 1 ) ]]
 	do
 		cutted=$(echo $res | cut -d{ -f$(expr $count + 2))
 	  name=$(echo $cutted | cut -d'"' -f6)
 	  ver=$(pacman -Qqi $name | xargs 2>/dev/null | awk {'print $6'})
 		remotever=$(echo $cutted | cut -d'"' -f16)
-		progress $count $fullcount "Checking packages..."
-		if [[ $(echo ${black[*]} | sed -e 's/ /\n/g'| egrep -xE $name) = "$name" ]] || [[ $remotever = "$ver" ]]
+		progress $count $fullcount "Checking packages $name..."
+		if [[ $remotever = "$ver" ]] || [[ $(echo "$black" | egrep -xE $name) = "$name" ]]
 		then
 			printf "" >/dev/null
 		elif [[ $(echo -e "$ver\n$remotever" | sort -V | xargs | awk {'print $1'}) = $ver ]]
@@ -603,7 +597,7 @@ new_checker(){
 	do
 		aspinfo=$(asp show $pac 2>/dev/null)
 		pkgver=0
-		progress $count $fullcount "Checking packages..."
+		progress $count $fullcount "Checking packages $pac..."
 		if [[ $aspinfo = "" ]]
 		then
 			pkgver=$(pacman -Qqi $pac | xargs 2>/dev/null | awk {'print $6'})
@@ -708,12 +702,12 @@ old_checker(){
 			elif [[ $(echo -e "$ver\n$pkgver-$pkgrel" | sort -V | xargs | awk {'print $1'}) = $ver ]]
 			then
 				echo "($count/${#localpacs[*]}) $pac-$ver is out of date! $pkgver-$pkgrel is available!"
-				askinst_asp
+				askinst asp
 			else
 				echo "($count/${#localpacs[*]}) ${bold}${yellow}Warning:${normal} $pac-$ver is higher than ASP $pkgver-$pkgrel!"
 				if [[ $ask_warn_inst = 1 ]]
 				then
-					askinst_asp
+					askinst asp
 				fi
 			fi
 		fi
@@ -731,21 +725,12 @@ askinst(){
 	fi
 	if [[ $ans == y ]] || [[ $ans == "" ]]
 	then
-		willinst=(${willinst[@]} $name)
-	fi
-}
-
-askinst_asp(){
-	if [[ $ask = "--noconfirm" ]]
-	then
-		ans=y
-	else
-		echo ":: Should it be updated? [Y/n]"
-		read ans
-	fi
-	if [[ $ans == y ]] || [[ $ans == "" ]]
-	then
-		willinstasp=(${willinstasp[@]} $pac)
+		if [[ $1 != asp ]]
+		then
+			willinst=(${willinst${1}[@]} $name)
+	  else
+			willinstasp=(${willinstasp[@]} $pac)
+		fi
 	fi
 }
 
@@ -780,53 +765,45 @@ listhooks(){
 			echo "$hook:"
 		fi
 		hooks=($(ls /etc/buildaur/$hook))
-		hookcount=0
-		while [[ $hookcount -lt ${#hooks[*]} ]]
+		for hoook in ${hooks[@]}
 		do
-			. /etc/buildaur/$hook/${hooks[$hookcount]}
-			echo " ${hooks[$hookcount]}"
+			. /etc/buildaur/$hook/$hoook
+			echo " $hoook"
 			echo "  $desc"
-			((hookcount++))
 		done
 	done
 }
 
 activate(){
-	hookcount=$#
-	while [[ $hookcount -gt 0 ]]
+	for hook in $@
 	do
-		. /etc/buildaur/hooks/$1 2>/dev/null
-		sudo mv /etc/buildaur/hooks/$1 /etc/buildaur/${type}hooks/ 2>/dev/null
+		. /etc/buildaur/hooks/$hook 2>/dev/null
+		sudo mv /etc/buildaur/hooks/$hook /etc/buildaur/${type}hooks/ 2>/dev/null
 		if [[ $? = 0 ]]
 		then
-			echo ":: Activated $1!"
+			echo ":: Activated $hook!"
 		else
-			echo ":: ${red}${bold}ERROR:${normal} $1 is not available!"
+			echo ":: ${red}${bold}ERROR:${normal} $hook is not available!"
 			exit 1
 		fi
-		((hookcount--))
-		shift
 	done
 }
 
 deactivate(){
-	hookcount=$#
-	while [[ $hookcount -gt 0 ]]
+	for hook in $@
 	do
-		. /etc/buildaur/prehooks/$1 2>/dev/null
-		. /etc/buildaur/posthooks/$1 2>/dev/null
-		. /etc/buildaur/prerunhooks/$1 2>/dev/null
-		. /etc/buildaur/postrunhooks/$1 2>/dev/null
-		sudo mv /etc/buildaur/${type}hooks/$1 /etc/buildaur/hooks/ 2>/dev/null
+		. /etc/buildaur/prehooks/$hook 2>/dev/null
+		. /etc/buildaur/posthooks/$hook 2>/dev/null
+		. /etc/buildaur/prerunhooks/$hook 2>/dev/null
+		. /etc/buildaur/postrunhooks/$hook 2>/dev/null
+		sudo mv /etc/buildaur/${type}hooks/$hook /etc/buildaur/hooks/ 2>/dev/null
 		if [[ $? = 0 ]]
 		then
-			echo ":: Deactivated $1!"
+			echo ":: Deactivated $hook!"
 		else
-			echo ":: ${red}${bold}ERROR:${normal} is not available!"
+			echo ":: ${red}${bold}ERROR:${normal} $hook is not available!"
 			exit 1
 		fi
-		((hookcount--))
-		shift
 	done
 }
 
@@ -932,9 +909,10 @@ case $1 in
 		if [[ $1 = "" ]]
 		then
 			echo ":: Checking installed AUR packages..."
-			echo "  $(pacman -Qqm | wc -l) packages are curently installed from the AUR!"
+			instpac=$(pacman -Qqm)
+			echo "  $(echo "$instpac" | wc -l) packages are curently installed from the AUR!"
 			all=true
-			info $(pacman -Qqm)
+			info $instpac
 		else
 			info $@
 		fi
