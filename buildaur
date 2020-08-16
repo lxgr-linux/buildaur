@@ -123,10 +123,11 @@ info(){
 		then
 			if [[ $all = true ]]
 			then
-				echo -e ":: Syncing database..."
+				echo ":: Updating packagelist..."
 			else
 				echo ":: Qetting package infos..."
 			fi
+			echo " AUR packages..."
 		fi
 		res="https://aur.archlinux.org/rpc/?v=5&type=multiinfo"
 		counter=0
@@ -136,12 +137,20 @@ info(){
 			((counter++))
 		done
 		res=$(curl -s $res)
+		if [[ $notext != 1 ]]
+		then
+			echo " ASP packages..."
+		fi
+		asp update >/dev/null 2>/dev/null
 		if [[ $all = true ]]
 		then
-			sudo sh -c "echo '$res' > /usr/share/buildaur/res"
+			if [[ "$res" != "$(cat /usr/share/buildaur/res)" ]]
+			then
+				echo "$res" | sudo tee /usr/share/buildaur/res >/dev/null
+			fi
 		fi
 	fi
-	resultcount=$(echo $res | cut -d'"' -f9 | sed -e 's/://g' | sed -e 's/,//g')
+	resultcount=$(echo "$res" | cut -d'"' -f9 | sed -e 's/://g' | sed -e 's/,//g')
 	counter=0
 	aurpacs=()
 	if [[ $notext != 1 ]]
@@ -162,12 +171,12 @@ info(){
 		then
 			echo $name
 		else
-			echo "  "$name $(echo $cutted | cut -d'"' -f16) "(local: $ver)"
+			echo " "$name $(echo $cutted | cut -d'"' -f16) "(local: $ver)"
 			if [[ $remoteinfo = "" ]]
 			then
-				echo "     ${bold}${yellow}Warning:${normal} AUR does not provide information about this package!"
+				echo "    ${bold}${yellow}Warning:${normal} AUR does not provide information about this package!"
 			else
-				echo "     "$remoteinfo
+				echo "    "$remoteinfo
 			fi
 		fi
 		aurpacs[$counter]=$name
@@ -237,12 +246,12 @@ search(){
 			then
 				ver="--- "
 			fi
-			echo "  "$name $(echo $cutted | cut -d'"' -f16) "(local: $ver)"
+			echo " "$name $(echo $cutted | cut -d'"' -f16) "(local: $ver)"
 			if [[ $remoteinfo = "" ]]
 			then
-				echo "     ${bold}${yellow}Warning:${normal} AUR does not provide information about this package!"
+				echo "    ${bold}${yellow}Warning:${normal} AUR does not provide information about this package!"
 			else
-				echo "     "$remoteinfo
+				echo "    "$remoteinfo
 			fi
 			((counter++))
 		done
@@ -349,6 +358,8 @@ preinst(){
 			fi
 		elif [[ $mode = asp ]]
 		then
+			echo ":: Updating ASP packagelist..."
+			asp update 2>/dev/null >/dev/null
 			aspout=$(echo "$(asp show $key 2>/dev/null)" | egrep pkgver | head -1)
 			aspoutrel=$(echo "$(asp show $key 2>/dev/null)" | egrep pkgrel | head -1)
 			ver=$(pacman -Qqi $key 2>/dev/null| xargs 2>/dev/null | awk {'print $6'})
@@ -426,6 +437,8 @@ realinst(){
 		rm -rf  ~/.cache/buildaur/build/$1 ~/.cache/buildaur/build/urlbuild
 		if [[ $mode = asp ]]
 		then
+			echo ":: Updating asp packagelist..."
+			asp update >/dev/null 2>/dev/null
 			echo ":: Exporting package..."
 			asp export $1 2>/dev/null
 			cd ~/.cache/buildaur/build/$1
@@ -527,9 +540,15 @@ update(){
 		res=${res}"&arg[]="${pkgnames[$counter]}
 		((counter++))
 	done
-	echo ":: Downloading packagelist..."
+	echo ":: Updating packagelist..."
+	echo " AUR packages..."
 	res=$(curl -s $res)
-	sudo sh -c "echo $res > /usr/share/buildaur/res"
+	if [[ "$res" != "$(cat /usr/share/buildaur/res)" ]]
+	then
+		echo "$res" | sudo tee /usr/share/buildaur/res >/dev/null
+	fi
+	echo " ASP packages..."
+	asp update >/dev/null 2>/dev/null
 	if [[ $layout = new ]]
 	then
 	  new_checker
@@ -565,7 +584,7 @@ new_checker(){
 	count=1
 	textcounter=0
 	echo ":: Checking localy installed packages..."
-	echo "  $fullcount packages are curently installed!"
+	echo " $fullcount packages are curently installed!"
 	echo ":: Checking for outdated packages..."
 	until [[ $count = $(expr $resultcount + 1 ) ]]
 	do
@@ -622,6 +641,7 @@ new_checker(){
 		fi
 		((count++))
 	done
+	progress $fullcount $fullcount "Checking packages..."
 	echo
 	echo ":: Done"
 	for message in "${text[@]}"
@@ -895,7 +915,7 @@ case $1 in
 		if [[ $1 = "" ]]
 		then
 			echo ":: Checking installed AUR packages..."
-			echo "  $(pacman -Qqm | wc -l) packages are curently installed from the AUR!"
+			echo " $(pacman -Qqm | wc -l) packages are curently installed!"
 			all=true
 			info $(pacman -Qqm)
 		else
@@ -910,7 +930,7 @@ case $1 in
 		then
 			echo ":: Checking installed AUR packages..."
 			instpac=$(pacman -Qqm)
-			echo "  $(echo "$instpac" | wc -l) packages are curently installed from the AUR!"
+			echo " $(echo "$instpac" | wc -l) packages are curently installed!"
 			all=true
 			info $instpac
 		else
