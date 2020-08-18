@@ -7,8 +7,10 @@ sudoreset=1
 ask_warn_inst=1
 layout=new
 color=true
+proto=https
 . /etc/buildaur/buildaur.conf
 black="$(cat /usr/share/buildaur/blacklist)"
+# asp set-git-protocol $proto
 
 colorer(){
 	if [[ $color = true ]]
@@ -38,7 +40,7 @@ then
 fi
 
 progress(){
-	python3 -c "import os; import math; max=$2; i=$1; width, height = os.get_terminal_size(); string=' $3'+200*' ';pl=round(math.log(width/57 ,1.01644658));  print('\r('+(len(str(max))-len(str(i)))*' '+str(i)+'/'+str(max)+')'+string[:width-16+(6-2*len(str(max)))-pl]+'['+round((i/max)*pl)*'#'+round((pl-((i/max)*pl)))*'-'+'] '+(3-len(str(round((i/max)*100))))*' '+str(round((i/max)*100))+'%', end='', flush=True)"
+	python3 -c "import os; import math; max=$2; i=$1; width, height = os.get_terminal_size(); string=' $3'+200*' ';pl=round(math.log(width/57 ,1.01644658));  print('\r('+(len(str(max))-len(str(i)))*' '+str(i)+'/'+str(max)+')'+string[:width-16+(6-2*len(str(max)))-pl]+'['+round((i/max)*pl)*'#'+(pl-round((i/max)*pl))*'-'+'] '+(3-len(str(round((i/max)*100))))*' '+str(round((i/max)*100))+'%', end='', flush=True)"
 }
 
 options(){
@@ -129,7 +131,7 @@ info(){
 			fi
 			echo " AUR packages..."
 		fi
-		res="https://aur.archlinux.org/rpc/?v=5&type=multiinfo"
+		res="${proto}://aur.archlinux.org/rpc/?v=5&type=multiinfo"
 		counter=0
 		while [[ $counter -lt ${#pkgnames[*]} ]]
 		do
@@ -210,12 +212,9 @@ info(){
 			then
 				echo $pac
 			else
-				aspout=$(echo "$aspinfo" | egrep pkgver | head -1)
-				aspoutrel=$(echo "$aspinfo" | egrep pkgrel | head -1)
-				aspoutdesc=$(echo "$aspinfo" | egrep pkgdesc | head -1)
-				declare $aspout
-				declare $aspoutrel
-				declare "$aspoutdesc"
+				declare $(echo "$aspinfo" | egrep pkgver | head -1)
+				declare $(echo "$aspinfo" | egrep pkgrel | head -1)
+				declare "$(echo "$aspinfo" | egrep pkgdesc | head -1)"
 				ver=$(pacman -Qqi $pac | xargs 2>/dev/null | awk {'print $6'})
 				echo "  $pac $pkgver-$pkgrel (local: $ver)"
 				echo "     $(echo $pkgdesc | sed 's/"//g')"
@@ -231,7 +230,7 @@ search(){
 	do
 		key=$2
 		echo ":: Checking AUR packages..."
-		res=$(curl -s 'https://aur.archlinux.org/rpc/?v=5&type=search&arg='$key'')
+		res=$(curl -s ''${proto}'://aur.archlinux.org/rpc/?v=5&type=search&arg='$key'')
 		resultcount=$(echo $res | cut -d'"' -f9 | sed -e 's/://g' | sed -e 's/,//g')
 		echo "  $resultcount packages found"
   	echo ":: Giving out package infos..."
@@ -333,7 +332,7 @@ preinst(){
 		if [[ $mode != asp ]] && [[ $mode != url ]]
 		then
 			ver=$(pacman -Qqi $key 2>/dev/null| xargs 2>/dev/null | awk {'print $6'})
-			res=$(curl -s 'https://aur.archlinux.org/rpc/?v=5&type=multiinfo&arg[]='$key'')
+			res=$(curl -s ''${proto}'://aur.archlinux.org/rpc/?v=5&type=multiinfo&arg[]='$key'')
 			remotever=$(echo $res | cut -d'"' -f26)
 			if [[ $(echo $res | cut -d'"' -f9) = ":0," ]]
 			then
@@ -454,7 +453,7 @@ realinst(){
 				git clone $1 ~/.cache/buildaur/build/urlbuild 2>/dev/null
 				cd ~/.cache/buildaur/build/urlbuild
 			else
-				git clone https://aur.archlinux.org/$1.git ~/.cache/buildaur/build/$1 2>/dev/null
+				git clone ${proto}://aur.archlinux.org/$1.git ~/.cache/buildaur/build/$1 2>/dev/null
 				cd ~/.cache/buildaur/build/$1
 			fi
 		fi
@@ -533,7 +532,7 @@ realinst(){
 update(){
 	netcheck
 	pkgnames=($(pacman -Qqm))
-	res="https://aur.archlinux.org/rpc/?v=5&type=multiinfo"
+	res="${proto}://aur.archlinux.org/rpc/?v=5&type=multiinfo"
 	counter=0
 	while [[ $counter -lt ${#pkgnames[*]} ]]
 	do
@@ -621,21 +620,24 @@ new_checker(){
 		then
 			pkgver=$(pacman -Qqi $pac | xargs 2>/dev/null | awk {'print $6'})
 		else
-			declare $(echo "$aspinfo" | egrep pkgver | head -1)
-			declare $(echo "$aspinfo" | egrep pkgrel | head -1)
-			ver=$(pacman -Qqi $pac | xargs 2>/dev/null | awk {'print $6'})
-			if [[ $(echo ${black[*]} | sed -e 's/ /\n/g'| egrep -xE $pac) = "$pac" ]] || [[ $pkgver-$pkgrel = "$ver" ]]
+			if [[ $(asp list-all | egrep -Ex $pac) != "" ]]
 			then
-				printf "" >/dev/null
-			elif [[ $(echo -e "$ver\n$pkgver-$pkgrel" | sort -V | xargs | awk {'print $1'}) = $ver ]]
-			then
-				willinstasp=(${willinstasp[@]} $pac)
-			else
-				text[$textcounter]="${bold}${yellow}Warning:${normal} $pac-$ver is higher than ASP $pkgver-$pkgrel!"
-				((textcounter++))
-				if [[ $ask_warn_inst = 1 ]]
+				declare $(echo "$aspinfo" | egrep pkgver | head -1)
+				declare $(echo "$aspinfo" | egrep pkgrel | head -1)
+				ver=$(pacman -Qqi $pac | xargs 2>/dev/null | awk {'print $6'})
+				if [[ $(echo ${black[*]} | sed -e 's/ /\n/g'| egrep -xE $pac) = "$pac" ]] || [[ $pkgver-$pkgrel = "$ver" ]]
+				then
+					printf "" >/dev/null
+				elif [[ $(echo -e "$ver\n$pkgver-$pkgrel" | sort -V | xargs | awk {'print $1'}) = $ver ]]
 				then
 					willinstasp=(${willinstasp[@]} $pac)
+				else
+					text[$textcounter]="${bold}${yellow}Warning:${normal} $pac-$ver is higher than ASP $pkgver-$pkgrel!"
+					((textcounter++))
+					if [[ $ask_warn_inst = 1 ]]
+					then
+						willinstasp=(${willinstasp[@]} $pac)
+					fi
 				fi
 			fi
 		fi
