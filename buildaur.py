@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # maintainer lxgr <lxgr@protonmail.com>
+# WARNING: This is experimental code!
 
 import os
 import progressbar_buildaur as progressbar
@@ -31,7 +32,8 @@ def info(res, quiet):
         pkgver=splitted[15]
         localver=os.popen("pacman -Qqi "+pkgname).read().split("\n")[1].split(" ")[19]
         pkgoutdate=splitted[30]
-        array=[pkgname, pkgver, localver, pkgoutdate]
+        pkgdesc=splitted[19]
+        array=[pkgname, pkgver, localver, pkgoutdate, pkgdesc]
         if quiet == False:
             progressbar.progress(i+1, int(info.rescount), "Collecting "+pkgname+"...")
         exec("info.array_"+str(i)+"=array")
@@ -66,13 +68,20 @@ def update():
         print(i)
     install(update.willinst)
 
-def infoout(res):
+def infoout(res, quiet):
     info(res, True)
     for i in range(int(info.rescount)):
         exec("infoout.out=info.array_"+str(i))
         pkgname=infoout.out[0]
-        pkgver=infoout.out[1]
-        print(pkgname)
+        if quiet:
+            print(pkgname)
+        else:
+            pkgver=infoout.out[1]
+            localver=infoout.out[2]
+            pkgoutdate=infoout.out[3]
+            pkgdesc=infoout.out[4]
+            print(" "+pkgname+"-"+pkgver+" (local: "+localver+")")
+            print("    "+pkgdesc)
 
 def install(pkgs):
     pkgpathes=[]
@@ -80,6 +89,9 @@ def install(pkgs):
     resolve(pkgs)
     print(":: Checking packages...")
     info(resolve.res, True)
+    if info.rescount == 0:
+        print(" Nothing to do")
+        exit(0)
     # Checking packages for existance
     for i in range(int(info.rescount)):
         exec("update.out=info.array_"+str(i))
@@ -121,15 +133,27 @@ def install(pkgs):
             print(":: Cloning git repository...")
             os.system("rm -rf ./"+pkgname+" 2>/dev/null; git clone https://aur.archlinux.org/"+pkgname)
             os.chdir(os.getcwd()+"/"+pkgname)
+            # edit
+            print(":: Printing PKGBUILD...")
+            pkgbuild = open("PKGBUILD", "rt").read()
+            print("\033[37m"+str(pkgbuild)+"\033[0m")
+            ask=input("\n:: Edit PKGBUILD? [y/N] ")
+            if (ask == "y") or (ask == "Y"):
+                os.system("nano ./PKGBUILD")
+                print(":: Going on")
+            # Hooks
+            hooks("prehooks")
             # makepkg
             print(":: Making the package...")
             os.system("makepkg -s")
+            # Hooks
+            hooks("posthooks")
             # Defining pkgpath
             if os.popen('. ./PKGBUILD ; echo $arch').read().split('\n')[0] == "any":
                 arch='any'
             else:
                 arch=os.popen('uname -m').read().split('\n')[0]
-            pkgpathes.append(os.getcwd()+"/"+pkgname+"-"+os.popen('. ./PKGBUILD ;if [[ $epoch != "" ]]; then epoch=${epoch}: ;fi; echo "${epoch}$pkgver-$pkgrel"').read().split('\n')[0]+"-"+arch+".pkg.tar.zst")
+            pkgpathes.append(os.getcwd()+"/"+pkgname+"-"+os.popen('. ./PKGBUILD ;if [[ $epoch != "" ]] && [[ $epoch != 0 ]]; then epoch=${epoch}: ;else epoch="" ;fi; echo "${epoch}$pkgver-$pkgrel"').read().split('\n')[0]+"-"+arch+".pkg.tar.zst")
             os.chdir(home)
             count=count+1
             print("")
@@ -183,19 +207,32 @@ def help():
     print("      -h|--help         : Displays this help-dialog")
     print("      --help-hooks      : Displays help-dialog for hooks")
 
+def hooks(type):
+    hooks=os.popen("ls /etc/buildaur/"+type).read().split('\n')
+    del hooks[-1]
+    if len(hooks) > 0:
+        print(":: Running "+type+"...")
+        for hook in hooks:
+            print(" "+hook+"...")
+            os.system("/etc/buildaur/"+type+"/"+hook+" -u")
+
 if len(args) == 1:
     print(":: \033[31;1mERROR:\033[0m No options given!")
     exit(1)
 
 if args[1] == "-Syu":
     update()
-elif args[1] == "-Qq":
+elif args[1] == "-Q" or args[1] == "-Qq":
     pkgs=args
+    arg=args[1]
     del pkgs[0:2]
     if len(pkgs) == 0:
         pkgs=os.popen("pacman -Qqm").read().split('\n')
     resolve(pkgs)
-    infoout(resolve.res)
+    if arg == "-Q":
+        infoout(resolve.res, False)
+    else:
+        infoout(resolve.res, True)
 elif args[1] == "-S":
     pkgs=args
     del pkgs[0:2]
@@ -205,7 +242,3 @@ elif args[1] == "-S":
     install(pkgs)
 elif args[1] == "-h" or args[1] == "--help":
     help()
-
-
-
-#infoout(res)
