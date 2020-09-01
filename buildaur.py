@@ -8,13 +8,24 @@ import time
 import requests
 import sys
 
+# config file
+proto="https"
+editor="nano"
+compmeth=".tar.zst"
+conf=open("/etc/buildaur/buildaur.conf").read()
+try:
+    exec(conf)
+except:
+    print(":: \033[33;1mWarning:\033[0m The config has errors in it.")
+
+# args
 args=sys.argv
 
 # res=os.popen("cat /usr/share/buildaur/res").read()
 
 def resolve(pkgs):
     print(":: Downloading packagelist...")
-    url="https://aur.archlinux.org/rpc/?v=5&type=multiinfo"
+    url=proto+"://aur.archlinux.org/rpc/?v=5&type=multiinfo"
     for pkg in pkgs:
         url=url+"&arg[]="+pkg
     r=requests.get(url)
@@ -131,7 +142,7 @@ def install(pkgs):
             # Git repository
             os.chdir(home+"/.cache/buildaur/build")
             print(":: Cloning git repository...")
-            os.system("rm -rf ./"+pkgname+" 2>/dev/null; git clone https://aur.archlinux.org/"+pkgname)
+            os.system("rm -rf ./"+pkgname+" 2>/dev/null; git clone "+proto+"://aur.archlinux.org/"+pkgname)
             os.chdir(os.getcwd()+"/"+pkgname)
             # edit
             print(":: Printing PKGBUILD...")
@@ -139,13 +150,13 @@ def install(pkgs):
             print("\033[37m"+str(pkgbuild)+"\033[0m")
             ask=input("\n:: Edit PKGBUILD? [y/N] ")
             if (ask == "y") or (ask == "Y"):
-                os.system("nano ./PKGBUILD")
+                os.system(editor+" ./PKGBUILD")
                 print(":: Going on")
             # Hooks
             hooks("prehooks")
             # makepkg
             print(":: Making the package...")
-            os.system("makepkg -s")
+            os.system(" PKGEXT='.pkg"+compmeth+"' makepkg -s")
             # Hooks
             hooks("posthooks")
             # Defining pkgpath
@@ -153,7 +164,7 @@ def install(pkgs):
                 arch='any'
             else:
                 arch=os.popen('uname -m').read().split('\n')[0]
-            pkgpathes.append(os.getcwd()+"/"+pkgname+"-"+os.popen('. ./PKGBUILD ;if [[ $epoch != "" ]] && [[ $epoch != 0 ]]; then epoch=${epoch}: ;else epoch="" ;fi; echo "${epoch}$pkgver-$pkgrel"').read().split('\n')[0]+"-"+arch+".pkg.tar.zst")
+            pkgpathes.append(os.getcwd()+"/"+pkgname+"-"+os.popen('. ./PKGBUILD ;if [[ $epoch != "" ]] && [[ $epoch != 0 ]]; then epoch=${epoch}: ;else epoch="" ;fi; echo "${epoch}$pkgver-$pkgrel"').read().split('\n')[0]+"-"+arch+".pkg"+compmeth)
             os.chdir(home)
             count=count+1
             print("")
