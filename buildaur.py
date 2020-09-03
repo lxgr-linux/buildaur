@@ -8,6 +8,9 @@ import time
 import requests
 import sys
 
+#global home
+home=os.getcwd()
+
 # config file
 proto="https"
 editor="nano"
@@ -23,8 +26,18 @@ args=sys.argv
 
 # res=os.popen("cat /usr/share/buildaur/res").read()
 
-def resolve(pkgs):
-    print(":: Downloading packagelist...")
+def options(string):
+    options.confirm=True
+    options.install=True
+    if string.find("n") != -1:
+        options.confirm=False
+    if string.find("di") != -1:
+        options.install=False
+
+
+def resolve(pkgs, quiet):
+    if quiet == False:
+        print(":: Downloading packagelist...")
     url=proto+"://aur.archlinux.org/rpc/?v=5&type=multiinfo"
     for pkg in pkgs:
         url=url+"&arg[]="+pkg
@@ -41,7 +54,10 @@ def info(res, quiet):
         splitted=cutted[i+2].split('"')
         pkgname=splitted[5]
         pkgver=splitted[15]
-        localver=os.popen("pacman -Qqi "+pkgname).read().split("\n")[1].split(" ")[19]
+        try:
+            localver=os.popen("pacman -Qqi "+pkgname+" 2>/dev/null").read().split("\n")[1].split(" ")[19]
+        except:
+            localver="---"
         pkgoutdate=splitted[30]
         pkgdesc=splitted[19]
         array=[pkgname, pkgver, localver, pkgoutdate, pkgdesc]
@@ -53,7 +69,7 @@ def update():
     msg=[]
     update.willinst=[]
     pkgs=os.popen("pacman -Qqm").read().split("\n")
-    resolve(pkgs)
+    resolve(pkgs, False)
     info(resolve.res, False)
     print(":: Checking packages...")
     print(" "+info.rescount+" Packages found!", flush=True)
@@ -96,11 +112,21 @@ def infoout(res, quiet):
 
 def install(pkgs):
     pkgpathes=[]
+    pkgsout=[]
     install=[]
-    resolve(pkgs)
+    pcarg=""
+    resolve(pkgs, False)
     print(":: Checking packages...")
     info(resolve.res, True)
-    if info.rescount == 0:
+    # Check if package is realy in AUR
+    for i in range(int(info.rescount)):
+        exec("update.out=info.array_"+str(i))
+        pkgsout.append(update.out[0])
+    for pkg in pkgs:
+        if pkg not in pkgsout:
+            print(":: \033[31;1mERROR:\033[0m "+pkg+" not found!")
+            exit(1)
+    if info.rescount == "0":
         print(" Nothing to do")
         exit(0)
     # Checking packages for existance
@@ -112,6 +138,8 @@ def install(pkgs):
         pkgoutdate=update.out[3]
         if pkgver == localver:
             print(" \033[1mInfo:\033[0m "+pkgname+"-"+localver+" is up to date -- reistalling")
+        elif localver == "---":
+            print("", end="")
         elif sorted([pkgver, localver])[0] == localver:
             print(" \033[1mInfo:\033[0m "+pkgname+"-"+localver+" will be updated to "+pkgver)
         elif sorted([pkgver, localver])[0] == pkgver:
@@ -127,10 +155,13 @@ def install(pkgs):
         pkgname=update.out[0]
         print(pkgname+" ", end='')
     print("")
-    ask=input("\n:: Continnue installation? [Y/n] ")
+    if options.confirm:
+        ask=input("\n:: Continnue installation? [Y/n] ")
+    else:
+        ask="y"
     if (ask == "Y") or (ask == "y") or (ask == ""):
         print("")
-        home=os.getcwd()
+        # home=os.getcwd()
         count=1
         for pkg in install:
             # full makeprocess
@@ -148,12 +179,17 @@ def install(pkgs):
             print(":: Printing PKGBUILD...")
             pkgbuild = open("PKGBUILD", "rt").read()
             print("\033[37m"+str(pkgbuild)+"\033[0m")
-            ask=input("\n:: Edit PKGBUILD? [y/N] ")
+            if options.confirm:
+                ask=input("\n:: Edit PKGBUILD? [y/N] ")
+            else:
+                ask="n"
             if (ask == "y") or (ask == "Y"):
                 os.system(editor+" ./PKGBUILD")
                 print(":: Going on")
             # Hooks
             hooks("prehooks")
+            # depends
+            depts()
             # makepkg
             print(":: Making the package...")
             os.system(" PKGEXT='.pkg"+compmeth+"' makepkg -s")
@@ -169,11 +205,18 @@ def install(pkgs):
             count=count+1
             print("")
         # installing packages
-        print(":: Installing packages...")
-        inststring=""
-        for path in pkgpathes:
-            inststring=inststring+path+" "
-        os.system("sudo pacman -U "+inststring)
+        if options.install:
+            print(":: Installing packages...")
+            inststring=""
+            for path in pkgpathes:
+                inststring=inststring+path+" "
+            if options.confirm == False:
+                pcarg=pcarg+" --noconfirm"
+            os.system("sudo pacman -U "+pcarg+" "+inststring)
+        else:
+            print(":: Package(s) created in:")
+            for path in pkgpathes:
+                print(" "+path)
     else:
         exit()
 # exec("out=info.array_1")
@@ -183,6 +226,32 @@ def install(pkgs):
 # pkgs=["brave-bin", "inxi"]
 # resolve(pkgs)
 # update()
+
+def depts():
+    list=""
+    nedeps=[]
+    neaurdeps=[]
+    print(":: Checking for unresolved dependencies...")
+    depends=os.popen(". ./PKGBUILD; echo ${depends[@]}").read().split("\n")[0].split(" ")
+    for pkg in depends:
+        list=list+" "+pkg
+    instadepends=os.popen("pacman -Qq "+list+" 2>/dev/null").read().split("\n")
+    del instadepends[-1]
+    for pkg in depends:
+        if pkg in instadepends:
+            print("", end="")
+        else:
+            nedeps.append(pkg)
+    resolve(nedeps, True)
+    info(resolve.res, True)
+    if int(info.rescount) != 0:
+        for i in range(int(info.rescount)):
+            exec("infoout.out=info.array_"+str(i))
+            neaurdeps.append(infoout.out[0])
+        curdir=os.getcwd()
+        os.chdir(home)
+        install(neaurdeps)
+        os.chdir(curdir)
 
 def help():
     print("buildaur - An AUR helper with asp support")
@@ -231,7 +300,8 @@ if len(args) == 1:
     print(":: \033[31;1mERROR:\033[0m No options given!")
     exit(1)
 
-if args[1] == "-Syu":
+if args[1][:4] == "-Syu":
+    options(args[1])
     update()
 elif args[1] == "-Q" or args[1] == "-Qq":
     pkgs=args
@@ -239,12 +309,13 @@ elif args[1] == "-Q" or args[1] == "-Qq":
     del pkgs[0:2]
     if len(pkgs) == 0:
         pkgs=os.popen("pacman -Qqm").read().split('\n')
-    resolve(pkgs)
+    resolve(pkgs, False)
     if arg == "-Q":
         infoout(resolve.res, False)
     else:
         infoout(resolve.res, True)
-elif args[1] == "-S":
+elif args[1][:2] == "-S":
+    options(args[1])
     pkgs=args
     del pkgs[0:2]
     if len(pkgs) == 0:
@@ -253,3 +324,5 @@ elif args[1] == "-S":
     install(pkgs)
 elif args[1] == "-h" or args[1] == "--help":
     help()
+else:
+    print(":: \033[31;1mERROR:\033[0m "+args[1]+" is no valid option!")
