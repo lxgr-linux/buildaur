@@ -11,6 +11,10 @@ import sys
 #global home
 home=os.getcwd()
 
+#colors
+yellow="\033[33;1m"
+red="\033[31;1m"
+thic="\033[1m"
 # config file
 proto="https"
 editor="nano"
@@ -19,7 +23,7 @@ conf=open("/etc/buildaur/buildaur.conf").read()
 try:
     exec(conf)
 except:
-    print(":: \033[33;1mWarning:\033[0m The config has errors in it.")
+    print(":: "+yellow+"Warning:\033[0m The config has errors in it.")
 
 # args
 args=sys.argv
@@ -27,13 +31,25 @@ args=sys.argv
 # res=os.popen("cat /usr/share/buildaur/res").read()
 
 def options(string):
+    global mkopts
+    mkopts=""
     options.confirm=True
     options.install=True
+    options.color=True
     if string.find("n") != -1:
         options.confirm=False
     if string.find("di") != -1:
         options.install=False
-
+    if string.find("co") != -1:
+        global yellow
+        global red
+        global thic
+        mkopts=mkopts+" -m"
+        yellow=""
+        red=""
+        thic=""
+    if string.find("spgp") != -1:
+        mkopts=mkopts+" --skippgpcheck"
 
 def resolve(pkgs, quiet):
     if quiet == False:
@@ -87,9 +103,9 @@ def update():
             # msg.append(" \033[1mInfo:\033[0m "+pkgname+" is out of date!")
             update.willinst.append(pkgname)
         elif sorted([pkgver, localver])[0] == pkgver:
-            msg.append(" \033[33;1mWarning:\033[0m "+pkgname+"-"+localver+" is higher than AUR "+pkgver+"!")
+            msg.append(" "+yellow+"Warning:\033[0m "+pkgname+"-"+localver+" is higher than AUR "+pkgver+"!")
         if pkgoutdate != ":null,":
-            msg.append(" \033[33;1mWarning:\033[0m "+pkgname+" is flagged as out-of-date!")
+            msg.append(" "+yellow+"Warning:\033[0m "+pkgname+" is flagged as out-of-date!")
     print(":: Done")
     for i in msg:
         print(i)
@@ -124,7 +140,7 @@ def install(pkgs):
         pkgsout.append(update.out[0])
     for pkg in pkgs:
         if pkg not in pkgsout:
-            print(":: \033[31;1mERROR:\033[0m "+pkg+" not found!")
+            print(":: "+red+"ERROR:\033[0m "+pkg+" not found!")
             exit(1)
     if info.rescount == "0":
         print(" Nothing to do")
@@ -137,15 +153,15 @@ def install(pkgs):
         localver=update.out[2]
         pkgoutdate=update.out[3]
         if pkgver == localver:
-            print(" \033[1mInfo:\033[0m "+pkgname+"-"+localver+" is up to date -- reistalling")
+            print(" "+thic+"Info:\033[0m "+pkgname+"-"+localver+" is up to date -- reistalling")
         elif localver == "---":
             print("", end="")
         elif sorted([pkgver, localver])[0] == localver:
-            print(" \033[1mInfo:\033[0m "+pkgname+"-"+localver+" will be updated to "+pkgver)
+            print(" "+thic+"Info:\033[0m "+pkgname+"-"+localver+" will be updated to "+pkgver)
         elif sorted([pkgver, localver])[0] == pkgver:
-            print(" \033[33;1mWarning:\033[0m "+pkgname+"-"+localver+" is higher than AUR "+pkgver+"!")
+            print(" "+yellow+"Warning:\033[0m "+pkgname+"-"+localver+" is higher than AUR "+pkgver+"!")
         if pkgoutdate != ":null,":
-            print(" \033[33;1mWarning:\033[0m "+pkgname+" is flagged as out-of-date!")
+            print(" "+yellow+"Warning:\033[0m "+pkgname+" is flagged as out-of-date!")
         install.append(i)
     # asking to continue
     print("")
@@ -169,7 +185,7 @@ def install(pkgs):
             exec("update.out=info.array_"+str(pkg))
             pkgname=update.out[0]
             pkgver=update.out[1]
-            print("("+str(count)+"/"+info.rescount+") Making package \033[1m"+pkgname+"\033[0m...")
+            print("("+str(count)+"/"+info.rescount+") Making package "+thic+pkgname+"\033[0m...")
             # Git repository
             os.chdir(home+"/.cache/buildaur/build")
             print(":: Cloning git repository...")
@@ -192,7 +208,7 @@ def install(pkgs):
             depts()
             # makepkg
             print(":: Making the package...")
-            os.system(" PKGEXT='.pkg"+compmeth+"' makepkg -s")
+            os.system(" PKGEXT='.pkg"+compmeth+"' makepkg -s "+mkopts)
             # Hooks
             hooks("posthooks")
             # Defining pkgpath
@@ -297,7 +313,7 @@ def hooks(type):
             os.system("/etc/buildaur/"+type+"/"+hook+" -u")
 
 if len(args) == 1:
-    print(":: \033[31;1mERROR:\033[0m No options given!")
+    print(":: "+red+"ERROR:\033[0m No options given!")
     exit(1)
 
 if args[1][:4] == "-Syu":
@@ -319,10 +335,10 @@ elif args[1][:2] == "-S":
     pkgs=args
     del pkgs[0:2]
     if len(pkgs) == 0:
-        print(":: \033[31;1mERROR:\033[0m No packages given!")
+        print(":: "+red+"ERROR:\033[0m No packages given!")
         exit(1)
     install(pkgs)
 elif args[1] == "-h" or args[1] == "--help":
     help()
 else:
-    print(":: \033[31;1mERROR:\033[0m "+args[1]+" is no valid option!")
+    print(":: "+red+"ERROR:\033[0m "+args[1]+" is no valid option!")
