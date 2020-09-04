@@ -32,12 +32,16 @@ args=sys.argv
 
 def options(string):
     global mkopts
+    global pcarg
     mkopts=""
+    pcarg=""
     options.confirm=True
     options.install=True
     options.color=True
+    options.chroot=False
     if string.find("n") != -1:
         options.confirm=False
+        pcarg=pcarg+" --noconfirm"
     if string.find("di") != -1:
         options.install=False
     if string.find("co") != -1:
@@ -50,6 +54,8 @@ def options(string):
         thic=""
     if string.find("spgp") != -1:
         mkopts=mkopts+" --skippgpcheck"
+    if string.find("ch") != -1:
+        options.chroot=True
 
 def resolve(pkgs, type, quiet):
     if quiet == False:
@@ -210,8 +216,14 @@ def install(pkgs):
             # depends
             depts()
             # makepkg
-            print(":: Making the package...")
-            os.system(" PKGEXT='.pkg"+compmeth+"' makepkg -s "+mkopts)
+            if options.chroot:
+                print(":: Updating chrootpackages...")
+                os.system("arch-nspawn $CHROOT/root pacman -Syu "+pcarg)
+                print(":: Making the package...")
+                os.system("PKGEXT='.pkg"+compmeth+"' makechrootpkg -c -r $CHROOT -- -s"+mkopts)
+            else:
+                print(":: Making the package...")
+                os.system(" PKGEXT='.pkg"+compmeth+"' makepkg -s "+mkopts)
             # Hooks
             hooks("posthooks")
             # Defining pkgpath
@@ -229,8 +241,6 @@ def install(pkgs):
             inststring=""
             for path in pkgpathes:
                 inststring=inststring+path+" "
-            if options.confirm == False:
-                pcarg=pcarg+" --noconfirm"
             os.system("sudo pacman -U "+pcarg+" "+inststring)
         else:
             print(":: Package(s) created in:")
@@ -293,7 +303,7 @@ def help():
     print("   Additional options for -S,-R,-Syu,-asp:")
     print("      n                 : Doesn't ask questions")
     print("      spgp              : Skips pgp checks of sourcecode")
-    #print("      ch                : Builds the package in a clean chroot (you may run into some problems using this on archlinux arm!)")
+    print("      ch                : Builds the package in a clean chroot (you may run into some problems using this on archlinux arm!)")
     print("      di                : Just builds the package")
     print("      co                : Toggles colored output on and off")
     print("")
