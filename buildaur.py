@@ -51,12 +51,15 @@ def options(string):
     if string.find("spgp") != -1:
         mkopts=mkopts+" --skippgpcheck"
 
-def resolve(pkgs, quiet):
+def resolve(pkgs, type, quiet):
     if quiet == False:
         print(":: Downloading packagelist...")
-    url=proto+"://aur.archlinux.org/rpc/?v=5&type=multiinfo"
-    for pkg in pkgs:
-        url=url+"&arg[]="+pkg
+    url=proto+"://aur.archlinux.org/rpc/?v=5&type="+type
+    if type == "search":
+        url=url+"&arg="+pkgs[0]
+    else:
+        for pkg in pkgs:
+            url=url+"&arg[]="+pkg
     r=requests.get(url)
     resolve.res=str(r.content)
 
@@ -85,7 +88,7 @@ def update():
     msg=[]
     update.willinst=[]
     pkgs=os.popen("pacman -Qqm").read().split("\n")
-    resolve(pkgs, False)
+    resolve(pkgs,"multiinfo", False)
     info(resolve.res, False)
     print(":: Checking packages...")
     print(" "+info.rescount+" Packages found!", flush=True)
@@ -131,7 +134,7 @@ def install(pkgs):
     pkgsout=[]
     install=[]
     pcarg=""
-    resolve(pkgs, False)
+    resolve(pkgs, "multiinfo", False)
     print(":: Checking packages...")
     info(resolve.res, True)
     # Check if package is realy in AUR
@@ -258,7 +261,7 @@ def depts():
             print("", end="")
         else:
             nedeps.append(pkg)
-    resolve(nedeps, True)
+    resolve(nedeps,"multiinfo", True)
     info(resolve.res, True)
     if int(info.rescount) != 0:
         for i in range(int(info.rescount)):
@@ -278,30 +281,33 @@ def help():
     print("      -Q                : Lists installed packages or searches for ones in the AUR")
     print("      -Qs               : Search the AUR")
     print("      -Syu              : Updates all AUR packages")
-    print("      -url              : Installs a package from a given git-repository")
-    print("      -asp              : Builds a package from source using asp (usefull for archlinux arm)")
+    #print("      -url              : Installs a package from a given git-repository")
+    #print("      -asp              : Builds a package from source using asp (usefull for archlinux arm)")
     print("      --show            : Shows the PKGBUILD of a given package")
-    print("      --clear           : Cleanes build dir")
-    print("      -v|--version      : Displays version of this program")
-    print("      -l|--license      : Displays license of this program")
-    print("      --make-chroot     : Creates a chroot dir which can be used for building packages")
-    print("      --about           : Displays an about text")
+    #print("      --clear           : Cleanes build dir")
+    #print("      -v|--version      : Displays version of this program")
+    #print("      -l|--license      : Displays license of this program")
+    #print("      --make-chroot     : Creates a chroot dir which can be used for building packages")
+    #print("      --about           : Displays an about text")
     print("")
     print("   Additional options for -S,-R,-Syu,-asp:")
     print("      n                 : Doesn't ask questions")
     print("      spgp              : Skips pgp checks of sourcecode")
-    print("      ch                : Builds the package in a clean chroot (you may run into some problems using this on archlinux arm!)")
+    #print("      ch                : Builds the package in a clean chroot (you may run into some problems using this on archlinux arm!)")
     print("      di                : Just builds the package")
     print("      co                : Toggles colored output on and off")
     print("")
-    print("   Hookoptions:")
-    print("      --listhooks       : Lists all available and installed hooks")
-    print("      --hook-activate   : Activates a hook")
-    print("      --hook-deactivate : Deactivates a hook")
+    print("   Additional options for -Q,-Qs")
+    print("      q                 : Just ouputs pknames")
     print("")
+    #print("   Hookoptions:")
+    #print("      --listhooks       : Lists all available and installed hooks")
+    #print("      --hook-activate   : Activates a hook")
+    #print("      --hook-deactivate : Deactivates a hook")
+    #print("")
     print("   Help options:")
     print("      -h|--help         : Displays this help-dialog")
-    print("      --help-hooks      : Displays help-dialog for hooks")
+    #print("      --help-hooks      : Displays help-dialog for hooks")
 
 def hooks(type):
     hooks=os.popen("ls /etc/buildaur/"+type).read().split('\n')
@@ -325,10 +331,19 @@ elif args[1] == "-Q" or args[1] == "-Qq":
     del pkgs[0:2]
     if len(pkgs) == 0:
         pkgs=os.popen("pacman -Qqm").read().split('\n')
-    resolve(pkgs, False)
+    resolve(pkgs,"multiinfo", False)
     if arg == "-Q":
         infoout(resolve.res, False)
-    else:
+    elif arg == "-Qq":
+        infoout(resolve.res, True)
+elif args[1] == "-Qs" or args[1] == "-Qsq":
+    pkgs=args
+    arg=args[1]
+    del pkgs[0:2]
+    resolve(pkgs,"search", False)
+    if arg == "-Qs":
+        infoout(resolve.res, False)
+    elif arg == "-Qsq":
         infoout(resolve.res, True)
 elif args[1][:2] == "-S":
     options(args[1])
@@ -340,5 +355,19 @@ elif args[1][:2] == "-S":
     install(pkgs)
 elif args[1] == "-h" or args[1] == "--help":
     help()
+elif args[1] == "--show":
+        pkgs=args
+        arg=args[1]
+        del pkgs[0:2]
+        resolve(pkgs,"multiinfo", True)
+        info(resolve.res, True)
+        for i in range(int(info.rescount)):
+            exec("infoout.out=info.array_"+str(i))
+            pkgname=infoout.out[0]
+            os.system("rm -rf ./"+pkgname+" 2>/dev/null; git clone "+proto+"://aur.archlinux.org/"+pkgname+" 2>/dev/null")
+            os.chdir(os.getcwd()+"/"+pkgname)
+            pkgbuild = open("PKGBUILD", "rt").read()
+            print(pkgbuild)
+
 else:
     print(":: "+red+"ERROR:\033[0m "+args[1]+" is no valid option!")
