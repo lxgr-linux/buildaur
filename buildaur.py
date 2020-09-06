@@ -57,6 +57,30 @@ def options(string):
     if string.find("ch") != -1:
         options.chroot=True
 
+def sorter(ver1, ver2):
+	arr1=ver1.split("-")[0].split(".")
+	arr2=ver2.split("-")[0].split(".")
+	for i in range(sorted([len(arr2), len(arr1)])[1]):
+		try:
+			a=arr1[i]
+		except:
+			a="0"
+		try:
+			b=arr2[i]
+		except:
+			b="0"
+		arg1=len(b)*"0"+a
+		arg2=len(a)*"0"+b
+		arrs=[arg1, arg2]
+		if sorted(arrs)[0] == arg2 and arg1 != arg2:
+			return ver1
+		elif sorted(arrs)[0] == arg1 and arg1 != arg2:
+			return ver2
+	if ver1.split("-")[1] > ver2.split("-")[1]:
+		return ver1
+	if ver2.split("-")[1] > ver1.split("-")[1]:
+		return ver2
+
 def resolve(pkgs, type, quiet):
     if quiet == False:
         print(":: Downloading packagelist...")
@@ -108,10 +132,10 @@ def update():
         progressbar.progress(i+1, int(info.rescount), "Checking "+pkgname+"...")
         if pkgver == localver:
             print("", end="")
-        elif sorted([pkgver, localver])[0] == localver:
+        elif sorter(pkgver, localver) == pkgver:
             # msg.append(" \033[1mInfo:\033[0m "+pkgname+" is out of date!")
             update.willinst.append(pkgname)
-        elif sorted([pkgver, localver])[0] == pkgver:
+        elif sorter(pkgver, localver) == localver:
             msg.append(" "+yellow+"Warning:\033[0m "+pkgname+"-"+localver+" is higher than AUR "+pkgver+"!")
         if pkgoutdate != ":null,":
             msg.append(" "+yellow+"Warning:\033[0m "+pkgname+" is flagged as out-of-date!")
@@ -165,9 +189,9 @@ def install(pkgs):
             print(" "+thic+"Info:\033[0m "+pkgname+"-"+localver+" is up to date -- reistalling")
         elif localver == "---":
             print("", end="")
-        elif sorted([pkgver, localver])[0] == localver:
+        elif sorter(pkgver, localver) == pkgver:
             print(" "+thic+"Info:\033[0m "+pkgname+"-"+localver+" will be updated to "+pkgver)
-        elif sorted([pkgver, localver])[0] == pkgver:
+        elif sorter(pkgver, localver) == localver:
             print(" "+yellow+"Warning:\033[0m "+pkgname+"-"+localver+" is higher than AUR "+pkgver+"!")
         if pkgoutdate != ":null,":
             print(" "+yellow+"Warning:\033[0m "+pkgname+" is flagged as out-of-date!")
@@ -188,13 +212,14 @@ def install(pkgs):
         print("")
         # home=os.getcwd()
         count=1
+        max=info.rescount
         for pkg in install:
             # full makeprocess
             # vars
             exec("update.out=info.array_"+str(pkg))
             pkgname=update.out[0]
             pkgver=update.out[1]
-            print("("+str(count)+"/"+info.rescount+") Making package "+thic+pkgname+"\033[0m...")
+            print("("+str(count)+"/"+max+") Making package "+thic+pkgname+"\033[0m...")
             # Git repository
             os.chdir(home+"/.cache/buildaur/build")
             print(":: Cloning git repository...")
