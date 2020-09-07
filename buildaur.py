@@ -78,7 +78,7 @@ def sorter(ver1, ver2):
 			return ver2
 	if ver1.split("-")[1] > ver2.split("-")[1]:
 		return ver1
-	if ver2.split("-")[1] > ver1.split("-")[1]:
+	elif ver2.split("-")[1] > ver1.split("-")[1]:
 		return ver2
 
 def resolve(pkgs, type, quiet):
@@ -133,7 +133,6 @@ def update():
         if pkgver == localver:
             print("", end="")
         elif sorter(pkgver, localver) == pkgver:
-            # msg.append(" \033[1mInfo:\033[0m "+pkgname+" is out of date!")
             update.willinst.append(pkgname)
         elif sorter(pkgver, localver) == localver:
             msg.append(" "+yellow+"Warning:\033[0m "+pkgname+"-"+localver+" is higher than AUR "+pkgver+"!")
@@ -252,11 +251,14 @@ def install(pkgs):
             # Hooks
             hooks("posthooks")
             # Defining pkgpath
-            if os.popen('. ./PKGBUILD ; echo $arch').read().split('\n')[0] == "any":
+            if os.popen('/usr/share/buildaur/outputter.sh arch').read().split('\n')[0] == "any":
                 arch='any'
             else:
                 arch=os.popen('uname -m').read().split('\n')[0]
-            pkgpathes.append(os.getcwd()+"/"+pkgname+"-"+os.popen('. ./PKGBUILD ;if [[ $epoch != "" ]] && [[ $epoch != 0 ]]; then epoch=${epoch}: ;else epoch="" ;fi; echo "${epoch}$pkgver-$pkgrel"').read().split('\n')[0]+"-"+arch+".pkg"+compmeth)
+            # versioning for packages with multiple packagenames
+            ver=os.popen("/usr/share/buildaur/outputter.sh vers").read().split('\n')[0]
+            for pkgname in os.popen("/usr/share/buildaur/outputter.sh pkgname").read().split('\n')[0].split(' '):
+                pkgpathes.append(os.getcwd()+"/"+pkgname+"-"+ver+"-"+arch+".pkg"+compmeth)
             os.chdir(home)
             count=count+1
             print("")
@@ -286,7 +288,7 @@ def depts():
     nedeps=[]
     neaurdeps=[]
     print(":: Checking for unresolved dependencies...")
-    depends=os.popen(". ./PKGBUILD; echo ${depends[@]}").read().split("\n")[0].split(" ")
+    depends=os.popen("/usr/share/buildaur/outputter.sh deps").read().split("\n")[0].split(" ")
     for pkg in depends:
         list=list+" "+pkg
     instadepends=os.popen("pacman -Qq "+list+" 2>/dev/null").read().split("\n")
