@@ -104,7 +104,7 @@ def info(res, quiet):
         pkgname=splitted[5]
         pkgver=splitted[15]
         try:
-            localver=os.popen("pacman -Qqi "+pkgname+" 2>/dev/null").read().split("\n")[1].split(" ")[19]
+            localver=os.popen("pacman -Qqi "+pkgname+" 2>/dev/null").read().split("\n")[1].split(" : ")[1]
         except:
             localver="---"
         pkgoutdate=splitted[30]
@@ -399,6 +399,7 @@ elif args[1] == "--show":
         resolve(pkgs,"multiinfo", True)
         info(resolve.res, True)
         for i in range(int(info.rescount)):
+            os.chdir(home+"/.cache/buildaur/build")
             exec("infoout.out=info.array_"+str(i))
             pkgname=infoout.out[0]
             os.system("rm -rf ./"+pkgname+" 2>/dev/null; git clone "+proto+"://aur.archlinux.org/"+pkgname+" 2>/dev/null")
