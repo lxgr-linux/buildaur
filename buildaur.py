@@ -91,12 +91,18 @@ def resolve(pkgs, type, quiet):
     else:
         for pkg in pkgs:
             url=url+"&arg[]="+pkg
-    r=requests.get(url)
+    try:
+        r=requests.get(url)
+    except:
+        print(":: "+red+"ERROR:\033[0m Server is not reachable!")
+        exit(1)
     resolve.res=str(r.content)
 
 def info(res, quiet):
     info.rescount=res.split('"')[8].split(":")[1].split(",")[0]
     cutted=res.split('{')
+    handle = Handle(".", "/var/lib/pacman")
+    localdb = handle.get_localdb()
     if quiet == False:
         print(":: Collecting package data...")
     for i in range(int(info.rescount)):
@@ -105,8 +111,6 @@ def info(res, quiet):
         pkgname=splitted[5]
         pkgver=splitted[15]
         try:
-            handle = Handle(".", "/var/lib/pacman")
-            localdb = handle.get_localdb()
             pkg=localdb.get_pkg(pkgname)
             localver=pkg.version
             #localver=os.popen("pacman -Q "+pkgname+" 2>/dev/null").read().split("\n")[0].split(" ")[1]
@@ -148,7 +152,10 @@ def update():
     print(":: Done")
     for i in msg:
         print(i)
-    install(update.willinst)
+    if update.willinst == []:
+        print(" Nothing to do")
+    else:
+        install(update.willinst)
 
 def infoout(res, quiet):
     info(res, True)
@@ -328,11 +335,11 @@ def help():
     #print("      -url              : Installs a package from a given git-repository")
     #print("      -asp              : Builds a package from source using asp (usefull for archlinux arm)")
     print("      --show            : Shows the PKGBUILD of a given package")
-    #print("      --clear           : Cleanes build dir")
+    print("      --clear           : Cleanes build dir")
     #print("      -v|--version      : Displays version of this program")
     #print("      -l|--license      : Displays license of this program")
-    #print("      --make-chroot     : Creates a chroot dir which can be used for building packages")
-    #print("      --about           : Displays an about text")
+    print("      --make-chroot     : Creates a chroot dir which can be used for building packages")
+    print("      --about           : Displays an about text")
     print("")
     print("   Additional options for -S,-R,-Syu,-asp:")
     print("      n                 : Doesn't ask questions")
@@ -352,6 +359,12 @@ def help():
     print("   Help options:")
     print("      -h|--help         : Displays this help-dialog")
     #print("      --help-hooks      : Displays help-dialog for hooks")
+
+def about():
+    handle = Handle(".", "/var/lib/pacman")
+    localdb = handle.get_localdb()
+    pkg=localdb.get_pkg("buildaur")
+    print("Buildaur "+pkg.version+" -- An AUR helper with asp support\n\nThis package is submited and maintained by lxgr -- <lxgr@protonmail.com>\nThis software is licensed under the GPL3.\n\nThis software is made to help archlinux users to install and update packages from the AUR in a save and consistent way.")
 
 def hooks(type):
     hooks=os.popen("ls /etc/buildaur/"+type).read().split('\n')
@@ -399,6 +412,16 @@ elif args[1][:2] == "-S":
     install(pkgs)
 elif args[1] == "-h" or args[1] == "--help":
     help()
+elif args[1] == "--about":
+    about()
+elif args[1] == "--clear":
+    print(":: Cleaning builddir...")
+    print(" "+os.popen("echo $(du -hcs ~/.cache/buildaur/build | xargs | awk {'print $1'})").read().split("\n")[0]+"B will be removed!")
+    os.system("rm -rf ~/.cache/buildaur/build/*")
+    print(":: Done!")
+elif args[1] == "--make-chroot":
+    print(":: Creating a chrootdir")
+    os.system('sudo rm -rf ~/chroot 2>/dev/null; mkdir ~/chroot; export CHROOT=$HOME/chroot; mkarchroot $CHROOT/root base-devel; echo "export CHROOT=$HOME/chroot" >> $HOME/.bashrc; exit 0')
 elif args[1] == "--show":
         pkgs=args
         arg=args[1]
