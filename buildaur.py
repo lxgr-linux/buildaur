@@ -7,6 +7,7 @@ import progressbar_buildaur as progressbar
 import time
 import requests
 import sys
+from pyalpm import Handle
 
 #global home
 home=os.getcwd()
@@ -104,10 +105,16 @@ def info(res, quiet):
         pkgname=splitted[5]
         pkgver=splitted[15]
         try:
-            localver=os.popen("pacman -Qqi "+pkgname+" 2>/dev/null").read().split("\n")[1].split(" : ")[1]
+            handle = Handle(".", "/var/lib/pacman")
+            localdb = handle.get_localdb()
+            pkg=localdb.get_pkg(pkgname)
+            localver=pkg.version
+            #localver=os.popen("pacman -Q "+pkgname+" 2>/dev/null").read().split("\n")[0].split(" ")[1]
         except:
             localver="---"
         pkgoutdate=splitted[30]
+        if pkgoutdate == ":":
+            pkgoutdate=splitted[28]
         pkgdesc=splitted[19]
         array=[pkgname, pkgver, localver, pkgoutdate, pkgdesc]
         if quiet == False:
