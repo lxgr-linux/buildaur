@@ -9,9 +9,11 @@ import time
 import requests
 import sys
 from pyalpm import Handle
+from pathlib import Path
 
-# global home
-home=os.getcwd()
+# global home and pathchecking
+home=str(Path.home())
+Path(home+"/.cache/buildaur/build").mkdir(parents=True, exist_ok=True)
 
 # colors
 yellow="\033[33;1m"
@@ -27,9 +29,13 @@ try:
 except:
     print(":: "+yellow+"Warning:\033[0m The config has errors in it.")
 
+# checking for root
+if home == "/root":
+    print(":: "+red+"ERROR:\033[0m DON'T run this script as root, stupid!")
+    exit(1)
+
 # args
 args=sys.argv
-
 black=open("/usr/share/buildaur/blacklist").read().split("\n")
 
 # res=os.popen("cat /usr/share/buildaur/res").read()
@@ -274,7 +280,7 @@ def install(pkgs):
                 os.system(editor+" ./PKGBUILD")
                 print(":: Going on")
             if ask in ['c', 'C']:
-                echo(":: Exiting")
+                print(":: Exiting")
                 exit()
             # Hooks
             hooks("prehooks")
