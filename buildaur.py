@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # maintainer lxgr <lxgr@protonmail.com>
+# this software is licensed under the GPL v3
 # WARNING: This is experimental code!
 
 import os
@@ -9,10 +10,10 @@ import requests
 import sys
 from pyalpm import Handle
 
-#global home
+# global home
 home=os.getcwd()
 
-#colors
+# colors
 yellow="\033[33;1m"
 red="\033[31;1m"
 thic="\033[1m"
@@ -31,7 +32,7 @@ args=sys.argv
 
 # res=os.popen("cat /usr/share/buildaur/res").read()
 
-def options(string):
+def options(string, optlen):
     global mkopts
     global pcarg
     mkopts=""
@@ -43,8 +44,10 @@ def options(string):
     if string.find("n") != -1:
         options.confirm=False
         pcarg=pcarg+" --noconfirm"
+        optlen+=1
     if string.find("di") != -1:
         options.install=False
+        optlen+=2
     if string.find("co") != -1:
         global yellow
         global red
@@ -53,10 +56,16 @@ def options(string):
         yellow=""
         red=""
         thic=""
+        optlen+=2
     if string.find("spgp") != -1:
         mkopts=mkopts+" --skippgpcheck"
+        optlen+=4
     if string.find("ch") != -1:
         options.chroot=True
+        optlen+=2
+    if optlen != len(string):
+        print(":: "+red+"ERROR:\033[0m "+string+" is no valid option!")
+        exit(1)
 
 def sorter(ver1, ver2):
 	arr1=ver1.split("-")[0].split(".")
@@ -396,7 +405,7 @@ if len(args) == 1:
     exit(1)
 
 if args[1][:4] == "-Syu":
-    options(args[1])
+    options(args[1], 4)
     update()
 elif args[1] == "-Q" or args[1] == "-Qq":
     pkgs=args
@@ -419,7 +428,7 @@ elif args[1] == "-Qs" or args[1] == "-Qsq":
     elif arg == "-Qsq":
         infoout(resolve.res, True)
 elif args[1][:2] == "-S":
-    options(args[1])
+    options(args[1], 2)
     pkgs=args
     del pkgs[0:2]
     if len(pkgs) == 0:
@@ -452,6 +461,5 @@ elif args[1] == "--show":
             os.chdir(os.getcwd()+"/"+pkgname)
             pkgbuild = open("PKGBUILD", "rt").read()
             print(pkgbuild)
-
 else:
     print(":: "+red+"ERROR:\033[0m "+args[1]+" is no valid option!")
