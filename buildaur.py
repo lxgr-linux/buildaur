@@ -30,6 +30,8 @@ except:
 # args
 args=sys.argv
 
+black=open("/usr/share/buildaur/blacklist").read().split("\n")
+
 # res=os.popen("cat /usr/share/buildaur/res").read()
 
 def options(string, optlen):
@@ -162,7 +164,7 @@ def update():
         localver=update.out[2]
         pkgoutdate=update.out[3]
         progressbar.progress(i+1, int(info.rescount), "Checking "+pkgname+"...")
-        if pkgver == localver:
+        if pkgver == localver or pkgname in black:
             print("", end="")
         elif sorter(pkgver, localver) == pkgver:
             update.willinst.append(pkgname)

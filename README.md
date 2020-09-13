@@ -111,3 +111,7 @@ color : Turn on and off colored output.<br>
 # Blacklist
 
 The blacklist stored in /usr/share/buildaur/blacklist contains package names which are excluded in updates.
+
+# Python version
+
+The python version of buildaur (buildaur.py) is still in development, but brings some advantages. It is for example way faster and impliments buildaurs keyfeatures in less code. At the downside some features are not implimented yet (hook system, asp), so the bashscript is still the default.
