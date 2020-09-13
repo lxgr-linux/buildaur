@@ -89,6 +89,18 @@ def resolve(pkgs, type, quiet):
     if type == "search":
         url=url+"&arg="+pkgs[0]
     else:
+        # name processing to avoid bad packagenames
+        npkgs=[]
+        for pkg in pkgs:
+            npkg=""
+            for letter in pkg:
+                if letter == "+":
+                    npkg+="%2B"
+                else:
+                    npkg+=letter
+            npkgs.append(npkg)
+        pkgs=npkgs
+        # producing url
         for pkg in pkgs:
             url=url+"&arg[]="+pkg
     try:
@@ -184,10 +196,11 @@ def install(pkgs):
     for i in range(int(info.rescount)):
         exec("update.out=info.array_"+str(i))
         pkgsout.append(update.out[0])
-    for pkg in pkgs:
-        if pkg not in pkgsout:
-            print(":: "+red+"ERROR:\033[0m "+pkg+" not found!")
-            exit(1)
+    if len(pkgs) != len(pkgsout):
+        for pkg in pkgs:
+            if pkg not in pkgsout:
+                print(":: "+red+"ERROR:\033[0m "+pkg+" not found!")
+                exit(1)
     if info.rescount == "0":
         print(" Nothing to do")
         exit(0)
@@ -243,12 +256,15 @@ def install(pkgs):
             pkgbuild = open("PKGBUILD", "rt").read()
             print("\033[37m"+str(pkgbuild)+"\033[0m")
             if options.confirm:
-                ask=input("\n:: Edit PKGBUILD? [y/N] ")
+                ask=input("\n:: Edit PKGBUILD? [y/c/N] ")
             else:
                 ask="n"
-            if (ask == "y") or (ask == "Y"):
+            if ask in ['y', 'Y']:
                 os.system(editor+" ./PKGBUILD")
                 print(":: Going on")
+            if ask in ['c', 'C']:
+                echo(":: Exiting")
+                exit()
             # Hooks
             hooks("prehooks")
             # depends
