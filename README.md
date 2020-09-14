@@ -114,4 +114,4 @@ The blacklist stored in /usr/share/buildaur/blacklist contains package names whi
 
 # Python version
 
-The python version of buildaur (buildaur.py) is still in development, but brings some advantages. It is for example way faster and impliments buildaurs keyfeatures in less code. At the downside some features are not implimented yet (hook system, asp), so the bashscript is still the default.
+The python version of buildaur (buildaur.py) is still in development, but brings some advantages. It is for example way faster and impliments buildaurs keyfeatures in less code. At the downside some features are not implimented yet (asp), so the bashscript is still the default.

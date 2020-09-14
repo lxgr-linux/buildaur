@@ -110,11 +110,14 @@ def resolve(pkgs, type, quiet):
         npkgs=[]
         for pkg in pkgs:
             npkg=""
-            for letter in pkg:
-                if letter == "+":
-                    npkg+="%2B"
-                else:
-                    npkg+=letter
+            if "+" in pkg:
+                for letter in pkg:
+                    if letter == "+":
+                        npkg+="%2B"
+                    else:
+                        npkg+=letter
+            else:
+                npkg=pkg
             npkgs.append(npkg)
         pkgs=npkgs
         # producing url
@@ -245,7 +248,7 @@ def install(pkgs):
     for pkg in install:
         exec("update.out=info.array_"+str(pkg))
         pkgname=update.out[0]
-        print(pkgname+" ", end='')
+        print(pkgname+"-"+pkgver+" ", end='')
     print("")
     if options.confirm:
         ask=input("\n:: Continnue installation? [Y/n] ")
@@ -356,6 +359,38 @@ def depts():
         install(neaurdeps)
         os.chdir(curdir)
 
+def list_hooks():
+    hooktypes=["prehooks", "posthooks", "prerunhooks", "postrunhooks", "hooks"]
+    for hookdir in hooktypes:
+        if hookdir == "hooks":
+            print(":: deactivated hooks:")
+        else:
+            print(":: "+hookdir+":")
+        for hook in sorted(os.listdir("/etc/buildaur/"+hookdir)):
+            print(" "+hook)
+            print(os.popen('. /etc/buildaur/'+hookdir+'/'+hook+'; echo "  $desc"').read().split("\n")[0])
+
+def hook_activate(hooks):
+    for hook in hooks:
+        if hook in os.listdir('/etc/buildaur/hooks/'):
+            hooktype=os.popen('. /etc/buildaur/hooks/'+hook+' 2>/dev/null; echo $type').read().split("\n")[0]
+            os.system('sudo mv /etc/buildaur/hooks/'+hook+' /etc/buildaur/'+hooktype+'hooks/ 2>/dev/null')
+            print(":: Activated "+hook+"!")
+        else:
+            print(':: '+red+'ERROR:\033[0m '+hook+' not found!')
+
+def hook_deactivate(hooks):
+    hooktypes=["prehooks", "posthooks", "prerunhooks", "postrunhooks"]
+    for hook in hooks:
+        a=0
+        for hookdir in hooktypes:
+            if hook in os.listdir("/etc/buildaur/"+hookdir):
+                os.system('sudo mv  /etc/buildaur/'+hookdir+'/'+hook+' /etc/buildaur/hooks/ 2>/dev/null')
+                print(":: Deactivated "+hook+"!")
+                a=1
+        if a != 1:
+            print(':: '+red+'ERROR:\033[0m '+hook+' not found!')
+
 def help():
     print("buildaur - An AUR helper with asp support")
     print("Usage: "+args[0]+" <option> <string>")
@@ -384,11 +419,11 @@ def help():
     print("   Additional options for -Q,-Qs")
     print("      q                 : Just ouputs pknames")
     print("")
-    #print("   Hookoptions:")
-    #print("      --listhooks       : Lists all available and installed hooks")
-    #print("      --hook-activate   : Activates a hook")
-    #print("      --hook-deactivate : Deactivates a hook")
-    #print("")
+    print("   Hookoptions:")
+    print("      --listhooks       : Lists all available and installed hooks")
+    print("      --hook-activate   : Activates a hook")
+    print("      --hook-deactivate : Deactivates a hook")
+    print("")
     print("   Help options:")
     print("      -h|--help         : Displays this help-dialog")
     #print("      --help-hooks      : Displays help-dialog for hooks")
@@ -455,6 +490,24 @@ elif args[1] == "--clear":
 elif args[1] == "--make-chroot":
     print(":: Creating a chrootdir")
     os.system('sudo rm -rf ~/chroot 2>/dev/null; mkdir ~/chroot; export CHROOT=$HOME/chroot; mkarchroot $CHROOT/root base-devel; echo "export CHROOT=$HOME/chroot" >> $HOME/.bashrc; exit 0')
+elif args[1] == "--listhooks":
+    list_hooks()
+elif args[1] == "--hook-activate":
+    hooks=[]
+    if args[2] == "all":
+        hooks+=os.listdir("/etc/buildaur/hooks")
+    else:
+        hooks=args[2:]
+    hook_activate(hooks)
+elif args[1] == "--hook-deactivate":
+    hooks=[]
+    if args[2] == "all":
+        hooktypes=["prehooks", "posthooks", "prerunhooks", "postrunhooks"]
+        for hookdir in hooktypes:
+            hooks+=os.listdir("/etc/buildaur/"+hookdir)
+    else:
+        hooks=args[2:]
+    hook_deactivate(hooks)
 elif args[1] == "--show":
         pkgs=args
         arg=args[1]
