@@ -23,6 +23,7 @@ thic="\033[1m"
 proto="https"
 editor="nano"
 compmeth=".tar.zst"
+mode="normal"
 conf=open("/etc/buildaur/buildaur.conf").read()
 try:
     exec(conf)
@@ -132,13 +133,13 @@ def resolve(pkgs, type, quiet):
 
 def info(res, quiet):
     info.rescount=res.split('"')[8].split(":")[1].split(",")[0]
+    info.respkgs=[]
     cutted=res.split('{')
     handle = Handle(".", "/var/lib/pacman")
     localdb = handle.get_localdb()
     if quiet == False:
         print(":: Collecting package data...")
     for i in range(int(info.rescount)):
-        exec("global array_"+str(i))
         splitted=cutted[i+2].split('"')
         pkgname=splitted[5]
         pkgver=splitted[15]
@@ -153,9 +154,38 @@ def info(res, quiet):
             pkgoutdate=splitted[28]
         pkgdesc=splitted[19]
         array=[pkgname, pkgver, localver, pkgoutdate, pkgdesc]
+        info.respkgs.append(pkgname)
         if quiet == False:
             progressbar.progress(i+1, int(info.rescount), "Collecting "+pkgname+"...")
         exec("info.array_"+str(i)+"=array")
+
+def aspinfo(pkgs, quiet):
+    print(":: Updatting asp database...")
+    os.system("asp update 2>/dev/null")
+    info.rescount=0
+    handle = Handle(".", "/var/lib/pacman")
+    localdb = handle.get_localdb()
+    if quiet == False:
+        print(":: Collecting package data...")
+    n=0
+    for pkg, i in zip(pkgs, range(len(pkgs))):
+        pkgname=pkg
+        pkgver=os.popen("/usr/share/buildaur/outputter.sh asp "+pkg).read().split("\n")[0]
+        try:
+            pkg=localdb.get_pkg(pkgname)
+            localver=pkg.version
+            #localver=os.popen("pacman -Q "+pkgname+" 2>/dev/null").read().split("\n")[0].split(" ")[1]
+        except:
+            localver="---"
+        pkgoutdate=":null,"
+        pkgdesc="some pkg from asp"
+        if pkgver != "error":
+            array=[pkgname, pkgver, localver, pkgoutdate, pkgdesc]
+            exec("info.array_"+str(n)+"=array")
+            info.rescount+=1
+            n+=1
+        if quiet == False:
+            progressbar.progress(i+1, int(len(pkgs)), "Collecting "+pkgname+"...")
 
 def update():
     msg=[]
@@ -163,8 +193,16 @@ def update():
     pkgs=os.popen("pacman -Qqm").read().split("\n")
     resolve(pkgs,"multiinfo", False)
     info(resolve.res, False)
-    print(":: Checking packages...")
-    print(" "+info.rescount+" Packages found!", flush=True)
+    if mode == "asp":
+        npkgs=[]
+        for pkg in pkgs:
+            if pkg not in info.respkgs:
+                npkgs.append(pkg)
+        del npkgs[-1]
+        info.rescount=0
+        aspinfo(npkgs, False)
+    # print(":: Checking packages...")
+    # print(" "+info.rescount+" Packages found!", flush=True)
     print(":: Checking for outdated packages...")
     for i in range(int(info.rescount)):
         exec("update.out=info.array_"+str(i))
@@ -209,9 +247,13 @@ def install(pkgs):
     pkgsout=[]
     install=[]
     pcarg=""
-    resolve(pkgs, "multiinfo", False)
-    print(":: Checking packages...")
-    info(resolve.res, True)
+    if mode == "asp":
+        aspinfo(pkgs, False)
+        print(":: Checking packages...")
+    else:
+        resolve(pkgs, "multiinfo", False)
+        print(":: Checking packages...")
+        info(resolve.res, True)
     # Check if package is realy in AUR
     for i in range(int(info.rescount)):
         exec("update.out=info.array_"+str(i))
@@ -244,7 +286,7 @@ def install(pkgs):
         install.append(i)
     # asking to continue
     print("")
-    print("Packages ("+info.rescount+"): ", end='')
+    print("Packages ("+str(info.rescount)+"): ", end='')
     for pkg in install:
         exec("update.out=info.array_"+str(pkg))
         pkgname=update.out[0]
@@ -258,7 +300,7 @@ def install(pkgs):
         print("")
         # home=os.getcwd()
         count=1
-        max=info.rescount
+        max=str(info.rescount)
         for pkg in install:
             # full makeprocess
             # vars
@@ -268,8 +310,12 @@ def install(pkgs):
             print("("+str(count)+"/"+max+") Making package "+thic+pkgname+"\033[0m...")
             # Git repository
             os.chdir(home+"/.cache/buildaur/build")
-            print(":: Cloning git repository...")
-            os.system("rm -rf ./"+pkgname+" 2>/dev/null; git clone "+proto+"://aur.archlinux.org/"+pkgname)
+            if mode == "asp":
+                print(":: Exporting package...")
+                os.system('rm -rf ./'+pkgname+' 2>/dev/null; asp export '+pkgname+' 2>/dev/null')
+            else:
+                print(":: Cloning git repository...")
+                os.system("rm -rf ./"+pkgname+" 2>/dev/null; git clone "+proto+"://aur.archlinux.org/"+pkgname)
             os.chdir(os.getcwd()+"/"+pkgname)
             # edit
             print(":: Printing PKGBUILD...")
@@ -401,7 +447,8 @@ def help():
     print("      -Qs               : Search the AUR")
     print("      -Syu              : Updates all AUR packages")
     #print("      -url              : Installs a package from a given git-repository")
-    #print("      -asp              : Builds a package from source using asp (usefull for archlinux arm)")
+    print("      -asp              : Builds a package from source using asp (usefull for archlinux arm)")
+    print("      -aspyu            : Updates all asp packages (usefull for archlinux arm)")
     print("      --show            : Shows the PKGBUILD of a given package")
     print("      --clear           : Cleanes build dir")
     #print("      -v|--version      : Displays version of this program")
@@ -409,7 +456,7 @@ def help():
     print("      --make-chroot     : Creates a chroot dir which can be used for building packages")
     print("      --about           : Displays an about text")
     print("")
-    print("   Additional options for -S,-R,-Syu,-asp:")
+    print("   Additional options for -S,-R,-Syu,-asp,-aspyu:")
     print("      n                 : Doesn't ask questions")
     print("      spgp              : Skips pgp checks of sourcecode")
     print("      ch                : Builds the package in a clean chroot (you may run into some problems using this on archlinux arm!)")
@@ -450,6 +497,10 @@ if len(args) == 1:
 if args[1][:4] == "-Syu":
     options(args[1], 4)
     update()
+elif args[1][:6] == "-aspyu":
+    options(args[1], 6)
+    mode="asp"
+    update()
 elif args[1] == "-Q" or args[1] == "-Qq":
     pkgs=args
     arg=args[1]
@@ -477,6 +528,15 @@ elif args[1][:2] == "-S":
     if len(pkgs) == 0:
         print(":: "+red+"ERROR:\033[0m No packages given!")
         exit(1)
+    install(pkgs)
+elif args[1][:4] == "-asp":
+    options(args[1], 4)
+    pkgs=args
+    del pkgs[0:2]
+    if len(pkgs) == 0:
+        print(":: "+red+"ERROR:\033[0m No packages given!")
+        exit(1)
+    mode="asp"
     install(pkgs)
 elif args[1] == "-h" or args[1] == "--help":
     help()
