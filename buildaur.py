@@ -25,6 +25,8 @@ editor="nano"
 compmeth=".tar.zst"
 mode="normal"
 conf=open("/etc/buildaur/buildaur.conf").read()
+pcarg=""
+mkopts=""
 try:
     exec(conf)
 except:
@@ -44,15 +46,13 @@ black=open("/usr/share/buildaur/blacklist").read().split("\n")
 def options(string, optlen):
     global mkopts
     global pcarg
-    mkopts=""
-    pcarg=""
     options.confirm=True
     options.install=True
     options.color=True
     options.chroot=False
     if string.find("n") != -1:
         options.confirm=False
-        pcarg=pcarg+" --noconfirm"
+        pcarg+=" --noconfirm"
         optlen+=1
     if string.find("di") != -1:
         options.install=False
@@ -61,13 +61,13 @@ def options(string, optlen):
         global yellow
         global red
         global thic
-        mkopts=mkopts+" -m"
+        mkopts+=" -m"
         yellow=""
         red=""
         thic=""
         optlen+=2
     if string.find("spgp") != -1:
-        mkopts=mkopts+" --skippgpcheck"
+        mkopts+=" --skippgpcheck"
         optlen+=4
     if string.find("ch") != -1:
         options.chroot=True
@@ -105,7 +105,7 @@ def resolve(pkgs, type, quiet):
         print(":: Downloading packagelist...")
     url=proto+"://aur.archlinux.org/rpc/?v=5&type="+type
     if type == "search":
-        url=url+"&arg="+pkgs[0]
+        url+="&arg="+pkgs[0]
     else:
         # name processing to avoid bad packagenames
         npkgs=[]
@@ -146,7 +146,6 @@ def info(res, quiet):
         try:
             pkg=localdb.get_pkg(pkgname)
             localver=pkg.version
-            #localver=os.popen("pacman -Q "+pkgname+" 2>/dev/null").read().split("\n")[0].split(" ")[1]
         except:
             localver="---"
         pkgoutdate=splitted[30]
@@ -174,7 +173,6 @@ def aspinfo(pkgs, quiet):
         try:
             pkg=localdb.get_pkg(pkgname)
             localver=pkg.version
-            #localver=os.popen("pacman -Q "+pkgname+" 2>/dev/null").read().split("\n")[0].split(" ")[1]
         except:
             localver="---"
         pkgoutdate=":null,"
@@ -192,8 +190,8 @@ def update():
     update.willinst=[]
     pkgs=os.popen("pacman -Qqm").read().split("\n")
     resolve(pkgs,"multiinfo", False)
-    info(resolve.res, False)
     if mode == "asp":
+        info(resolve.res, True)
         npkgs=[]
         for pkg in pkgs:
             if pkg not in info.respkgs:
@@ -201,8 +199,8 @@ def update():
         del npkgs[-1]
         info.rescount=0
         aspinfo(npkgs, False)
-    # print(":: Checking packages...")
-    # print(" "+info.rescount+" Packages found!", flush=True)
+    else:
+        info(resolve.res, False)
     print(":: Checking for outdated packages...")
     for i in range(int(info.rescount)):
         exec("update.out=info.array_"+str(i))
@@ -246,9 +244,8 @@ def install(pkgs):
     pkgpathes=[]
     pkgsout=[]
     install=[]
-    pcarg=""
     if mode == "asp":
-        aspinfo(pkgs, False)
+        aspinfo(pkgs, True)
         print(":: Checking packages...")
     else:
         resolve(pkgs, "multiinfo", False)
@@ -296,7 +293,7 @@ def install(pkgs):
         ask=input("\n:: Continnue installation? [Y/n] ")
     else:
         ask="y"
-    if (ask == "Y") or (ask == "y") or (ask == ""):
+    if ask == "Y" or ask == "y" or ask == "":
         print("")
         # home=os.getcwd()
         count=1
@@ -356,7 +353,7 @@ def install(pkgs):
             for pkgname in os.popen("/usr/share/buildaur/outputter.sh pkgname").read().split('\n')[0].split(' '):
                 pkgpathes.append(os.getcwd()+"/"+pkgname+"-"+ver+"-"+arch+".pkg"+compmeth)
             os.chdir(home)
-            count=count+1
+            count+=1
             print("")
         # installing packages
         if options.install:
@@ -371,13 +368,6 @@ def install(pkgs):
                 print(" "+path)
     else:
         exit()
-# exec("out=info.array_1")
-# print(out)
-#
-#
-# pkgs=["brave-bin", "inxi"]
-# resolve(pkgs)
-# update()
 
 def depts():
     list=""
@@ -386,7 +376,7 @@ def depts():
     print(":: Checking for unresolved dependencies...")
     depends=os.popen("/usr/share/buildaur/outputter.sh deps").read().split("\n")[0].split(" ")
     for pkg in depends:
-        list=list+" "+pkg
+        list+=" "+pkg
     instadepends=os.popen("pacman -Qq "+list+" 2>/dev/null").read().split("\n")
     del instadepends[-1]
     for pkg in depends:
@@ -476,8 +466,8 @@ def help():
     #print("      --help-hooks      : Displays help-dialog for hooks")
 
 def about():
-    handle = Handle(".", "/var/lib/pacman")
-    localdb = handle.get_localdb()
+    handle=Handle(".", "/var/lib/pacman")
+    localdb=handle.get_localdb()
     pkg=localdb.get_pkg("buildaur")
     print("Buildaur "+pkg.version+" -- An AUR helper with asp support\n\nThis package is submited and maintained by lxgr -- <lxgr@protonmail.com>\nThis software is licensed under the GPL3.\n\nThis software is made to help archlinux users to install and update packages from the AUR in a save and consistent way.")
 
