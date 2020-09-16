@@ -373,8 +373,14 @@ def depts():
     list=""
     nedeps=[]
     neaurdeps=[]
+    depends=[]
     print(":: Checking for unresolved dependencies...")
-    depends=os.popen("/usr/share/buildaur/outputter.sh deps").read().split("\n")[0].split(" ")
+    udepends=os.popen("/usr/share/buildaur/outputter.sh deps").read().split("\n")[0].split(" ")
+    for dep in udepends:
+        if ">" in dep:
+            depends.append(dep.split(">")[0])
+        else:
+            depends.append(dep)
     for pkg in depends:
         list+=" "+pkg
     instadepends=os.popen("pacman -Qq "+list+" 2>/dev/null").read().split("\n")
