@@ -184,6 +184,8 @@ def update():
             update.willinst.append(pkgname)
         elif sorter(pkgver, localver) == localver:
             msg.append(" "+yellow+"Warning:\033[0m "+pkgname+"-"+localver+" is higher than AUR "+pkgver+"!")
+            if ask_warn_inst == 1:
+                update.willinst.append(pkgname)
         if pkgoutdate != ":null,":
             msg.append(" "+yellow+"Warning:\033[0m "+pkgname+" is flagged as out-of-date!")
     print(":: Done")
@@ -256,7 +258,7 @@ def install(pkgs):
     for pkg in install:
         exec("update.out=info.array_"+str(pkg))
         pkgname=update.out[0]
-        print(pkgname+"-"+pkgver+" ", end='')
+        print(pkgname+"-"+pkgver+"  ", end='')
     print("")
     if options.confirm:
         ask=input("\n:: Continnue installation? [Y/n] ")
@@ -432,8 +434,11 @@ def help():
     print("      di                : Just builds the package")
     print("      co                : Toggles colored output on and off")
     print("")
+    print("")
+    print("   Additional options for --show:")
+    print("      --diff            : Outputs diff between current pkgbuildver and former pkgbuildver")
     print("   Additional options for -Q,-Qs")
-    print("      q                 : Just ouputs pknames")
+    print("      q                 : Just outputs pknames")
     print("")
     print("   Hookoptions:")
     print("      --listhooks       : Lists all available and installed hooks")
@@ -473,9 +478,10 @@ if __name__ == "__main__":
     compmeth=".tar.zst"
     mode="normal"
     showPKGBUILD=1
-    conf=open("/etc/buildaur/buildaur.conf").read()
+    ask_warn_inst=0
     pcarg=""
     mkopts=""
+    conf=open("/etc/buildaur/buildaur.conf").read()
     try:
         exec(conf)
     except:
@@ -567,14 +573,20 @@ if __name__ == "__main__":
             hooks=args[2:]
         hook_deactivate(hooks)
     elif args[1] == "--show":
-        print(len(args))
-        if int(len(args)) < 1:
-             exit(1)
-        else:
-             secarg=args[2]
+        try:
+            secarg=args[2]
+        except:
+            print(":: "+red+"ERROR:\033[0m No package or other option is given!")
+            exit(1)
         pkgs=args
         arg=args[1]
-        del pkgs[0:2]
+        if secarg == "--diff":
+            del pkgs[0:3]
+            if len(pkgs) == 0:
+                print(":: "+red+"ERROR:\033[0m No package given!")
+                exit(1)
+        else:
+            del pkgs[0:2]
         resolve(pkgs,"multiinfo", True)
         info(resolve.res, True)
         for i in range(int(info.rescount)):
