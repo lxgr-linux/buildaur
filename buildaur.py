@@ -10,37 +10,6 @@ import requests
 import sys
 from pyalpm import Handle
 from pathlib import Path
-
-# global home and pathchecking
-home=str(Path.home())
-Path(home+"/.cache/buildaur/build").mkdir(parents=True, exist_ok=True)
-
-# colors
-yellow="\033[33;1m"
-red="\033[31;1m"
-thic="\033[1m"
-# config file
-proto="https"
-editor="nano"
-compmeth=".tar.zst"
-mode="normal"
-conf=open("/etc/buildaur/buildaur.conf").read()
-pcarg=""
-mkopts=""
-try:
-    exec(conf)
-except:
-    print(":: "+yellow+"Warning:\033[0m The config has errors in it.")
-
-# checking for root
-if home == "/root":
-    print(":: "+red+"ERROR:\033[0m DON'T run this script as root, stupid!")
-    exit(1)
-
-# args
-args=sys.argv
-black=open("/usr/share/buildaur/blacklist").read().split("\n")
-
 # res=os.popen("cat /usr/share/buildaur/res").read()
 
 def options(string, optlen):
@@ -317,7 +286,7 @@ def install(pkgs):
             # edit
             print(":: Printing PKGBUILD...")
             pkgbuild = open("PKGBUILD", "rt").read()
-            print("\033[37m"+str(pkgbuild)+"\033[0m")
+            print("\033[37m"+showPKGBUILD*str(pkgbuild)+"\033[0m", end="")
             if options.confirm:
                 ask=input("\n:: Edit PKGBUILD? [y/c/N] ")
             else:
@@ -379,6 +348,10 @@ def depts():
     for dep in udepends:
         if ">" in dep:
             depends.append(dep.split(">")[0])
+        elif "<" in dep:
+            depends.append(dep.split("<")[0])
+        elif "=" in dep:
+            depends.append(dep.split("=")[0])
         else:
             depends.append(dep)
     for pkg in depends:
@@ -486,85 +459,119 @@ def hooks(type):
             print(" "+hook+"...")
             os.system("/etc/buildaur/"+type+"/"+hook+" -u")
 
-if len(args) == 1:
-    print(":: "+red+"ERROR:\033[0m No options given!")
-    exit(1)
+if __name__ == "__main__":
+    # global home and pathchecking
+    home=str(Path.home())
+    Path(home+"/.cache/buildaur/build").mkdir(parents=True, exist_ok=True)
+    # colors
+    yellow="\033[33;1m"
+    red="\033[31;1m"
+    thic="\033[1m"
+    # config file
+    proto="https"
+    editor="nano"
+    compmeth=".tar.zst"
+    mode="normal"
+    showPKGBUILD=1
+    conf=open("/etc/buildaur/buildaur.conf").read()
+    pcarg=""
+    mkopts=""
+    try:
+        exec(conf)
+    except:
+        print(":: "+yellow+"Warning:\033[0m The config has errors in it.")
+    # checking for root
+    if home == "/root":
+        print(":: "+red+"ERROR:\033[0m DON'T run this script as root, stupid!")
+        exit(1)
+    # args
+    args=sys.argv
+    black=open("/usr/share/buildaur/blacklist").read().split("\n")
 
-if args[1][:4] == "-Syu":
-    options(args[1], 4)
-    update()
-elif args[1][:6] == "-aspyu":
-    options(args[1], 6)
-    mode="asp"
-    update()
-elif args[1] == "-Q" or args[1] == "-Qq":
-    pkgs=args
-    arg=args[1]
-    del pkgs[0:2]
-    if len(pkgs) == 0:
-        pkgs=os.popen("pacman -Qqm").read().split('\n')
-    resolve(pkgs,"multiinfo", False)
-    if arg == "-Q":
-        infoout(resolve.res, False)
-    elif arg == "-Qq":
-        infoout(resolve.res, True)
-elif args[1] == "-Qs" or args[1] == "-Qsq":
-    pkgs=args
-    arg=args[1]
-    del pkgs[0:2]
-    resolve(pkgs,"search", False)
-    if arg == "-Qs":
-        infoout(resolve.res, False)
-    elif arg == "-Qsq":
-        infoout(resolve.res, True)
-elif args[1][:2] == "-S":
-    options(args[1], 2)
-    pkgs=args
-    del pkgs[0:2]
-    if len(pkgs) == 0:
-        print(":: "+red+"ERROR:\033[0m No packages given!")
+    if len(args) == 1:
+        print(":: "+red+"ERROR:\033[0m No options given!")
         exit(1)
-    install(pkgs)
-elif args[1][:4] == "-asp":
-    options(args[1], 4)
-    pkgs=args
-    del pkgs[0:2]
-    if len(pkgs) == 0:
-        print(":: "+red+"ERROR:\033[0m No packages given!")
-        exit(1)
-    mode="asp"
-    install(pkgs)
-elif args[1] == "-h" or args[1] == "--help":
-    help()
-elif args[1] == "--about":
-    about()
-elif args[1] == "--clear":
-    print(":: Cleaning builddir...")
-    print(" "+os.popen("echo $(du -hcs ~/.cache/buildaur/build | xargs | awk {'print $1'})").read().split("\n")[0]+"B will be removed!")
-    os.system("rm -rf ~/.cache/buildaur/build/*")
-    print(":: Done!")
-elif args[1] == "--make-chroot":
-    print(":: Creating a chrootdir")
-    os.system('sudo rm -rf ~/chroot 2>/dev/null; mkdir ~/chroot; export CHROOT=$HOME/chroot; mkarchroot $CHROOT/root base-devel; echo "export CHROOT=$HOME/chroot" >> $HOME/.bashrc; exit 0')
-elif args[1] == "--listhooks":
-    list_hooks()
-elif args[1] == "--hook-activate":
-    hooks=[]
-    if args[2] == "all":
-        hooks+=os.listdir("/etc/buildaur/hooks")
-    else:
-        hooks=args[2:]
-    hook_activate(hooks)
-elif args[1] == "--hook-deactivate":
-    hooks=[]
-    if args[2] == "all":
-        hooktypes=["prehooks", "posthooks", "prerunhooks", "postrunhooks"]
-        for hookdir in hooktypes:
-            hooks+=os.listdir("/etc/buildaur/"+hookdir)
-    else:
-        hooks=args[2:]
-    hook_deactivate(hooks)
-elif args[1] == "--show":
+
+    if args[1][:4] == "-Syu":
+        options(args[1], 4)
+        update()
+    elif args[1][:6] == "-aspyu":
+        options(args[1], 6)
+        mode="asp"
+        update()
+    elif args[1] == "-Q" or args[1] == "-Qq":
+        pkgs=args
+        arg=args[1]
+        del pkgs[0:2]
+        if len(pkgs) == 0:
+            pkgs=os.popen("pacman -Qqm").read().split('\n')
+        resolve(pkgs,"multiinfo", False)
+        if arg == "-Q":
+            infoout(resolve.res, False)
+        elif arg == "-Qq":
+            infoout(resolve.res, True)
+    elif args[1] == "-Qs" or args[1] == "-Qsq":
+        pkgs=args
+        arg=args[1]
+        del pkgs[0:2]
+        resolve(pkgs,"search", False)
+        if arg == "-Qs":
+            infoout(resolve.res, False)
+        elif arg == "-Qsq":
+            infoout(resolve.res, True)
+    elif args[1][:2] == "-S":
+        options(args[1], 2)
+        pkgs=args
+        del pkgs[0:2]
+        if len(pkgs) == 0:
+            print(":: "+red+"ERROR:\033[0m No packages given!")
+            exit(1)
+        install(pkgs)
+    elif args[1][:4] == "-asp":
+        options(args[1], 4)
+        pkgs=args
+        del pkgs[0:2]
+        if len(pkgs) == 0:
+            print(":: "+red+"ERROR:\033[0m No packages given!")
+            exit(1)
+        mode="asp"
+        install(pkgs)
+    elif args[1] == "-h" or args[1] == "--help":
+        help()
+    elif args[1] == "--about":
+        about()
+    elif args[1] == "--clear":
+        print(":: Cleaning builddir...")
+        print(" "+os.popen("echo $(du -hcs ~/.cache/buildaur/build | xargs | awk {'print $1'})").read().split("\n")[0]+"B will be removed!")
+        os.system("rm -rf ~/.cache/buildaur/build/*")
+        print(":: Done!")
+    elif args[1] == "--make-chroot":
+        print(":: Creating a chrootdir")
+        os.system('sudo rm -rf ~/chroot 2>/dev/null; mkdir ~/chroot; export CHROOT=$HOME/chroot; mkarchroot $CHROOT/root base-devel; echo "export CHROOT=$HOME/chroot" >> $HOME/.bashrc; exit 0')
+    elif args[1] == "--listhooks":
+        list_hooks()
+    elif args[1] == "--hook-activate":
+        hooks=[]
+        if args[2] == "all":
+            hooks+=os.listdir("/etc/buildaur/hooks")
+        else:
+            hooks=args[2:]
+        hook_activate(hooks)
+    elif args[1] == "--hook-deactivate":
+        hooks=[]
+        if args[2] == "all":
+            hooktypes=["prehooks", "posthooks", "prerunhooks", "postrunhooks"]
+            for hookdir in hooktypes:
+                hooks+=os.listdir("/etc/buildaur/"+hookdir)
+        else:
+            hooks=args[2:]
+        hook_deactivate(hooks)
+    elif args[1] == "--show":
+        print(len(args))
+        if int(len(args)) < 1:
+             exit(1)
+        else:
+             secarg=args[2]
         pkgs=args
         arg=args[1]
         del pkgs[0:2]
@@ -576,7 +583,10 @@ elif args[1] == "--show":
             pkgname=infoout.out[0]
             os.system("rm -rf ./"+pkgname+" 2>/dev/null; git clone "+proto+"://aur.archlinux.org/"+pkgname+" 2>/dev/null")
             os.chdir(os.getcwd()+"/"+pkgname)
-            pkgbuild = open("PKGBUILD", "rt").read()
-            print(pkgbuild)
-else:
-    print(":: "+red+"ERROR:\033[0m "+args[1]+" is no valid option!")
+            if secarg == "--diff":
+                os.system('git diff $(git log --pretty=format:"%h" | head -2 | xargs)')
+            else:
+                pkgbuild = open("PKGBUILD", "rt").read()
+                print(pkgbuild)
+    else:
+        print(":: "+red+"ERROR:\033[0m "+args[1]+" is no valid option!")
