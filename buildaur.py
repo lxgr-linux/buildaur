@@ -73,8 +73,10 @@ def resolve(pkgs, type, quiet):
     if quiet == False:
         print(":: Downloading packagelist...")
     url=proto+"://aur.archlinux.org/rpc/?v=5&type="+type
+    if len(pkgs) == 0:
+        exit(0)
     if type == "search":
-        url+="&arg="+pkgs[0]
+        url+="&by=name&arg="+pkgs[0]
     else:
         # name processing to avoid bad packagenames
         npkgs=[]
@@ -437,6 +439,7 @@ def help():
     print("      --diff            : Outputs diff between current pkgbuildver and former pkgbuildver")
     print("   Additional options for -Q,-Qs")
     print("      q                 : Just outputs pknames")
+    print("      qq                : JUST outputs pknames")
     print("")
     print("   Hookoptions:")
     print("      --listhooks       : Lists all available and installed hooks")
@@ -505,25 +508,31 @@ if __name__ == "__main__":
         options(args[1], 6)
         mode="asp"
         update()
-    elif args[1] == "-Q" or args[1] == "-Qq":
+    elif args[1] in ["-Q", "-Qq", "-Qqq"]:
         pkgs=args
         arg=args[1]
         del pkgs[0:2]
         if len(pkgs) == 0:
             pkgs=os.popen("pacman -Qqm").read().split('\n')
-        resolve(pkgs,"multiinfo", False)
+        if "qq" in arg:
+            resolve(pkgs, "multiinfo", True)
+        else:
+            resolve(pkgs, "multiinfo", False)
         if arg == "-Q":
             infoout(resolve.res, False)
-        elif arg == "-Qq":
+        elif arg in ["-Qq", "-Qqq"]:
             infoout(resolve.res, True)
-    elif args[1] == "-Qs" or args[1] == "-Qsq":
+    elif args[1] in ["-Qs", "-Qsq", "-Qsqq"]:
         pkgs=args
         arg=args[1]
         del pkgs[0:2]
-        resolve(pkgs,"search", False)
+        if "qq" in arg:
+            resolve(pkgs, "search", True)
+        else:
+            resolve(pkgs, "search", False)
         if arg == "-Qs":
             infoout(resolve.res, False)
-        elif arg == "-Qsq":
+        elif arg in  ["-Qsq", "-Qsqq"]:
             infoout(resolve.res, True)
     elif args[1][:2] == "-S":
         options(args[1], 2)
