@@ -286,9 +286,14 @@ def install(pkgs):
                 os.system("rm -rf ./"+pkgname+" 2>/dev/null; git clone "+proto+"://aur.archlinux.org/"+pkgname)
             os.chdir(os.getcwd()+"/"+pkgname)
             # edit
-            print(":: Printing PKGBUILD...")
-            pkgbuild = open("PKGBUILD", "rt").read()
-            print("\033[37m"+showPKGBUILD*str(pkgbuild)+"\033[0m", end="")
+            if showPKGBUILD == 1:
+                print(":: Printing PKGBUILD...")
+                pkgbuild=open("PKGBUILD", "rt").read()
+                print("\033[37m"+str(pkgbuild)+"\033[0m", end="")
+            if showDiff == 1:
+                print(":: Printing PKGDIFF...")
+                diff=os.popen('git diff $(git log --pretty=format:"%h" | head -2 | xargs)').read()
+                print(diff)
             if options.confirm:
                 ask=input("\n:: Edit PKGBUILD? [y/c/N] ")
             else:
@@ -478,9 +483,11 @@ if __name__ == "__main__":
     compmeth=".tar.zst"
     mode="normal"
     showPKGBUILD=1
+    showDiff=0
     ask_warn_inst=0
     pcarg=""
     mkopts=""
+    # configfile
     conf=open("/etc/buildaur/buildaur.conf").read()
     try:
         exec(conf)
@@ -493,11 +500,11 @@ if __name__ == "__main__":
     # args
     args=sys.argv
     black=open("/usr/share/buildaur/blacklist").read().split("\n")
-
+    # checking if args are given
     if len(args) == 1:
         print(":: "+red+"ERROR:\033[0m No options given!")
         exit(1)
-
+    # args
     if args[1][:4] == "-Syu":
         options(args[1], 4)
         update()
