@@ -104,8 +104,6 @@ def info(res, quiet):
     info.rescount=res.split('"')[8].split(":")[1].split(",")[0]
     info.respkgs=[]
     cutted=res.split('{')
-    handle = Handle(".", "/var/lib/pacman")
-    localdb = handle.get_localdb()
     if quiet == False:
         print(":: Collecting package data...")
     for i in range(int(info.rescount)):
@@ -131,8 +129,6 @@ def aspinfo(pkgs, quiet):
     print(":: Updatting asp database...")
     os.system("asp update 2>/dev/null")
     info.rescount=0
-    handle = Handle(".", "/var/lib/pacman")
-    localdb = handle.get_localdb()
     if quiet == False:
         print(":: Collecting package data...")
     n=0
@@ -283,7 +279,9 @@ def install(pkgs):
                 os.system('rm -rf ./'+pkgname+' 2>/dev/null; asp export '+pkgname+' 2>/dev/null')
             else:
                 print(":: Cloning git repository...")
-                os.system("rm -rf ./"+pkgname+" 2>/dev/null; git clone "+proto+"://aur.archlinux.org/"+pkgname)
+                os.system("rm -rf ./"+pkgname+" 2>/dev/null;")
+                while not os.path.exists("./"+pkgname+"/PKGBUILD"):
+                    os.system("git clone "+proto+"://aur.archlinux.org/"+pkgname)
             os.chdir(os.getcwd()+"/"+pkgname)
             # edit
             if showPKGBUILD == 1:
@@ -293,7 +291,7 @@ def install(pkgs):
             if showDiff == 1:
                 print(":: Printing PKGDIFF...")
                 diff=os.popen('git diff $(git log --pretty=format:"%h" | head -2 | xargs)').read()
-                print(diff)
+                print("\033[37m"+diff+"\033[0m", end="")
             if options.confirm:
                 ask=input("\n:: Edit PKGBUILD? [y/c/N] ")
             else:
@@ -362,13 +360,8 @@ def depts():
         else:
             depends.append(dep)
     for pkg in depends:
-        list+=" "+pkg
-    instadepends=os.popen("pacman -Qq "+list+" 2>/dev/null").read().split("\n")
-    del instadepends[-1]
-    for pkg in depends:
-        if pkg in instadepends:
-            print("", end="")
-        else:
+        paca=localdb.get_pkg(pkg)
+        if str(paca) == "None":
             nedeps.append(pkg)
     resolve(nedeps,"multiinfo", True)
     info(resolve.res, True)
@@ -427,8 +420,8 @@ def help():
     print("      -aspyu            : Updates all asp packages (usefull for archlinux arm)")
     print("      --show            : Shows the PKGBUILD of a given package")
     print("      --clear           : Cleanes build dir")
-    #print("      -v|--version      : Displays version of this program")
-    #print("      -l|--license      : Displays license of this program")
+    print("      -v|--version      : Displays version of this program")
+    print("      -l|--license      : Displays license of this program")
     print("      --make-chroot     : Creates a chroot dir which can be used for building packages")
     print("      --about           : Displays an about text")
     print("")
@@ -455,8 +448,6 @@ def help():
     #print("      --help-hooks      : Displays help-dialog for hooks")
 
 def about():
-    handle=Handle(".", "/var/lib/pacman")
-    localdb=handle.get_localdb()
     pkg=localdb.get_pkg("buildaur")
     print("Buildaur "+pkg.version+" -- An AUR helper with asp support\n\nThis package is submited and maintained by lxgr -- <lxgr@protonmail.com>\nThis software is licensed under the GPL3.\n\nThis software is made to help archlinux users to install and update packages from the AUR in a save and consistent way.")
 
@@ -497,6 +488,8 @@ if __name__ == "__main__":
     if home == "/root":
         print(":: "+red+"ERROR:\033[0m DON'T run this script as root, stupid!")
         exit(1)
+    handle=Handle(".", "/var/lib/pacman")
+    localdb=handle.get_localdb()
     # args
     args=sys.argv
     black=open("/usr/share/buildaur/blacklist").read().split("\n")
@@ -579,6 +572,11 @@ if __name__ == "__main__":
         else:
             hooks=args[2:]
         hook_deactivate(hooks)
+    elif args[1] in ["--license", "-l"]:
+        print(open("/usr/share/licenses/buildaur/LICENSE").read())
+    elif args[1] in ["--version", "-v"]:
+        pkg=localdb.get_pkg("buildaur")
+        print(pkg.version)
     elif args[1] == "--show":
         try:
             secarg=args[2]
