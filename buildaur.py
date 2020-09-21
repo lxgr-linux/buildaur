@@ -105,22 +105,22 @@ def resolve(pkgs, type, quiet):
 def info(res, quiet):
     info.rescount=res.split('"')[8].split(":")[1].split(",")[0]
     info.respkgs=[]
-    cutted=res.split('{')
+    cutted=res.split('{"ID"')
     if quiet == False:
         print(":: Collecting package data...")
     for i in range(int(info.rescount)):
-        splitted=cutted[i+2].split('"')
-        pkgname=splitted[5]
-        pkgver=splitted[15]
+        splitted=cutted[i+1].split('"')
+        pkgname=splitted[3]
+        pkgver=splitted[13]
+        pkgdesc=splitted[17]
+        pkgoutdate=splitted[28]
+        if pkgoutdate in [":"]:
+            pkgoutdate=splitted[26]
         try:
             pkg=localdb.get_pkg(pkgname)
             localver=pkg.version
         except:
             localver="---"
-        pkgoutdate=splitted[30]
-        if pkgoutdate == ":":
-            pkgoutdate=splitted[28]
-        pkgdesc=splitted[19]
         array=[pkgname, pkgver, localver, pkgoutdate, pkgdesc]
         info.respkgs.append(pkgname)
         if quiet == False:
