@@ -100,13 +100,23 @@ hooks:
 
 The config file for buildaur is ' /etc/buildaur/buildaur.conf'. It can be used to set variables which appear in buildaur, like 'ask', 'pgp' and 'buildchroot'. It can also contain code that should be integrated into buildaur.
 
-Available variables are:<br>
-editor : Text-editor that will be used to edit the PKGBUILD. Default is 'nano'<br>
-showPKGBUILD : Print out PKGBUILD before asking to edit it. Default is '1'<br>
-sudoreset : Reset sudo before running PKGBUILD. Default is '1'. This may cause typing in your password more often, but is also more secure.<br>
-ask_warn_inst : Ask you if you want to update packages wich higher local versions than aur versions.<br>
-layout : Specifies the look of the program at updates. Options are 'old' and 'new'.<br>
-color : Turn on and off colored output.<br>
+Available variables:<br>
+yellow="\033[33;1m" # Color yellow<br>
+red="\033[31;1m" # Color red<br>
+thic="\033[1m" # Bold text<br>
+proto="https" # Protocol to be used at downloads<br>
+editor="nano" # Editor to edit PKGBUILD<br>
+compmeth=".tar.zst" # Compression method of package<br>
+mode="normal" # Default mode<br>
+showPKGBUILD=1 # Print out PKGBUILD before build process<br>
+showDiff=0 # Print out diffs between former and current PKGBUILD version before build process<br>
+ask_warn_inst=0 # Ask to update packages which are higher than AUR<br>
+pcarg="" # Default arguments for pacman<br>
+mkopts="" # Default arguments for makepkg<br>
+Bash only options:<br>
+sudoreset=1 # Reset sudo before PKGBUILD<br>
+layout="new" # Old or new look of buildaur<br>
+color="true" # Toggels colored output<br>
 
 # Blacklist
 

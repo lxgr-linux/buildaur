@@ -26,10 +26,25 @@ then
 else
 	case $prev in
 		-S)
-		if ! [[ ${#cur} -lt 3 ]]
+		if ! [[ ${#cur} -lt 2 ]]
 		then
 			COMPREPLY=($(compgen -W "$(buildaur.py -Qsqq $cur)" -- "$cur"))
 		fi
+		;;
+		--show)
+			COMPREPLY=($(compgen -W "$(buildaur.py -Qsqq $cur) --diff" -- "$cur"))
+		;;
+		--diff)
+		if ! [[ ${#cur} -lt 2 ]]
+		then
+			COMPREPLY=($(compgen -W "$(buildaur.py -Qsqq $cur)" -- "$cur"))
+		fi
+		;;
+		--hook-activate)
+			COMPREPLY=($(compgen -W "$(ls /etc/buildaur/hooks) all" -- "$cur"))
+		;;
+		--hook-deactivate)
+			COMPREPLY=($(compgen -W "$(ls /etc/buildaur/prehooks) $(ls /etc/buildaur/posthooks) $(ls /etc/buildaur/prerunhooks) $(ls /etc/buildaur/postrunhooks) all" -- "$cur"))
 		;;
 	esac
 fi
