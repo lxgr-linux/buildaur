@@ -346,7 +346,6 @@ def install(pkgs):
         exit()
 
 def depts():
-    list=""
     nedeps=[]
     neaurdeps=[]
     depends=[]
@@ -365,16 +364,17 @@ def depts():
         paca=localdb.get_pkg(pkg)
         if str(paca) == "None":
             nedeps.append(pkg)
-    resolve(nedeps,"multiinfo", True)
-    info(resolve.res, True)
-    if int(info.rescount) != 0:
-        for i in range(int(info.rescount)):
-            exec("infoout.out=info.array_"+str(i))
-            neaurdeps.append(infoout.out[0])
-        curdir=os.getcwd()
-        os.chdir(home)
-        install(neaurdeps)
-        os.chdir(curdir)
+    if len(nedeps) > 0:
+        resolve(nedeps,"multiinfo", True)
+        info(resolve.res, True)
+        if int(info.rescount) != 0:
+            for i in range(int(info.rescount)):
+                exec("infoout.out=info.array_"+str(i))
+                neaurdeps.append(infoout.out[0])
+            curdir=os.getcwd()
+            os.chdir(home)
+            install(neaurdeps)
+            os.chdir(curdir)
 
 def list_hooks():
     hooktypes=["prehooks", "posthooks", "prerunhooks", "postrunhooks", "hooks"]
