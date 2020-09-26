@@ -40,17 +40,21 @@ else
 			COMPREPLY=($(compgen -W "$(buildaur.py -Qsqq $cur)" -- "$cur"))
 		fi
 		;;
+		--by)
+			byOPTIONS=(name name-desc maintainer depends makedepends optdepends checkdepends)
+			COMPREPLY=($(compgen -W "${byOPTIONS[*]}" -- "$cur"))
+		;;
 		--hook-activate)
 			COMPREPLY=($(compgen -W "$(ls /etc/buildaur/hooks) all" -- "$cur"))
 		;;
 		--hook-deactivate)
 			COMPREPLY=($(compgen -W "$(ls /etc/buildaur/prehooks) $(ls /etc/buildaur/posthooks) $(ls /etc/buildaur/prerunhooks) $(ls /etc/buildaur/postrunhooks) all" -- "$cur"))
 		;;
-		-Q*)
-		if ! [[ ${#cur} -lt 2 ]]
-		then
+		-Qs*)
+			COMPREPLY=($(compgen -W "$(buildaur.py -Qsqq $cur) --by" -- "$cur"))
+		;;
+		-Q* | name | name-desc | maintainer | depends | makedepends | optdepends | checkdepends)
 			COMPREPLY=($(compgen -W "$(buildaur.py -Qsqq $cur)" -- "$cur"))
-		fi
 		;;
 	esac
 fi

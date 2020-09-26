@@ -69,14 +69,14 @@ def sorter(ver1, ver2):
 	elif ver2.split("-")[1] > ver1.split("-")[1]:
 		return ver2
 
-def resolve(pkgs, type, quiet):
+def resolve(pkgs, type="multiinfo", quiet=False, searchby="name"):
     if quiet == False:
         print(":: Downloading packagelist...")
     url=proto+"://aur.archlinux.org/rpc/?v=5&type="+type
     if len(pkgs) == 0:
         exit(0)
     if type == "search":
-        url+="&by=name&arg="+pkgs[0]
+        url+="&by="+searchby+"&arg="+pkgs[0]
     else:
         # name processing to avoid bad packagenames
         npkgs=[]
@@ -102,7 +102,7 @@ def resolve(pkgs, type, quiet):
         exit(1)
     resolve.res=str(r.content)
 
-def info(res, quiet):
+def info(res, quiet=False):
     info.rescount=res.split('"')[8].split(":")[1].split(",")[0]
     info.respkgs=[]
     cutted=res.split('{"ID"')
@@ -156,7 +156,7 @@ def update():
     msg=[]
     update.willinst=[]
     pkgs=os.popen("pacman -Qqm").read().split("\n")
-    resolve(pkgs,"multiinfo", False)
+    resolve(pkgs)
     if mode == "asp":
         info(resolve.res, True)
         npkgs=[]
@@ -194,15 +194,17 @@ def update():
     else:
         install(update.willinst)
 
-def infoout(res, quiet):
+def infoout(res, quiet=False, veryquiet=False):
     info(res, True)
     for i in range(int(info.rescount)):
         exec("infoout.out=info.array_"+str(i))
         pkgname=infoout.out[0]
-        if quiet:
+        pkgver=infoout.out[1]
+        if veryquiet:
             print(pkgname)
+        elif quiet:
+            print(pkgname, pkgver)
         else:
-            pkgver=infoout.out[1]
             localver=infoout.out[2]
             pkgoutdate=infoout.out[3]
             pkgdesc=infoout.out[4]
@@ -217,7 +219,7 @@ def install(pkgs):
         aspinfo(pkgs, True)
         print(":: Checking packages...")
     else:
-        resolve(pkgs, "multiinfo", False)
+        resolve(pkgs)
         print(":: Checking packages...")
         info(resolve.res, True)
     # Check if package is realy in AUR
@@ -365,7 +367,7 @@ def depts():
         if str(paca) == "None":
             nedeps.append(pkg)
     if len(nedeps) > 0:
-        resolve(nedeps,"multiinfo", True)
+        resolve(nedeps, quiet=True)
         info(resolve.res, True)
         if int(info.rescount) != 0:
             for i in range(int(info.rescount)):
@@ -437,9 +439,11 @@ def help():
     print("")
     print("   Additional options for --show:")
     print("      --diff            : Outputs diff between current pkgbuildver and former pkgbuildver")
+    print("")
     print("   Additional options for -Q,-Qs")
-    print("      q                 : Just outputs pknames")
+    print("      q                 : Just outputs pknames and vers")
     print("      qq                : JUST outputs pknames")
+    print("      --by              : Defines the value that should be searched by (values: name name-desc maintainer depends makedepends optdepends checkdepends")
     print("")
     print("   Hookoptions:")
     print("      --listhooks       : Lists all available and installed hooks")
@@ -515,25 +519,41 @@ if __name__ == "__main__":
         if len(pkgs) == 0:
             pkgs=os.popen("pacman -Qqm").read().split('\n')
         if "qq" in arg:
-            resolve(pkgs, "multiinfo", True)
+            resolve(pkgs, quiet=True)
         else:
-            resolve(pkgs, "multiinfo", False)
+            resolve(pkgs)
         if arg == "-Q":
-            infoout(resolve.res, False)
-        elif arg in ["-Qq", "-Qqq"]:
-            infoout(resolve.res, True)
+            infoout(resolve.res)
+        elif arg =="-Qq":
+            infoout(resolve.res, quiet=True)
+        elif arg =="-Qqq":
+            infoout(resolve.res, veryquiet=True)
     elif args[1] in ["-Qs", "-Qsq", "-Qsqq"]:
+        searchby="name"
         pkgs=args
         arg=args[1]
-        del pkgs[0:2]
-        if "qq" in arg:
-            resolve(pkgs, "search", True)
+        try:
+            secarg=args[2]
+        except:
+            exit()
+        if secarg == "--by":
+            searchby=args[3]
+            if args[3] in ["name", "name-desc", "maintainer", "depends", "makedepends", "optdepends", "checkdepends"]:
+                searchby=args[3]
+            del pkgs[0:4]
         else:
-            resolve(pkgs, "search", False)
-        if arg == "-Qs":
-            infoout(resolve.res, False)
-        elif arg in  ["-Qsq", "-Qsqq"]:
-            infoout(resolve.res, True)
+            del pkgs[0:2]
+        for pkg in pkgs:
+            if "qq" in arg:
+                resolve([pkg], type="search", searchby=searchby, quiet=True)
+            else:
+                resolve([pkg], type="search", searchby=searchby)
+            if arg == "-Qs":
+                infoout(resolve.res, False)
+            elif arg =="-Qsq":
+                infoout(resolve.res, quiet=True)
+            elif arg =="-Qsqq":
+                infoout(resolve.res, veryquiet=True)
     elif args[1][:2] == "-S":
         options(args[1], 2)
         pkgs=args
@@ -601,7 +621,7 @@ if __name__ == "__main__":
                 exit(1)
         else:
             del pkgs[0:2]
-        resolve(pkgs,"multiinfo", True)
+        resolve(pkgs, quiet=True)
         info(resolve.res, True)
         for i in range(int(info.rescount)):
             os.chdir(home+"/.cache/buildaur/build")
