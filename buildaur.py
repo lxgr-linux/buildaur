@@ -278,7 +278,7 @@ def install(pkgs):
             os.chdir(home+"/.cache/buildaur/build")
             if mode == "asp":
                 print(":: Exporting package...")
-                os.system('rm -rf ./'+pkgname+' 2>/dev/null; asp export '+pkgname+' 2>/dev/null')
+                os.system('rm -rf ./'+ipkg.name()+' 2>/dev/null; asp export '+ipkg.name()+' 2>/dev/null')
             else:
                 print(":: Cloning git repository...")
                 os.system("rm -rf ./"+ipkg.name()+" 2>/dev/null;")
