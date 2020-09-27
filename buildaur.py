@@ -191,8 +191,16 @@ def update():
         install(update.willinst)
 
 class informer():
-    def __init__(self, pkg):
-        exec("informer.out=info.array_"+str(pkg))
+    def __init__(self, pkg, type="by_num"):
+        if type == "by_num":
+            exec("informer.out=info.array_"+str(pkg))
+            self.num=pkg
+        elif type == "by_name":
+            for i in range(int(info.rescount)):
+                exec("informer.out=info.array_"+str(i))
+                if informer.out[0] == pkg:
+                    self.num=i
+                    break
     def ver(self):
         return informer.out[1]
     def localver(self):
@@ -220,15 +228,22 @@ def install(pkgs):
     pkgpathes=[]
     pkgsout=[]
     install=[]
-    if mode == "asp":
-        aspinfo(pkgs, True)
-        print(":: Checking packages...")
-    else:
-        resolve(pkgs)
-        print(":: Checking packages...")
-        info(resolve.res, True)
+    nums=[]
+    try:
+        # Looking if pkgs are already in res
+        for pkg in pkgs:
+            ipkg=informer(pkg, type="by_name")
+            nums.append(ipkg.num)
+    except:
+        if mode == "asp":
+            aspinfo(pkgs, True)
+        else:
+            resolve(pkgs)
+            info(resolve.res, True)
+        nums=range(int(info.rescount))
+    print(":: Checking packages...")
     # Check if package is realy in AUR
-    for i in range(int(info.rescount)):
+    for i in nums:
         pkg=informer(i)
         pkgsout.append(pkg.name())
     if len(pkgs) != len(pkgsout):
@@ -240,7 +255,7 @@ def install(pkgs):
         print(" Nothing to do")
         exit(0)
     # Checking packages for existance
-    for i in range(int(info.rescount)):
+    for i in nums:
         pkg=informer(i)
         if pkg.ver() == pkg.localver():
             print(" "+thic+"Info:\033[0m "+pkg.name()+"-"+pkg.localver()+" is up to date -- reistalling")
@@ -255,7 +270,7 @@ def install(pkgs):
         install.append(i)
     # asking to continue
     print("")
-    print("Packages ("+str(info.rescount)+"): ", end='')
+    print("Packages ("+str(len(nums))+"): ", end='')
     for i in install:
         pkg=informer(i)
         print(pkg.name()+"-"+pkg.ver()+"  ", end='')
@@ -268,7 +283,7 @@ def install(pkgs):
         print("")
         # home=os.getcwd()
         count=1
-        max=str(info.rescount)
+        max=str(len(nums))
         for pkg in install:
             # full makeprocess
             # vars
