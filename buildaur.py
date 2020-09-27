@@ -175,7 +175,7 @@ def update():
         if pkg.ver() == pkg.localver() or pkg.name() in black:
             print("", end="")
         elif sorter(pkg.ver(), pkg.localver()) == pkg.ver():
-            update.willinst.append(pkgname)
+            update.willinst.append(pkg.name())
         elif sorter(pkg.ver(), pkg.localver()) == pkg.localver():
             msg.append(" "+yellow+"Warning:\033[0m "+pkg.name()+"-"+pkg.localver()+" is higher than AUR "+pkg.ver()+"!")
             if ask_warn_inst == 1:
