@@ -170,22 +170,18 @@ def update():
         info(resolve.res, False)
     print(":: Checking for outdated packages...")
     for i in range(int(info.rescount)):
-        exec("update.out=info.array_"+str(i))
-        pkgname=update.out[0]
-        pkgver=update.out[1]
-        localver=update.out[2]
-        pkgoutdate=update.out[3]
-        progressbar.progress(i+1, int(info.rescount), "Checking "+pkgname+"...")
-        if pkgver == localver or pkgname in black:
+        pkg=informer(i)
+        progressbar.progress(i+1, int(info.rescount), "Checking "+pkg.name()+"...")
+        if pkg.ver() == pkg.localver() or pkg.name() in black:
             print("", end="")
-        elif sorter(pkgver, localver) == pkgver:
+        elif sorter(pkg.ver(), pkg.localver()) == pkg.ver():
             update.willinst.append(pkgname)
-        elif sorter(pkgver, localver) == localver:
-            msg.append(" "+yellow+"Warning:\033[0m "+pkgname+"-"+localver+" is higher than AUR "+pkgver+"!")
+        elif sorter(pkg.ver(), pkg.localver()) == pkg.localver():
+            msg.append(" "+yellow+"Warning:\033[0m "+pkg.name()+"-"+pkg.localver()+" is higher than AUR "+pkg.ver()+"!")
             if ask_warn_inst == 1:
-                update.willinst.append(pkgname)
-        if pkgoutdate != ":null,":
-            msg.append(" "+yellow+"Warning:\033[0m "+pkgname+" is flagged as out-of-date!")
+                update.willinst.append(pkg.name())
+        if pkg.outdate() != ":null,":
+            msg.append(" "+yellow+"Warning:\033[0m "+pkg.name()+" is flagged as out-of-date!")
     print(":: Done")
     for i in msg:
         print(i)
@@ -194,22 +190,31 @@ def update():
     else:
         install(update.willinst)
 
+class informer():
+    def __init__(self, pkg):
+        exec("informer.out=info.array_"+str(pkg))
+    def ver(self):
+        return informer.out[1]
+    def localver(self):
+        return informer.out[2]
+    def name(self):
+        return informer.out[0]
+    def outdate(self):
+        return informer.out[3]
+    def desc(self):
+        return informer.out[4]
+
 def infoout(res, quiet=False, veryquiet=False):
     info(res, True)
     for i in range(int(info.rescount)):
-        exec("infoout.out=info.array_"+str(i))
-        pkgname=infoout.out[0]
-        pkgver=infoout.out[1]
+        pkg=informer(i)
         if veryquiet:
-            print(pkgname)
+            print(pkg.name())
         elif quiet:
-            print(pkgname, pkgver)
+            print(pkg.name(), pkg.ver())
         else:
-            localver=infoout.out[2]
-            pkgoutdate=infoout.out[3]
-            pkgdesc=infoout.out[4]
-            print(" "+pkgname+"-"+pkgver+" (local: "+localver+")")
-            print("    "+pkgdesc)
+            print(" "+pkg.name()+"-"+pkg.ver()+" (local: "+pkg.localver()+")")
+            print("    "+pkg.desc())
 
 def install(pkgs):
     pkgpathes=[]
@@ -224,8 +229,8 @@ def install(pkgs):
         info(resolve.res, True)
     # Check if package is realy in AUR
     for i in range(int(info.rescount)):
-        exec("update.out=info.array_"+str(i))
-        pkgsout.append(update.out[0])
+        pkg=informer(i)
+        pkgsout.append(pkg.name())
     if len(pkgs) != len(pkgsout):
         for pkg in pkgs:
             if pkg not in pkgsout:
@@ -236,29 +241,24 @@ def install(pkgs):
         exit(0)
     # Checking packages for existance
     for i in range(int(info.rescount)):
-        exec("update.out=info.array_"+str(i))
-        pkgname=update.out[0]
-        pkgver=update.out[1]
-        localver=update.out[2]
-        pkgoutdate=update.out[3]
-        if pkgver == localver:
-            print(" "+thic+"Info:\033[0m "+pkgname+"-"+localver+" is up to date -- reistalling")
-        elif localver == "---":
+        pkg=informer(i)
+        if pkg.ver() == pkg.localver():
+            print(" "+thic+"Info:\033[0m "+pkg.name()+"-"+pkg.localver()+" is up to date -- reistalling")
+        elif pkg.localver() == "---":
             print("", end="")
-        elif sorter(pkgver, localver) == pkgver:
-            print(" "+thic+"Info:\033[0m "+pkgname+"-"+localver+" will be updated to "+pkgver)
-        elif sorter(pkgver, localver) == localver:
-            print(" "+yellow+"Warning:\033[0m "+pkgname+"-"+localver+" is higher than AUR "+pkgver+"!")
-        if pkgoutdate != ":null,":
-            print(" "+yellow+"Warning:\033[0m "+pkgname+" is flagged as out-of-date!")
+        elif sorter(pkg.ver(), pkg.localver()) == pkg.ver():
+            print(" "+thic+"Info:\033[0m "+pkg.name()+"-"+pkg.localver()+" will be updated to "+pkg.ver())
+        elif sorter(pkg.ver(), pkg.localver()) == pkg.localver():
+            print(" "+yellow+"Warning:\033[0m "+pkg.name()+"-"+pkg.localver()+" is higher than AUR "+pkg.ver()+"!")
+        if pkg.outdate() != ":null,":
+            print(" "+yellow+"Warning:\033[0m "+pkg.name()+" is flagged as out-of-date!")
         install.append(i)
     # asking to continue
     print("")
     print("Packages ("+str(info.rescount)+"): ", end='')
-    for pkg in install:
-        exec("update.out=info.array_"+str(pkg))
-        pkgname=update.out[0]
-        print(pkgname+"-"+pkgver+"  ", end='')
+    for i in install:
+        pkg=informer(i)
+        print(pkg.name()+"-"+pkg.ver()+"  ", end='')
     print("")
     if options.confirm:
         ask=input("\n:: Continnue installation? [Y/n] ")
@@ -272,10 +272,8 @@ def install(pkgs):
         for pkg in install:
             # full makeprocess
             # vars
-            exec("update.out=info.array_"+str(pkg))
-            pkgname=update.out[0]
-            pkgver=update.out[1]
-            print("("+str(count)+"/"+max+") Making package "+thic+pkgname+"\033[0m...")
+            ipkg=informer(pkg)
+            print("("+str(count)+"/"+max+") Making package "+thic+ipkg.name()+"\033[0m...")
             # Git repository
             os.chdir(home+"/.cache/buildaur/build")
             if mode == "asp":
@@ -283,10 +281,10 @@ def install(pkgs):
                 os.system('rm -rf ./'+pkgname+' 2>/dev/null; asp export '+pkgname+' 2>/dev/null')
             else:
                 print(":: Cloning git repository...")
-                os.system("rm -rf ./"+pkgname+" 2>/dev/null;")
-                while not os.path.exists("./"+pkgname+"/PKGBUILD"):
-                    os.system("git clone "+proto+"://aur.archlinux.org/"+pkgname)
-            os.chdir(os.getcwd()+"/"+pkgname)
+                os.system("rm -rf ./"+ipkg.name()+" 2>/dev/null;")
+                while not os.path.exists("./"+ipkg.name()+"/PKGBUILD"):
+                    os.system("git clone "+proto+"://aur.archlinux.org/"+ipkg.name())
+            os.chdir(os.getcwd()+"/"+ipkg.name())
             # edit
             if showPKGBUILD == 1:
                 print(":: Printing PKGBUILD...")
@@ -371,8 +369,8 @@ def depts():
         info(resolve.res, True)
         if int(info.rescount) != 0:
             for i in range(int(info.rescount)):
-                exec("infoout.out=info.array_"+str(i))
-                neaurdeps.append(infoout.out[0])
+                pkg=informer(i)
+                neaurdeps.append(pkg.name)
             curdir=os.getcwd()
             os.chdir(home)
             install(neaurdeps)
@@ -625,10 +623,9 @@ if __name__ == "__main__":
         info(resolve.res, True)
         for i in range(int(info.rescount)):
             os.chdir(home+"/.cache/buildaur/build")
-            exec("infoout.out=info.array_"+str(i))
-            pkgname=infoout.out[0]
-            os.system("rm -rf ./"+pkgname+" 2>/dev/null; git clone "+proto+"://aur.archlinux.org/"+pkgname+" 2>/dev/null")
-            os.chdir(os.getcwd()+"/"+pkgname)
+            pkg=informer(i)
+            os.system("rm -rf ./"+pkg.name()+" 2>/dev/null; git clone "+proto+"://aur.archlinux.org/"+pkg.name()+" 2>/dev/null")
+            os.chdir(os.getcwd()+"/"+pkg.name())
             if secarg == "--diff":
                 os.system('git diff $(git log --pretty=format:"%h" | head -2 | xargs)')
             else:
