@@ -242,19 +242,10 @@ def install(pkgs):
             info(resolve.res, True)
         nums=range(int(info.rescount))
     print(":: Checking packages...")
-    # Check if package is realy in AUR
-    for i in nums:
-        pkg=informer(i)
-        pkgsout.append(pkg.name())
-    if len(pkgs) != len(pkgsout):
-        for pkg in pkgs:
-            if pkg not in pkgsout:
-                print(":: "+red+"ERROR:\033[0m "+pkg+" not found!")
-                exit(1)
-    if info.rescount == "0":
+    if len(nums) == "0":
         print(" Nothing to do")
         exit(0)
-    # Checking packages for existance
+    # Checking packages for atributes
     for i in nums:
         pkg=informer(i)
         if pkg.ver() == pkg.localver():
@@ -268,6 +259,13 @@ def install(pkgs):
         if pkg.outdate() != ":null,":
             print(" "+yellow+"Warning:\033[0m "+pkg.name()+" is flagged as out-of-date!")
         install.append(i)
+        pkgsout.append(pkg.name())
+    # Check if package is realy in AUR
+    if len(pkgs) != len(pkgsout):
+        for pkg in pkgs:
+            if pkg not in pkgsout:
+                print(":: "+red+"ERROR:\033[0m "+pkg+" not found!")
+                exit(1)
     # asking to continue
     print("")
     print("Packages ("+str(len(nums))+"): ", end='')
