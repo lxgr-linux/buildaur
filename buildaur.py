@@ -102,6 +102,18 @@ def resolve(pkgs, type="multiinfo", quiet=False, searchby="name"):
         exit(1)
     resolve.res=str(r.content)
 
+def infoarfilter(splitted, name):
+    infoar=[]
+    for n in range(len(splitted)):
+        if splitted[n] == name:
+            for m in range(n, len(splitted)):
+                if splitted[m] not in [":[", ",", name, "],"]:
+                    infoar.append(splitted[m])
+                if splitted[m] == '],':
+                    break
+            return infoar
+    return infoar
+
 def info(res, quiet=False):
     info.rescount=res.split('"')[8].split(":")[1].split(",")[0]
     info.respkgs=[]
@@ -110,18 +122,25 @@ def info(res, quiet=False):
         print(":: Collecting package data...")
     for i in range(int(info.rescount)):
         splitted=cutted[i+1].split('"')
+        #print(splitted)
         pkgname=splitted[3]
         pkgver=splitted[13]
         pkgdesc=splitted[17]
+        pkgurl=splitted[21]
         pkgoutdate=splitted[28]
-        if pkgoutdate in [":"]:
+        pkgmaintainer=splitted[31]
+        depends=infoarfilter(splitted, "Depends")
+        makedepends=infoarfilter(splitted, "MakeDepends")
+        optdepends=infoarfilter(splitted, "OptDepends")
+        license=infoarfilter(splitted, "License")
+        if pkgoutdate == ":":
             pkgoutdate=splitted[26]
         try:
             pkg=localdb.get_pkg(pkgname)
             localver=pkg.version
         except:
             localver="---"
-        array=[pkgname, pkgver, localver, pkgoutdate, pkgdesc]
+        array=[pkgname, pkgver, localver, pkgoutdate, pkgdesc, depends, makedepends, optdepends, license, pkgurl, pkgmaintainer]
         info.respkgs.append(pkgname)
         if quiet == False:
             progressbar.progress(i+1, int(info.rescount), "Collecting "+pkgname+"...")
@@ -211,6 +230,18 @@ class informer():
         return informer.out[3]
     def desc(self):
         return informer.out[4]
+    def depends(self):
+        return informer.out[5]
+    def makedepends(self):
+        return informer.out[6]
+    def optdepends(self):
+        return informer.out[7]
+    def license(self):
+        return informer.out[8]
+    def url(self):
+        return informer.out[9]
+    def maintainer(self):
+        return informer.out[10]
 
 def infoout(res, quiet=False, veryquiet=False):
     info(res, True)
@@ -223,6 +254,31 @@ def infoout(res, quiet=False, veryquiet=False):
         else:
             print(" "+pkg.name()+"-"+pkg.ver()+" (local: "+pkg.localver()+")")
             print("    "+pkg.desc())
+
+def detailinfo(res):
+    info(res, True)
+    for i in range(int(info.rescount)):
+        pkg=informer(i)
+        print("Name                  : "+pkg.name())
+        print("Version               : "+pkg.ver())
+        print("Local Version         : "+pkg.localver())
+        print("Description           : "+pkg.desc())
+        print("Maintainer            : "+pkg.maintainer())
+        print("URl                   : "+pkg.url())
+        print("Licenses              : ", end='')
+        for l in pkg.license():
+            print(l, end='')
+        print("\nPkg out-of-date       : "+pkg.outdate())
+        print("Dependencies          : ", end='')
+        for l in pkg.depends():
+            print(l+"  ", end='')
+        print("\nMakedependencies      : ", end='')
+        for l in pkg.makedepends():
+            print(l+"  ", end='')
+        print("\nOptional Dependencies : ", end='')
+        for l in pkg.optdepends():
+            print(l+"  ", end='')
+        print("\n")
 
 def install(pkgs):
     pkgpathes=[]
@@ -429,6 +485,7 @@ def help():
     print("      -R                : Removes a package")
     print("      -Q                : Lists installed packages or searches for ones in the AUR")
     print("      -Qs               : Search the AUR")
+    print("      -Qi               : Gives detailed package information")
     print("      -Syu              : Updates all AUR packages")
     #print("      -url              : Installs a package from a given git-repository")
     print("      -asp              : Builds a package from source using asp (usefull for archlinux arm)")
@@ -565,6 +622,14 @@ if __name__ == "__main__":
                 infoout(resolve.res, quiet=True)
             elif arg =="-Qsqq":
                 infoout(resolve.res, veryquiet=True)
+    elif args[1] == "-Qi":
+        pkgs=args
+        arg=args[1]
+        del pkgs[0:2]
+        if len(pkgs) == 0:
+            pkgs=os.popen("pacman -Qqm").read().split('\n')
+        resolve(pkgs, quiet=True)
+        detailinfo(resolve.res)
     elif args[1][:2] == "-S":
         options(args[1], 2)
         pkgs=args
