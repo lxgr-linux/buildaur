@@ -45,6 +45,18 @@ def options(string, optlen):
         print(":: "+red+"ERROR:\033[0m "+string+" is no valid option!")
         exit(1)
 
+def liner(length, names, sep=""):
+    width, height = os.get_terminal_size()
+    lens=0
+    for name in names:
+        if lens+len(name)+2 < width-length:
+            print(name+"  ", end="")
+            lens+=len(name)+2
+        else:
+            lens=len(name)+2
+            print("\n"+(length-len(sep))*" "+sep+name+"  ", end="")
+    print("")
+
 def sorter(ver1, ver2):
 	arr1=ver1.split("-")[0].split(".")
 	arr2=ver2.split("-")[0].split(".")
@@ -136,7 +148,6 @@ def info(res, quiet=False):
     for i in range(int(info.rescount)):
         splitted=cutted[i+1].split('"')
         #print(splitted)
-        c=0
         for sname in ["Name", "Version", "URL", "Description", "Maintainer"]:
             exec("info."+sname+"=infofilter(splitted, '"+sname+"')")
         for sname in ["Depends", "MakeDepends", "OptDepends", "License"]:
@@ -273,19 +284,15 @@ def detailinfo(res):
         print("Maintainer            : "+pkg.maintainer())
         print("URL                   : "+pkg.url())
         print("Licenses              : ", end='')
-        for l in pkg.license():
-            print(l, end='')
-        print("\nPkg out-of-date       : "+pkg.outdate())
+        liner(24, pkg.license(), ": ")
+        print("Pkg out-of-date       : "+pkg.outdate())
         print("Dependencies          : ", end='')
-        for l in pkg.depends():
-            print(l+"  ", end='')
-        print("\nMakedependencies      : ", end='')
-        for l in pkg.makedepends():
-            print(l+"  ", end='')
-        print("\nOptional Dependencies : ", end='')
-        for l in pkg.optdepends():
-            print(l+"  ", end='')
-        print("\n")
+        liner(24, pkg.depends(), ": ")
+        print("Makedependencies      : ", end='')
+        liner(24, pkg.makedepends(), ": ")
+        print("Optional Dependencies : ", end='')
+        liner(24, pkg.optdepends(), ": ")
+        print("")
 
 def install(pkgs):
     pkgpathes=[]
@@ -332,9 +339,11 @@ def install(pkgs):
     # asking to continue
     print("")
     print("Packages ("+str(len(nums))+"): ", end='')
+    packs=[]
     for i in install:
-        pkg=informer(i)
-        print(pkg.name()+"-"+pkg.ver()+"  ", end='')
+         pkg=informer(i)
+         packs.append(pkg.name()+"-"+pkg.ver()+"  ")
+    liner(len("Packages ("+str(len(nums))+"): "), packs)
     print("")
     if options.confirm:
         ask=input("\n:: Continnue installation? [Y/n] ")
