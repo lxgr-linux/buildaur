@@ -150,7 +150,7 @@ def info(res, quiet=False):
         array=[info.Name, info.Version, localver, pkgoutdate, info.Description, info.Depends, info.MakeDepends, info.OptDepends, info.License, info.URL, info.Maintainer]
         info.respkgs.append(info.Name)
         if quiet == False:
-            progressbar.progress(i+1, int(info.rescount), "Collecting "+pkgname+"...")
+            progressbar.progress(i+1, int(info.rescount), "Collecting "+info.Name+"...")
         exec("info.array_"+str(i)+"=array")
 
 def aspinfo(pkgs, quiet):
