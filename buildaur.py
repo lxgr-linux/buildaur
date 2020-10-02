@@ -114,6 +114,19 @@ def infoarfilter(splitted, name):
             return infoar
     return infoar
 
+def infofilter(splitted, name, type="big"):
+    for n in range(len(splitted)):
+        if splitted[n] == name:
+            if type == "small":
+                info=splitted[n+1]
+            else:
+                if splitted[n+1] == ":":
+                    info=splitted[n+2]
+                else:
+                    info="---"
+            return info
+    return "---"
+
 def info(res, quiet=False):
     info.rescount=res.split('"')[8].split(":")[1].split(",")[0]
     info.respkgs=[]
@@ -123,25 +136,19 @@ def info(res, quiet=False):
     for i in range(int(info.rescount)):
         splitted=cutted[i+1].split('"')
         #print(splitted)
-        pkgname=splitted[3]
-        pkgver=splitted[13]
-        pkgdesc=splitted[17]
-        pkgurl=splitted[21]
-        pkgoutdate=splitted[28]
-        pkgmaintainer=splitted[31]
-        depends=infoarfilter(splitted, "Depends")
-        makedepends=infoarfilter(splitted, "MakeDepends")
-        optdepends=infoarfilter(splitted, "OptDepends")
-        license=infoarfilter(splitted, "License")
-        if pkgoutdate == ":":
-            pkgoutdate=splitted[26]
+        c=0
+        for sname in ["Name", "Version", "URL", "Description", "Maintainer"]:
+            exec("info."+sname+"=infofilter(splitted, '"+sname+"')")
+        for sname in ["Depends", "MakeDepends", "OptDepends", "License"]:
+            exec("info."+sname+"=infoarfilter(splitted, '"+sname+"')")
+        pkgoutdate=infofilter(splitted, "OutOfDate", type="small")
         try:
-            pkg=localdb.get_pkg(pkgname)
+            pkg=localdb.get_pkg(info.Name)
             localver=pkg.version
         except:
             localver="---"
-        array=[pkgname, pkgver, localver, pkgoutdate, pkgdesc, depends, makedepends, optdepends, license, pkgurl, pkgmaintainer]
-        info.respkgs.append(pkgname)
+        array=[info.Name, info.Version, localver, pkgoutdate, info.Description, info.Depends, info.MakeDepends, info.OptDepends, info.License, info.URL, info.Maintainer]
+        info.respkgs.append(info.Name)
         if quiet == False:
             progressbar.progress(i+1, int(info.rescount), "Collecting "+pkgname+"...")
         exec("info.array_"+str(i)+"=array")
@@ -264,7 +271,7 @@ def detailinfo(res):
         print("Local Version         : "+pkg.localver())
         print("Description           : "+pkg.desc())
         print("Maintainer            : "+pkg.maintainer())
-        print("URl                   : "+pkg.url())
+        print("URL                   : "+pkg.url())
         print("Licenses              : ", end='')
         for l in pkg.license():
             print(l, end='')
