@@ -342,7 +342,7 @@ def install(pkgs):
     packs=[]
     for i in install:
          pkg=informer(i)
-         packs.append(pkg.name()+"-"+pkg.ver()+"  ")
+         packs.append(pkg.name()+"-"+pkg.ver())
     liner(len("Packages ("+str(len(nums))+"): "), packs)
     print("")
     if options.confirm:
