@@ -116,27 +116,29 @@ def resolve(pkgs, type="multiinfo", quiet=False, searchby="name"):
 
 def infoarfilter(splitted, name):
     infoar=[]
-    for n in range(len(splitted)):
-        if splitted[n] == name:
-            for m in range(n, len(splitted)):
-                if splitted[m] not in [":[", ",", name, "],"]:
-                    infoar.append(splitted[m])
-                if splitted[m] == '],':
-                    break
-            return infoar
+    if name in splitted:
+        for n in range(len(splitted)):
+            if splitted[n] == name:
+                for m in range(n, len(splitted)):
+                    if splitted[m] not in [":[", ",", name, "],"]:
+                        infoar.append(splitted[m])
+                    if splitted[m] == '],':
+                        break
+                return infoar
     return infoar
 
 def infofilter(splitted, name, type="big"):
-    for n in range(len(splitted)):
-        if splitted[n] == name:
-            if type == "small":
-                info=splitted[n+1]
-            else:
-                if splitted[n+1] == ":":
-                    info=splitted[n+2]
+    if name in splitted:
+        for n in range(len(splitted)):
+            if splitted[n] == name:
+                if type == "small":
+                    info=splitted[n+1]
                 else:
-                    info="---"
-            return info
+                    if splitted[n+1] == ":":
+                        info=splitted[n+2]
+                    else:
+                        info="---"
+                return info
     return "---"
 
 def info(res, quiet=False):
@@ -153,6 +155,15 @@ def info(res, quiet=False):
         for sname in ["Depends", "MakeDepends", "OptDepends", "License"]:
             exec("info."+sname+"=infoarfilter(splitted, '"+sname+"')")
         pkgoutdate=infofilter(splitted, "OutOfDate", type="small")
+        # Filtering "\" from URL
+        if "\\\/" in info.URL:
+            newURL=""
+            for n in range(len(info.URL)):
+                if info.URL[n] == '\\' and info.URL[n+1] == '\\' and info.URL[n+2] == "/":
+                    newURL+=""
+                elif info.URL[n] != "\\":
+                    newURL+=info.URL[n]
+            info.URL=newURL
         try:
             pkg=localdb.get_pkg(info.Name)
             localver=pkg.version
