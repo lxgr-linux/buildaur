@@ -10,6 +10,7 @@ import requests
 import sys
 from pyalpm import Handle
 from pathlib import Path
+from datetime import datetime
 # res=os.popen("cat /usr/share/buildaur/res").read()
 
 def options(string, optlen):
@@ -125,6 +126,8 @@ def infoarfilter(splitted, name):
                     if splitted[m] == '],':
                         break
                 return infoar
+    if infoar == []:
+        infoar=["null"]
     return infoar
 
 def infofilter(splitted, name, type="big"):
@@ -137,9 +140,9 @@ def infofilter(splitted, name, type="big"):
                     if splitted[n+1] == ":":
                         info=splitted[n+2]
                     else:
-                        info="---"
+                        info="null"
                 return info
-    return "---"
+    return "null"
 
 def info(res, quiet=False):
     info.rescount=res.split('"')[8].split(":")[1].split(",")[0]
@@ -154,7 +157,7 @@ def info(res, quiet=False):
             exec("info."+sname+"=infofilter(splitted, '"+sname+"')")
         for sname in ["Depends", "MakeDepends", "OptDepends", "License"]:
             exec("info."+sname+"=infoarfilter(splitted, '"+sname+"')")
-        pkgoutdate=infofilter(splitted, "OutOfDate", type="small")
+        pkgoutdate=infofilter(splitted, "OutOfDate", type="small").split(":")[1].split(",")[0]
         # Filtering "\" from URL
         if "\\\/" in info.URL:
             newURL=""
@@ -190,7 +193,7 @@ def aspinfo(pkgs, quiet):
             localver=pkg.version
         except:
             localver="---"
-        pkgoutdate=":null,"
+        pkgoutdate="null"
         pkgdesc="some pkg from asp"
         if pkgver != "error":
             array=[pkgname, pkgver, localver, pkgoutdate, pkgdesc]
@@ -228,8 +231,8 @@ def update():
             msg.append(" "+yellow+"Warning:\033[0m "+pkg.name()+"-"+pkg.localver()+" is higher than AUR "+pkg.ver()+"!")
             if ask_warn_inst == 1:
                 update.willinst.append(pkg.name())
-        if pkg.outdate() != ":null,":
-            msg.append(" "+yellow+"Warning:\033[0m "+pkg.name()+" is flagged as out-of-date!")
+        if pkg.outdate() != "null":
+            msg.append(" "+yellow+"Warning:\033[0m "+pkg.name()+" is flagged as out-of-date since: "+datetime.utcfromtimestamp(int(pkg.outdate())).strftime('%Y-%m-%d %H:%M:%S')+"!")
     print(":: Done")
     for i in msg:
         print(i)
@@ -295,14 +298,18 @@ def detailinfo(res):
         print("Maintainer            : "+pkg.maintainer())
         print("URL                   : "+pkg.url())
         print("Licenses              : ", end='')
-        liner(24, pkg.license(), ": ")
-        print("Pkg out-of-date       : "+pkg.outdate())
+        liner(24, pkg.license())
+        print("Pkg out-of-date       : ", end='')
+        if pkg.outdate() == "null":
+            print(pkg.outdate())
+        else:
+            print(datetime.utcfromtimestamp(int(pkg.outdate())).strftime('%Y-%m-%d %H:%M:%S'))
         print("Dependencies          : ", end='')
-        liner(24, pkg.depends(), ": ")
+        liner(24, pkg.depends())
         print("Makedependencies      : ", end='')
-        liner(24, pkg.makedepends(), ": ")
+        liner(24, pkg.makedepends())
         print("Optional Dependencies : ", end='')
-        liner(24, pkg.optdepends(), ": ")
+        liner(24, pkg.optdepends())
         print("")
 
 def install(pkgs):
@@ -337,8 +344,8 @@ def install(pkgs):
             print(" "+thic+"Info:\033[0m "+pkg.name()+"-"+pkg.localver()+" will be updated to "+pkg.ver())
         elif sorter(pkg.ver(), pkg.localver()) == pkg.localver():
             print(" "+yellow+"Warning:\033[0m "+pkg.name()+"-"+pkg.localver()+" is higher than AUR "+pkg.ver()+"!")
-        if pkg.outdate() != ":null,":
-            print(" "+yellow+"Warning:\033[0m "+pkg.name()+" is flagged as out-of-date!")
+        if pkg.outdate() != "null":
+            print(" "+yellow+"Warning:\033[0m "+pkg.name()+" is flagged as out-of-date since: "+datetime.utcfromtimestamp(int(pkg.outdate())).strftime('%Y-%m-%d %H:%M:%S')+"!")
         install.append(i)
         pkgsout.append(pkg.name())
     # Check if package is realy in AUR
@@ -355,7 +362,6 @@ def install(pkgs):
          pkg=informer(i)
          packs.append(pkg.name()+"-"+pkg.ver())
     liner(len("Packages ("+str(len(nums))+"): "), packs)
-    print("")
     if options.confirm:
         ask=input("\n:: Continnue installation? [Y/n] ")
     else:
