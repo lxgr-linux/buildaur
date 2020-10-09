@@ -131,7 +131,7 @@ def infoarfilter(splitted, name):
         for n in range(len(splitted)):
             if splitted[n] == name:
                 for m in range(n, len(splitted)):
-                    if splitted[m] not in [":[", ",", name, "],"]:
+                    if splitted[m] not in [":[", ",", name, "],", "]}]}'", ":[]}]}'", ":[]},"]:
                         infoar.append(splitted[m])
                     if splitted[m] == '],':
                         break
@@ -169,7 +169,7 @@ def info(ress, quiet=False):
         #print(splitted)
         for sname in ["Name", "Version", "URL", "Description", "Maintainer"]:
             exec("info."+sname+"=infofilter(splitted, '"+sname+"')")
-        for sname in ["Depends", "MakeDepends", "OptDepends", "License"]:
+        for sname in ["Depends", "MakeDepends", "OptDepends", "License", "Keywords"]:
             exec("info."+sname+"=infoarfilter(splitted, '"+sname+"')")
         for sname in ["FirstSubmitted", "OutOfDate", "LastModified", "Popularity", "NumVotes"]:
             exec("info."+sname+"=infofilter(splitted, '"+sname+"', type='small').split(':')[1].split(',')[0]")
@@ -187,7 +187,7 @@ def info(ress, quiet=False):
             localver=pkg.version
         except:
             localver="---"
-        array=[info.Name, info.Version, localver, info.OutOfDate, info.Description, info.Depends, info.MakeDepends, info.OptDepends, info.License, info.URL, info.Maintainer, info.FirstSubmitted, info.LastModified, info.Popularity, info.NumVotes]
+        array=[info.Name, info.Version, localver, info.OutOfDate, info.Description, info.Depends, info.MakeDepends, info.OptDepends, info.License, info.URL, info.Maintainer, info.FirstSubmitted, info.LastModified, info.Popularity, info.NumVotes, info.Keywords]
         info.respkgs.append(info.Name)
         if quiet == False:
             progressbar.progress(i+1, int(rescount), "Collecting "+info.Name+"...")
@@ -299,6 +299,8 @@ class informer():
         return informer.out[13]
     def votes(self):
         return informer.out[14]
+    def keywords(self):
+        return informer.out[15]
 
 def infoout(res, quiet=False, veryquiet=False):
     info(res, True)
@@ -328,6 +330,8 @@ def detailinfo(res):
         print("Last modified         : "+datetime.utcfromtimestamp(int(pkg.modified())).strftime('%Y-%m-%d %H:%M:%S'))
         print("Popularity            : "+pkg.popularity())
         print("Votes                 : "+pkg.votes())
+        print("Keywords              : ", end='')
+        liner(24, pkg.keywords())
         print("Pkg out-of-date       : ", end='')
         if pkg.outdate() == "null":
             print(pkg.outdate())
