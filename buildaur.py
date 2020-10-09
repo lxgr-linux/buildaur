@@ -152,14 +152,13 @@ def info(res, quiet=False):
         print(":: Collecting package data...")
     for i in range(int(info.rescount)):
         splitted=cutted[i+1].split('"')
-        print(splitted)
+        #print(splitted)
         for sname in ["Name", "Version", "URL", "Description", "Maintainer"]:
             exec("info."+sname+"=infofilter(splitted, '"+sname+"')")
         for sname in ["Depends", "MakeDepends", "OptDepends", "License"]:
             exec("info."+sname+"=infoarfilter(splitted, '"+sname+"')")
-        for sname in ["FirstSubmitted", "OutOfDate", "LastModified"]:
+        for sname in ["FirstSubmitted", "OutOfDate", "LastModified", "Popularity", "NumVotes"]:
             exec("info."+sname+"=infofilter(splitted, '"+sname+"', type='small').split(':')[1].split(',')[0]")
-        # pkgoutdate=infofilter(splitted, "OutOfDate", type="small").split(":")[1].split(",")[0]
         # Filtering "\" from URL
         if "\\\/" in info.URL:
             newURL=""
@@ -174,7 +173,7 @@ def info(res, quiet=False):
             localver=pkg.version
         except:
             localver="---"
-        array=[info.Name, info.Version, localver, info.OutOfDate, info.Description, info.Depends, info.MakeDepends, info.OptDepends, info.License, info.URL, info.Maintainer, info.FirstSubmitted, info.LastModified]
+        array=[info.Name, info.Version, localver, info.OutOfDate, info.Description, info.Depends, info.MakeDepends, info.OptDepends, info.License, info.URL, info.Maintainer, info.FirstSubmitted, info.LastModified, info.Popularity, info.NumVotes]
         info.respkgs.append(info.Name)
         if quiet == False:
             progressbar.progress(i+1, int(info.rescount), "Collecting "+info.Name+"...")
@@ -280,6 +279,10 @@ class informer():
         return informer.out[11]
     def modified(self):
         return informer.out[12]
+    def popularity(self):
+        return informer.out[13]
+    def votes(self):
+        return informer.out[14]
 
 def infoout(res, quiet=False, veryquiet=False):
     info(res, True)
@@ -307,6 +310,8 @@ def detailinfo(res):
         liner(24, pkg.license())
         print("First submitted       : "+datetime.utcfromtimestamp(int(pkg.submitted())).strftime('%Y-%m-%d %H:%M:%S'))
         print("Last modified         : "+datetime.utcfromtimestamp(int(pkg.modified())).strftime('%Y-%m-%d %H:%M:%S'))
+        print("Popularity            : "+pkg.popularity())
+        print("Votes                 : "+pkg.votes())
         print("Pkg out-of-date       : ", end='')
         if pkg.outdate() == "null":
             print(pkg.outdate())
