@@ -152,12 +152,14 @@ def info(res, quiet=False):
         print(":: Collecting package data...")
     for i in range(int(info.rescount)):
         splitted=cutted[i+1].split('"')
-        #print(splitted)
+        print(splitted)
         for sname in ["Name", "Version", "URL", "Description", "Maintainer"]:
             exec("info."+sname+"=infofilter(splitted, '"+sname+"')")
         for sname in ["Depends", "MakeDepends", "OptDepends", "License"]:
             exec("info."+sname+"=infoarfilter(splitted, '"+sname+"')")
-        pkgoutdate=infofilter(splitted, "OutOfDate", type="small").split(":")[1].split(",")[0]
+        for sname in ["FirstSubmitted", "OutOfDate", "LastModified"]:
+            exec("info."+sname+"=infofilter(splitted, '"+sname+"', type='small').split(':')[1].split(',')[0]")
+        # pkgoutdate=infofilter(splitted, "OutOfDate", type="small").split(":")[1].split(",")[0]
         # Filtering "\" from URL
         if "\\\/" in info.URL:
             newURL=""
@@ -172,7 +174,7 @@ def info(res, quiet=False):
             localver=pkg.version
         except:
             localver="---"
-        array=[info.Name, info.Version, localver, pkgoutdate, info.Description, info.Depends, info.MakeDepends, info.OptDepends, info.License, info.URL, info.Maintainer]
+        array=[info.Name, info.Version, localver, info.OutOfDate, info.Description, info.Depends, info.MakeDepends, info.OptDepends, info.License, info.URL, info.Maintainer, info.FirstSubmitted, info.LastModified]
         info.respkgs.append(info.Name)
         if quiet == False:
             progressbar.progress(i+1, int(info.rescount), "Collecting "+info.Name+"...")
@@ -274,6 +276,10 @@ class informer():
         return informer.out[9]
     def maintainer(self):
         return informer.out[10]
+    def submitted(self):
+        return informer.out[11]
+    def modified(self):
+        return informer.out[12]
 
 def infoout(res, quiet=False, veryquiet=False):
     info(res, True)
@@ -299,6 +305,8 @@ def detailinfo(res):
         print("URL                   : "+pkg.url())
         print("Licenses              : ", end='')
         liner(24, pkg.license())
+        print("First submitted       : "+datetime.utcfromtimestamp(int(pkg.submitted())).strftime('%Y-%m-%d %H:%M:%S'))
+        print("Last modified         : "+datetime.utcfromtimestamp(int(pkg.modified())).strftime('%Y-%m-%d %H:%M:%S'))
         print("Pkg out-of-date       : ", end='')
         if pkg.outdate() == "null":
             print(pkg.outdate())
