@@ -11,6 +11,7 @@ import sys
 from pyalpm import Handle
 from pathlib import Path
 from datetime import datetime
+import math
 # res=os.popen("cat /usr/share/buildaur/res").read()
 
 def options(string, optlen):
@@ -83,37 +84,46 @@ def sorter(ver1, ver2):
 		return ver2
 
 def resolve(pkgs, type="multiinfo", quiet=False, searchby="name"):
+    pkgss=[]
+    resolve.res=[]
+    a=-200
+    # cut pkglists in 100 pkgs bytes
+    for i in range(math.ceil(len(pkgs)/200+1)):
+        pkgss.append(pkgs[a:i*200])
+        a+=200
+    del pkgss[0]
     if quiet == False:
         print(":: Downloading packagelist...")
-    url=proto+"://aur.archlinux.org/rpc/?v=5&type="+type
-    if len(pkgs) == 0:
-        exit(0)
-    if type == "search":
-        url+="&by="+searchby+"&arg="+pkgs[0]
-    else:
-        # name processing to avoid bad packagenames
-        npkgs=[]
-        for pkg in pkgs:
-            npkg=""
-            if "+" in pkg:
-                for letter in pkg:
-                    if letter == "+":
-                        npkg+="%2B"
-                    else:
-                        npkg+=letter
-            else:
-                npkg=pkg
-            npkgs.append(npkg)
-        pkgs=npkgs
-        # producing url
-        for pkg in pkgs:
-            url=url+"&arg[]="+pkg
-    try:
-        r=requests.get(url)
-    except:
-        print(":: "+red+"ERROR:\033[0m Server is not reachable!")
-        exit(1)
-    resolve.res=str(r.content)
+    for pkgs in pkgss:
+        url=proto+"://aur.archlinux.org/rpc/?v=5&type="+type
+        if len(pkgs) == 0:
+            exit()
+        if type == "search":
+            url+="&by="+searchby+"&arg="+pkgs[0]
+        else:
+            # name processing to avoid bad packagenames
+            npkgs=[]
+            for pkg in pkgs:
+                npkg=""
+                if "+" in pkg:
+                    for letter in pkg:
+                        if letter == "+":
+                            npkg+="%2B"
+                        else:
+                            npkg+=letter
+                else:
+                    npkg=pkg
+                npkgs.append(npkg)
+            pkgs=npkgs
+            # producing url
+            for pkg in pkgs:
+                url=url+"&arg[]="+pkg
+        try:
+            r=requests.get(url)
+        except:
+            print(":: "+red+"ERROR:\033[0m Server is not reachable!")
+            exit(1)
+        resolve.res.append(str(r.content))
 
 def infoarfilter(splitted, name):
     infoar=[]
@@ -144,14 +154,19 @@ def infofilter(splitted, name, type="big"):
                 return info
     return "null"
 
-def info(res, quiet=False):
-    info.rescount=res.split('"')[8].split(":")[1].split(",")[0]
+def info(ress, quiet=False):
+    m=0
+    cutted=[]
+    rescount=0
     info.respkgs=[]
-    cutted=res.split('{"ID"')
+    for res in ress:
+        rescount+=int(res.split('"')[8].split(":")[1].split(",")[0])
+        cutted+=res.split('{"ID"')[1:]
+    #print(rescount)
     if quiet == False:
         print(":: Collecting package data...")
-    for i in range(int(info.rescount)):
-        splitted=cutted[i+1].split('"')
+    for i in range(int(rescount)):
+        splitted=cutted[i].split('"')
         #print(splitted)
         for sname in ["Name", "Version", "URL", "Description", "Maintainer"]:
             exec("info."+sname+"=infofilter(splitted, '"+sname+"')")
@@ -176,8 +191,10 @@ def info(res, quiet=False):
         array=[info.Name, info.Version, localver, info.OutOfDate, info.Description, info.Depends, info.MakeDepends, info.OptDepends, info.License, info.URL, info.Maintainer, info.FirstSubmitted, info.LastModified, info.Popularity, info.NumVotes]
         info.respkgs.append(info.Name)
         if quiet == False:
-            progressbar.progress(i+1, int(info.rescount), "Collecting "+info.Name+"...")
-        exec("info.array_"+str(i)+"=array")
+            progressbar.progress(i+1, int(rescount), "Collecting "+info.Name+"...")
+        exec("info.array_"+str(m)+"=array")
+        m+=1
+    info.rescount=rescount
 
 def aspinfo(pkgs, quiet):
     print(":: Updatting asp database...")
