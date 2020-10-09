@@ -162,7 +162,6 @@ def info(ress, quiet=False):
     for res in ress:
         rescount+=int(res.split('"')[8].split(":")[1].split(",")[0])
         cutted+=res.split('{"ID"')[1:]
-    #print(rescount)
     if quiet == False:
         print(":: Collecting package data...")
     for i in range(int(rescount)):
