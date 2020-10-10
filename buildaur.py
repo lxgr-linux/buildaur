@@ -131,11 +131,10 @@ def infoarfilter(splitted, name):
         for n in range(len(splitted)):
             if splitted[n] == name:
                 for m in range(n, len(splitted)):
-                    if splitted[m] not in [":[", ",", name, "],", "]}]}'", ":[]}]}'", ":[]},"]:
+                    if splitted[m] not in [":[", ",", name, "],", "]}]}'", ":[]}]}'", ":[]},", "]},"]:
                         infoar.append(splitted[m])
-                    if splitted[m] == '],':
+                    if splitted[m] in ['],', "]}]}'", ":[]}]}'", ":[]},", "]},"]:
                         break
-                return infoar
     if infoar == []:
         infoar=["null"]
     return infoar
