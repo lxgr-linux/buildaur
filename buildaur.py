@@ -12,6 +12,7 @@ from pyalpm import Handle
 from pathlib import Path
 from datetime import datetime
 import math
+import json
 # res=os.popen("cat /usr/share/buildaur/res").read()
 
 def options(string, optlen):
@@ -123,55 +124,28 @@ def resolve(pkgs, type="multiinfo", quiet=False, searchby="name"):
             exit(1)
         resolve.res.append(str(r.content))
 
-def infoarfilter(splitted, name):
-    infoar=[]
-    if name in splitted:
-        for n in range(len(splitted)):
-            if splitted[n] == name:
-                for m in range(n, len(splitted)):
-                    if splitted[m] not in [":[", ",", name, "],", "]}]}'", ":[]}]}'", ":[]},", "]},"]:
-                        infoar.append(splitted[m])
-                    if splitted[m] in ['],', "]}]}'", ":[]}]}'", ":[]},", "]},"]:
-                        break
-    if infoar == []:
-        infoar=["null"]
-    return infoar
-
-def infofilter(splitted, name, type="big"):
-    if name in splitted:
-        for n in range(len(splitted)):
-            if splitted[n] == name:
-                if type == "small":
-                    info=splitted[n+1]
-                else:
-                    if splitted[n+1] == ":":
-                        info=splitted[n+2]
-                    else:
-                        info="null"
-                return info
-    return "null"
-
 def info(ress, quiet=False):
-    m=0
-    cutted=[]
     rescount=0
+    cutted=[]
     info.respkgs=[]
     for res in ress:
-        rescount+=int(res.split('"')[8].split(":")[1].split(",")[0])
-        cutted+=res.split('{"ID"')[1:]
-    if quiet == False:
-        print(":: Collecting package data...")
-    for i in range(int(rescount)):
-        splitted=cutted[i].split('"')
-        #print(splitted)
-        for sname in ["Name", "Version", "URL", "Description", "Maintainer"]:
-            exec("info."+sname+"=infofilter(splitted, '"+sname+"')")
+        y=json.loads(res.split("b'")[1].split("'")[0])
+        rescount+=int(y["resultcount"])
+        cutted+=y["results"]
+    #print(cutted)
+    for i in range(rescount):
+        for sname in ["Name", "Version", "URL", "Description", "Maintainer", "FirstSubmitted", "OutOfDate", "LastModified", "Popularity", "NumVotes"]:
+            try:
+                exec("info."+sname+"='"+str(cutted[i][sname])+"'")
+            except:
+                exec("info."+sname+"='None'")
         for sname in ["Depends", "MakeDepends", "OptDepends", "License", "Keywords"]:
-            exec("info."+sname+"=infoarfilter(splitted, '"+sname+"')")
-        for sname in ["FirstSubmitted", "OutOfDate", "LastModified", "Popularity", "NumVotes"]:
-            exec("info."+sname+"=infofilter(splitted, '"+sname+"', type='small').split(':')[1].split(',')[0]")
+            try:
+                exec("info."+sname+"="+str(cutted[i][sname]))
+            except:
+                exec("info."+sname+"=['None']")
         # Filtering "\" from URL
-        if "\\\/" in info.URL:
+        if "\\/" in info.URL:
             newURL=""
             for n in range(len(info.URL)):
                 if info.URL[n] == '\\' and info.URL[n+1] == '\\' and info.URL[n+2] == "/":
@@ -185,11 +159,10 @@ def info(ress, quiet=False):
         except:
             localver="---"
         array=[info.Name, info.Version, localver, info.OutOfDate, info.Description, info.Depends, info.MakeDepends, info.OptDepends, info.License, info.URL, info.Maintainer, info.FirstSubmitted, info.LastModified, info.Popularity, info.NumVotes, info.Keywords]
+        exec("info.array_"+str(i)+"=array")
         info.respkgs.append(info.Name)
         if quiet == False:
             progressbar.progress(i+1, int(rescount), "Collecting "+info.Name+"...")
-        exec("info.array_"+str(m)+"=array")
-        m+=1
     info.rescount=rescount
 
 def aspinfo(pkgs, quiet):
@@ -245,7 +218,7 @@ def update():
             msg.append(" "+yellow+"Warning:\033[0m "+pkg.name()+"-"+pkg.localver()+" is higher than AUR "+pkg.ver()+"!")
             if ask_warn_inst == 1:
                 update.willinst.append(pkg.name())
-        if pkg.outdate() != "null":
+        if pkg.outdate() != "None":
             msg.append(" "+yellow+"Warning:\033[0m "+pkg.name()+" is flagged as out-of-date since: "+datetime.utcfromtimestamp(int(pkg.outdate())).strftime('%Y-%m-%d %H:%M:%S')+"!")
     print(":: Done")
     for i in msg:
@@ -262,11 +235,10 @@ class informer():
             self.num=pkg
         elif type == "by_name":
             for i in range(int(info.rescount)):
+                self.num=i
                 exec("informer.out=info.array_"+str(i))
                 if informer.out[0] == pkg:
-                    self.num=i
                     break
-                    
     def ver(self):
         return informer.out[1]
     def localver(self):
@@ -298,7 +270,10 @@ class informer():
     def votes(self):
         return informer.out[14]
     def keywords(self):
-        return informer.out[15]
+        if informer.out[15] == []:
+            return ["null"]
+        else:
+            return informer.out[15]
 
 def infoout(res, quiet=False, veryquiet=False):
     info(res, True)
@@ -331,7 +306,7 @@ def detailinfo(res):
         print("Keywords              : ", end='')
         liner(24, pkg.keywords())
         print("Pkg out-of-date       : ", end='')
-        if pkg.outdate() == "null":
+        if pkg.outdate() == 'None':
             print(pkg.outdate())
         else:
             print(datetime.utcfromtimestamp(int(pkg.outdate())).strftime('%Y-%m-%d %H:%M:%S'))
@@ -375,7 +350,7 @@ def install(pkgs):
             print(" "+thic+"Info:\033[0m "+pkg.name()+"-"+pkg.localver()+" will be updated to "+pkg.ver())
         elif sorter(pkg.ver(), pkg.localver()) == pkg.localver():
             print(" "+yellow+"Warning:\033[0m "+pkg.name()+"-"+pkg.localver()+" is higher than AUR "+pkg.ver()+"!")
-        if pkg.outdate() != "null":
+        if pkg.outdate() != "None":
             print(" "+yellow+"Warning:\033[0m "+pkg.name()+" is flagged as out-of-date since: "+datetime.utcfromtimestamp(int(pkg.outdate())).strftime('%Y-%m-%d %H:%M:%S')+"!")
         install.append(i)
         pkgsout.append(pkg.name())
@@ -746,6 +721,9 @@ if __name__ == "__main__":
     elif args[1] in ["--version", "-v"]:
         pkg=localdb.get_pkg("buildaur")
         print(pkg.version)
+    elif args[1] in ["--test", "-t"]:
+        resolve(["buildaur", "cava", "brave-bin"])
+        json_test(resolve.res)
     elif args[1] == "--show":
         try:
             secarg=args[2]
