@@ -86,11 +86,9 @@ def sorter(ver1, ver2):
 def resolve(pkgs, type="multiinfo", quiet=False, searchby="name"):
     pkgss=[]
     resolve.res=[]
-    a=-200
-    # cut pkglists in 100 pkgs bytes
+    # cut pkglists in 200 pkgs bytes
     for i in range(math.ceil(len(pkgs)/200+1)):
-        pkgss.append(pkgs[a:i*200])
-        a+=200
+        pkgss.append(pkgs[(i*200)-200:i*200])
     del pkgss[0]
     if quiet == False:
         print(":: Downloading packagelist...")
@@ -268,6 +266,7 @@ class informer():
                 if informer.out[0] == pkg:
                     self.num=i
                     break
+                    
     def ver(self):
         return informer.out[1]
     def localver(self):
