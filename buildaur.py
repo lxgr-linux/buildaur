@@ -4,9 +4,9 @@
 # WARNING: This is experimental code!
 
 import os
+import urllib.request
 import progressbar_buildaur as progressbar
 import time
-import requests
 import sys
 from pyalpm import Handle
 from pathlib import Path
@@ -103,33 +103,27 @@ def resolve(pkgs, type="multiinfo", quiet=False, searchby="name"):
             # name processing to avoid bad packagenames
             npkgs=[]
             for pkg in pkgs:
-                npkg=""
-                if "+" in pkg:
-                    for letter in pkg:
-                        if letter == "+":
-                            npkg+="%2B"
-                        else:
-                            npkg+=letter
-                else:
-                    npkg=pkg
+                npkg=pkg.replace("+", "%2B")
                 npkgs.append(npkg)
             pkgs=npkgs
             # producing url
             for pkg in pkgs:
                 url=url+"&arg[]="+pkg
         try:
-            r=requests.get(url)
+            r=urllib.request.urlopen(url)
         except:
             print(":: "+red+"ERROR:\033[0m Server is not reachable!")
             exit(1)
-        resolve.res.append(str(r.content))
+        resolve.res.append(str(r.read()))
 
 def info(ress, quiet=False):
     rescount=0
     cutted=[]
     info.respkgs=[]
     for res in ress:
-        y=json.loads(res.split("b'")[1].split("'")[0])
+        abc=res.split("b'")[1].split("}'")[0]+"}"
+        #print(abc)
+        y=json.loads(abc.replace("\\'", "'").replace('\\\\"', "'"))
         rescount+=int(y["resultcount"])
         cutted+=y["results"]
     #print(cutted)
@@ -144,15 +138,7 @@ def info(ress, quiet=False):
                 exec("info."+sname+"="+str(cutted[i][sname]))
             except:
                 exec("info."+sname+"=['None']")
-        # Filtering "\" from URL
-        if "\\/" in info.URL:
-            newURL=""
-            for n in range(len(info.URL)):
-                if info.URL[n] == '\\' and info.URL[n+1] == '\\' and info.URL[n+2] == "/":
-                    newURL+=""
-                elif info.URL[n] != "\\":
-                    newURL+=info.URL[n]
-            info.URL=newURL
+        info.URL=info.URL.replace("\\/", "/")
         try:
             pkg=localdb.get_pkg(info.Name)
             localver=pkg.version
