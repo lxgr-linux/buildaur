@@ -721,9 +721,9 @@ if __name__ == "__main__":
     elif args[1] in ["--version", "-v"]:
         pkg=localdb.get_pkg("buildaur")
         print(pkg.version)
-    elif args[1] in ["--test", "-t"]:
-        resolve(["buildaur", "cava", "brave-bin"])
-        json_test(resolve.res)
+    # elif args[1] in ["--test", "-t"]:
+    #     resolve(["buildaur", "cava", "brave-bin"])
+    #     json_test(resolve.res)
     elif args[1] == "--show":
         try:
             secarg=args[2]
