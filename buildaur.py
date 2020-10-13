@@ -195,17 +195,17 @@ def update():
     print(":: Checking for outdated packages...")
     for i in range(int(info.rescount)):
         pkg=informer(i)
-        progressbar.progress(i+1, int(info.rescount), "Checking "+pkg.name()+"...")
-        if pkg.ver() == pkg.localver() or pkg.name() in black:
+        progressbar.progress(i+1, int(info.rescount), "Checking "+pkg.name+"...")
+        if pkg.ver == pkg.localver or pkg.name in black:
             print("", end="")
-        elif sorter(pkg.ver(), pkg.localver()) == pkg.ver():
-            update.willinst.append(pkg.name())
-        elif sorter(pkg.ver(), pkg.localver()) == pkg.localver():
-            msg.append(" "+yellow+"Warning:\033[0m "+pkg.name()+"-"+pkg.localver()+" is higher than AUR "+pkg.ver()+"!")
+        elif sorter(pkg.ver, pkg.localver) == pkg.ver:
+            update.willinst.append(pkg.name)
+        elif sorter(pkg.ver, pkg.localver) == pkg.localver:
+            msg.append(" "+yellow+"Warning:\033[0m "+pkg.name+"-"+pkg.localver+" is higher than AUR "+pkg.ver+"!")
             if ask_warn_inst == 1:
-                update.willinst.append(pkg.name())
-        if pkg.outdate() != "None":
-            msg.append(" "+yellow+"Warning:\033[0m "+pkg.name()+" is flagged as out-of-date since: "+datetime.utcfromtimestamp(int(pkg.outdate())).strftime('%Y-%m-%d %H:%M:%S')+"!")
+                update.willinst.append(pkg.name)
+        if str(pkg.outdate) != "None":
+            msg.append(" "+yellow+"Warning:\033[0m "+pkg.name+" is flagged as out-of-date since: "+datetime.utcfromtimestamp(int(pkg.outdate)).strftime('%Y-%m-%d %H:%M:%S')+"!")
     print(":: Done")
     for i in msg:
         print(i)
@@ -225,83 +225,74 @@ class informer():
                 exec("informer.out=info.array_"+str(i))
                 if informer.out[0] == pkg:
                     break
-    def ver(self):
-        return informer.out[1]
-    def localver(self):
-        return informer.out[2]
-    def name(self):
-        return informer.out[0]
-    def outdate(self):
-        return informer.out[3]
-    def desc(self):
-        return informer.out[4]
-    def depends(self):
-        return informer.out[5]
-    def makedepends(self):
-        return informer.out[6]
-    def optdepends(self):
-        return informer.out[7]
-    def license(self):
-        return informer.out[8]
-    def url(self):
-        return informer.out[9]
-    def maintainer(self):
-        return informer.out[10]
-    def submitted(self):
-        return informer.out[11]
-    def modified(self):
-        return informer.out[12]
-    def popularity(self):
-        return informer.out[13]
-    def votes(self):
-        return informer.out[14]
-    def keywords(self):
+        # Thisone may be more eficcient
+        # for i, sname in zip(range(15), ["name", "ver", "localver", "outdate", "desc", "depends", "makedepends", "optdepends", "license", "url", "maintainer", "submitted", "modified", "popularity", "votes"]):
+        #     try:
+        #         exec("self."+sname+"="+str(informer.out[i]))
+        #     except:
+        #         exec("self."+sname+"='"+str(informer.out[i])+"'")
+        # but thisone is way faster
+        self.name=informer.out[0]
+        self.ver=informer.out[1]
+        self.localver=informer.out[2]
+        self.outdate=informer.out[3]
+        self.desc=informer.out[4]
+        self.depends=informer.out[5]
+        self.makedepends=informer.out[6]
+        self.optdepends=informer.out[7]
+        self.license=informer.out[8]
+        self.url=informer.out[9]
+        self.maintainer=informer.out[10]
+        self.submitted=informer.out[11]
+        self.modified=informer.out[12]
+        self.popularity=informer.out[13]
+        self.votes=informer.out[14]
         if informer.out[15] == []:
-            return ["null"]
+            self.keywords=["None"]
         else:
-            return informer.out[15]
+            self.keywords=informer.out[15]
 
 def infoout(res, quiet=False, veryquiet=False):
     info(res, True)
     for i in range(int(info.rescount)):
         pkg=informer(i)
         if veryquiet:
-            print(pkg.name())
+            print(pkg.name)
         elif quiet:
-            print(pkg.name(), pkg.ver())
+            print(pkg.name, pkg.ver)
         else:
-            print(" "+pkg.name()+"-"+pkg.ver()+" (local: "+pkg.localver()+")")
-            print("    "+pkg.desc())
+            print(" "+pkg.name+"-"+pkg.ver+" (local: "+pkg.localver+")")
+            print("    "+pkg.desc)
 
 def detailinfo(res):
     info(res, True)
     for i in range(int(info.rescount)):
         pkg=informer(i)
-        print("Name                  : "+pkg.name())
-        print("Version               : "+pkg.ver())
-        print("Local Version         : "+pkg.localver())
-        print("Description           : "+pkg.desc())
-        print("Maintainer            : "+pkg.maintainer())
-        print("URL                   : "+pkg.url())
+        print("Name                  : "+pkg.name)
+        print("Version               : "+pkg.ver)
+        print("Local Version         : "+pkg.localver)
+        print("Description           : "+pkg.desc)
+        print("Maintainer            : "+pkg.maintainer)
+        print("URL                   : "+pkg.url)
         print("Licenses              : ", end='')
-        liner(24, pkg.license())
-        print("First submitted       : "+datetime.utcfromtimestamp(int(pkg.submitted())).strftime('%Y-%m-%d %H:%M:%S'))
-        print("Last modified         : "+datetime.utcfromtimestamp(int(pkg.modified())).strftime('%Y-%m-%d %H:%M:%S'))
-        print("Popularity            : "+pkg.popularity())
-        print("Votes                 : "+pkg.votes())
+        liner(24, pkg.license)
+        print("First submitted       : "+datetime.utcfromtimestamp(int(pkg.submitted)).strftime('%Y-%m-%d %H:%M:%S'))
+        print("Last modified         : "+datetime.utcfromtimestamp(int(pkg.modified)).strftime('%Y-%m-%d %H:%M:%S'))
+        print("Popularity            : "+pkg.popularity)
+        print("Votes                 : "+pkg.votes)
         print("Keywords              : ", end='')
-        liner(24, pkg.keywords())
+        liner(24, pkg.keywords)
         print("Pkg out-of-date       : ", end='')
-        if pkg.outdate() == 'None':
-            print(pkg.outdate())
+        if str(pkg.outdate) == 'None':
+            print(pkg.outdate)
         else:
-            print(datetime.utcfromtimestamp(int(pkg.outdate())).strftime('%Y-%m-%d %H:%M:%S'))
+            print(datetime.utcfromtimestamp(int(pkg.outdate)).strftime('%Y-%m-%d %H:%M:%S'))
         print("Dependencies          : ", end='')
-        liner(24, pkg.depends())
+        liner(24, pkg.depends)
         print("Makedependencies      : ", end='')
-        liner(24, pkg.makedepends())
+        liner(24, pkg.makedepends)
         print("Optional Dependencies : ", end='')
-        liner(24, pkg.optdepends())
+        liner(24, pkg.optdepends)
         print("")
 
 def install(pkgs):
@@ -328,18 +319,18 @@ def install(pkgs):
     # Checking packages for atributes
     for i in nums:
         pkg=informer(i)
-        if pkg.ver() == pkg.localver():
-            print(" "+thic+"Info:\033[0m "+pkg.name()+"-"+pkg.localver()+" is up to date -- reistalling")
-        elif pkg.localver() == "---":
+        if pkg.ver == pkg.localver:
+            print(" "+thic+"Info:\033[0m "+pkg.name+"-"+pkg.localver+" is up to date -- reistalling")
+        elif pkg.localver == "---":
             print("", end="")
-        elif sorter(pkg.ver(), pkg.localver()) == pkg.ver():
-            print(" "+thic+"Info:\033[0m "+pkg.name()+"-"+pkg.localver()+" will be updated to "+pkg.ver())
-        elif sorter(pkg.ver(), pkg.localver()) == pkg.localver():
-            print(" "+yellow+"Warning:\033[0m "+pkg.name()+"-"+pkg.localver()+" is higher than AUR "+pkg.ver()+"!")
-        if pkg.outdate() != "None":
-            print(" "+yellow+"Warning:\033[0m "+pkg.name()+" is flagged as out-of-date since: "+datetime.utcfromtimestamp(int(pkg.outdate())).strftime('%Y-%m-%d %H:%M:%S')+"!")
+        elif sorter(pkg.ver, pkg.localver) == pkg.ver:
+            print(" "+thic+"Info:\033[0m "+pkg.name+"-"+pkg.localver+" will be updated to "+pkg.ver)
+        elif sorter(pkg.ver, pkg.localver) == pkg.localver:
+            print(" "+yellow+"Warning:\033[0m "+pkg.name+"-"+pkg.localver+" is higher than AUR "+pkg.ver+"!")
+        if pkg.outdate != "None":
+            print(" "+yellow+"Warning:\033[0m "+pkg.name+" is flagged as out-of-date since: "+datetime.utcfromtimestamp(int(pkg.outdate)).strftime('%Y-%m-%d %H:%M:%S')+"!")
         install.append(i)
-        pkgsout.append(pkg.name())
+        pkgsout.append(pkg.name)
     # Check if package is realy in AUR
     if len(pkgs) != len(pkgsout):
         for pkg in pkgs:
@@ -352,7 +343,7 @@ def install(pkgs):
     packs=[]
     for i in install:
          pkg=informer(i)
-         packs.append(pkg.name()+"-"+pkg.ver())
+         packs.append(pkg.name+"-"+pkg.ver)
     liner(len("Packages ("+str(len(nums))+"): "), packs)
     if options.confirm:
         ask=input("\n:: Continnue installation? [Y/n] ")
@@ -367,18 +358,18 @@ def install(pkgs):
             # full makeprocess
             # vars
             ipkg=informer(pkg)
-            print("("+str(count)+"/"+max+") Making package "+thic+ipkg.name()+"\033[0m...")
+            print("("+str(count)+"/"+max+") Making package "+thic+ipkg.name+"\033[0m...")
             # Git repository
             os.chdir(home+"/.cache/buildaur/build")
             if mode == "asp":
                 print(":: Exporting package...")
-                os.system('rm -rf ./'+ipkg.name()+' 2>/dev/null; asp export '+ipkg.name()+' 2>/dev/null')
+                os.system('rm -rf ./'+ipkg.name+' 2>/dev/null; asp export '+ipkg.name+' 2>/dev/null')
             else:
                 print(":: Cloning git repository...")
-                os.system("rm -rf ./"+ipkg.name()+" 2>/dev/null;")
-                while not os.path.exists("./"+ipkg.name()+"/PKGBUILD"):
-                    os.system("git clone "+proto+"://aur.archlinux.org/"+ipkg.name())
-            os.chdir(os.getcwd()+"/"+ipkg.name())
+                os.system("rm -rf ./"+ipkg.name+" 2>/dev/null;")
+                while not os.path.exists("./"+ipkg.name+"/PKGBUILD"):
+                    os.system("git clone "+proto+"://aur.archlinux.org/"+ipkg.name)
+            os.chdir(os.getcwd()+"/"+ipkg.name)
             # edit
             if showPKGBUILD == 1:
                 print(":: Printing PKGBUILD...")
@@ -730,8 +721,8 @@ if __name__ == "__main__":
         for i in range(int(info.rescount)):
             os.chdir(home+"/.cache/buildaur/build")
             pkg=informer(i)
-            os.system("rm -rf ./"+pkg.name()+" 2>/dev/null; git clone "+proto+"://aur.archlinux.org/"+pkg.name()+" 2>/dev/null")
-            os.chdir(os.getcwd()+"/"+pkg.name())
+            os.system("rm -rf ./"+pkg.name+" 2>/dev/null; git clone "+proto+"://aur.archlinux.org/"+pkg.name+" 2>/dev/null")
+            os.chdir(os.getcwd()+"/"+pkg.name)
             if secarg == "--diff":
                 os.system('git diff $(git log --pretty=format:"%h" | head -2 | xargs)')
             else:
