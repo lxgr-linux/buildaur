@@ -3,16 +3,11 @@
 # this software is licensed under the GPL v3
 # WARNING: This is experimental code!
 
-import os
-import urllib.request
+import os, urllib.request, time, sys, math, json
 import progressbar_buildaur as progressbar
-import time
-import sys
 from pyalpm import Handle
 from pathlib import Path
 from datetime import datetime
-import math
-import json
 # res=os.popen("cat /usr/share/buildaur/res").read()
 
 def options(string, optlen):
@@ -87,6 +82,7 @@ def sorter(ver1, ver2):
 def resolve(pkgs, type="multiinfo", quiet=False, searchby="name"):
     pkgss=[]
     resolve.res=[]
+    m=1
     # cut pkglists in 200 pkgs bytes
     for i in range(math.ceil(len(pkgs)/200+1)):
         pkgss.append(pkgs[(i*200)-200:i*200])
@@ -94,6 +90,9 @@ def resolve(pkgs, type="multiinfo", quiet=False, searchby="name"):
     if quiet == False:
         print(":: Downloading packagelist...")
     for pkgs in pkgss:
+        if quiet == False and len(pkgss) > 1:
+            progressbar.progress(m, len(pkgss), "Downloading packagelist...")
+            m+=1
         url=proto+"://aur.archlinux.org/rpc/?v=5&type="+type
         if len(pkgs) == 0:
             exit()
@@ -128,27 +127,22 @@ def info(ress, quiet=False):
         cutted+=y["results"]
     #print(cutted)
     for i in range(rescount):
-        for sname in ["Name", "Version", "URL", "Description", "Maintainer", "FirstSubmitted", "OutOfDate", "LastModified", "Popularity", "NumVotes"]:
+        array=[]
+        for sname in ["Name", "Version", "NumVotes", "OutOfDate", "Description", "Depends", "MakeDepends", "OptDepends", "License", "URL", "Maintainer", "FirstSubmitted", "LastModified", "Popularity", "Keywords"]:
             try:
-                exec("info."+sname+"='"+str(cutted[i][sname])+"'")
+                array.append(cutted[i][sname])
             except:
-                exec("info."+sname+"='None'")
-        for sname in ["Depends", "MakeDepends", "OptDepends", "License", "Keywords"]:
-            try:
-                exec("info."+sname+"="+str(cutted[i][sname]))
-            except:
-                exec("info."+sname+"=['None']")
-        info.URL=info.URL.replace("\\/", "/")
+                array.append(["None"])
+        array[9]=str(array[9]).replace("\\/", "/")
         try:
-            pkg=localdb.get_pkg(info.Name)
-            localver=pkg.version
+            pkg=localdb.get_pkg(array[0])
+            array.append(pkg.version)
         except:
-            localver="---"
-        array=[info.Name, info.Version, localver, info.OutOfDate, info.Description, info.Depends, info.MakeDepends, info.OptDepends, info.License, info.URL, info.Maintainer, info.FirstSubmitted, info.LastModified, info.Popularity, info.NumVotes, info.Keywords]
+            array.append("---")
         exec("info.array_"+str(i)+"=array")
-        info.respkgs.append(info.Name)
+        info.respkgs.append(array[0])
         if quiet == False:
-            progressbar.progress(i+1, int(rescount), "Collecting "+info.Name+"...")
+            progressbar.progress(i+1, int(rescount), "Collecting "+array[0]+"...")
     info.rescount=rescount
 
 def aspinfo(pkgs, quiet):
@@ -233,24 +227,24 @@ class informer():
         #         exec("self."+sname+"='"+str(informer.out[i])+"'")
         # but thisone is way faster
         self.name=informer.out[0]
-        self.ver=informer.out[1]
-        self.localver=informer.out[2]
-        self.outdate=informer.out[3]
-        self.desc=informer.out[4]
+        self.ver=str(informer.out[1])
+        self.localver=informer.out[15]
+        self.outdate=str(informer.out[3])
+        self.desc=str(informer.out[4])
         self.depends=informer.out[5]
         self.makedepends=informer.out[6]
         self.optdepends=informer.out[7]
         self.license=informer.out[8]
         self.url=informer.out[9]
-        self.maintainer=informer.out[10]
-        self.submitted=informer.out[11]
-        self.modified=informer.out[12]
-        self.popularity=informer.out[13]
-        self.votes=informer.out[14]
-        if informer.out[15] == []:
+        self.maintainer=str(informer.out[10])
+        self.submitted=str(informer.out[11])
+        self.modified=str(informer.out[12])
+        self.popularity=str(informer.out[13])
+        self.votes=str(informer.out[3])
+        if informer.out[14] == []:
             self.keywords=["None"]
         else:
-            self.keywords=informer.out[15]
+            self.keywords=informer.out[14]
 
 def infoout(res, quiet=False, veryquiet=False):
     info(res, True)
