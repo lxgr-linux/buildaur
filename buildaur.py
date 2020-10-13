@@ -125,24 +125,7 @@ def info(ress, quiet=False):
         y=json.loads(abc.replace("\\'", "'").replace('\\\\"', "'"))
         rescount+=int(y["resultcount"])
         cutted+=y["results"]
-    #print(cutted)
-    for i in range(rescount):
-        array=[]
-        for sname in ["Name", "Version", "NumVotes", "OutOfDate", "Description", "Depends", "MakeDepends", "OptDepends", "License", "URL", "Maintainer", "FirstSubmitted", "LastModified", "Popularity", "Keywords"]:
-            try:
-                array.append(cutted[i][sname])
-            except:
-                array.append(["None"])
-        array[9]=str(array[9]).replace("\\/", "/")
-        try:
-            pkg=localdb.get_pkg(array[0])
-            array.append(pkg.version)
-        except:
-            array.append("---")
-        exec("info.array_"+str(i)+"=array")
-        info.respkgs.append(array[0])
-        if quiet == False:
-            progressbar.progress(i+1, int(rescount), "Collecting "+array[0]+"...")
+    info.cutted=cutted
     info.rescount=rescount
 
 def aspinfo(pkgs, quiet):
@@ -188,7 +171,7 @@ def update():
         info(resolve.res, False)
     print(":: Checking for outdated packages...")
     for i in range(int(info.rescount)):
-        pkg=informer(i)
+        pkg=informer(info.cutted, i)
         progressbar.progress(i+1, int(info.rescount), "Checking "+pkg.name+"...")
         if pkg.ver == pkg.localver or pkg.name in black:
             print("", end="")
@@ -209,47 +192,34 @@ def update():
         install(update.willinst)
 
 class informer():
-    def __init__(self, pkg, type="by_num"):
+    def __init__(self, cutted, pkg, type="by_num"):
         if type == "by_num":
-            exec("informer.out=info.array_"+str(pkg))
+            splitted=cutted[pkg]
             self.num=pkg
         elif type == "by_name":
             for i in range(int(info.rescount)):
                 self.num=i
-                exec("informer.out=info.array_"+str(i))
-                if informer.out[0] == pkg:
+                splitted=cutted[pkg]
+                if splitted["Name"] == pkg:
                     break
-        # Thisone may be more eficcient
-        # for i, sname in zip(range(15), ["name", "ver", "localver", "outdate", "desc", "depends", "makedepends", "optdepends", "license", "url", "maintainer", "submitted", "modified", "popularity", "votes"]):
-        #     try:
-        #         exec("self."+sname+"="+str(informer.out[i]))
-        #     except:
-        #         exec("self."+sname+"='"+str(informer.out[i])+"'")
-        # but thisone is way faster
-        self.name=informer.out[0]
-        self.ver=str(informer.out[1])
-        self.localver=informer.out[15]
-        self.outdate=str(informer.out[3])
-        self.desc=str(informer.out[4])
-        self.depends=informer.out[5]
-        self.makedepends=informer.out[6]
-        self.optdepends=informer.out[7]
-        self.license=informer.out[8]
-        self.url=informer.out[9]
-        self.maintainer=str(informer.out[10])
-        self.submitted=str(informer.out[11])
-        self.modified=str(informer.out[12])
-        self.popularity=str(informer.out[13])
-        self.votes=str(informer.out[3])
-        if informer.out[14] == []:
+        for name, sname in zip(["name", "ver", "votes", "outdate", "desc", "depends", "makedepends", "optdepends", "license", "url", "maintainer", "submitted", "modified", "popularity", "keywords"], ["Name", "Version", "NumVotes", "OutOfDate", "Description", "Depends", "MakeDepends", "OptDepends", "License", "URL", "Maintainer", "FirstSubmitted", "LastModified", "Popularity", "Keywords"]):
+            try:
+                exec("self."+name+"=splitted['"+sname+"']")
+            except:
+                exec("self."+name+"=['None']")
+        try:
+            pkg=localdb.get_pkg(splitted["Name"])
+            self.localver=pkg.version
+        except:
+            self.localver="---"
+        self.url=str(self.url).replace("\\/", "/")
+        if self.keywords == []:
             self.keywords=["None"]
-        else:
-            self.keywords=informer.out[14]
 
 def infoout(res, quiet=False, veryquiet=False):
     info(res, True)
     for i in range(int(info.rescount)):
-        pkg=informer(i)
+        pkg=informer(info.cutted, i)
         if veryquiet:
             print(pkg.name)
         elif quiet:
@@ -261,19 +231,19 @@ def infoout(res, quiet=False, veryquiet=False):
 def detailinfo(res):
     info(res, True)
     for i in range(int(info.rescount)):
-        pkg=informer(i)
-        print("Name                  : "+pkg.name)
-        print("Version               : "+pkg.ver)
-        print("Local Version         : "+pkg.localver)
-        print("Description           : "+pkg.desc)
-        print("Maintainer            : "+pkg.maintainer)
-        print("URL                   : "+pkg.url)
+        pkg=informer(info.cutted, i)
+        print("Name                  : "+str(pkg.name))
+        print("Version               : "+str(pkg.ver))
+        print("Local Version         : "+str(pkg.localver))
+        print("Description           : "+str(pkg.desc))
+        print("Maintainer            : "+str(pkg.maintainer))
+        print("URL                   : "+str(pkg.url))
         print("Licenses              : ", end='')
         liner(24, pkg.license)
         print("First submitted       : "+datetime.utcfromtimestamp(int(pkg.submitted)).strftime('%Y-%m-%d %H:%M:%S'))
         print("Last modified         : "+datetime.utcfromtimestamp(int(pkg.modified)).strftime('%Y-%m-%d %H:%M:%S'))
-        print("Popularity            : "+pkg.popularity)
-        print("Votes                 : "+pkg.votes)
+        print("Popularity            : "+str(pkg.popularity))
+        print("Votes                 : "+str(pkg.votes))
         print("Keywords              : ", end='')
         liner(24, pkg.keywords)
         print("Pkg out-of-date       : ", end='')
@@ -297,7 +267,7 @@ def install(pkgs):
     try:
         # Looking if pkgs are already in res
         for pkg in pkgs:
-            ipkg=informer(pkg, type="by_name")
+            ipkg=informer(info.cutted, pkg, type="by_name")
             nums.append(ipkg.num)
     except:
         if mode == "asp":
@@ -312,7 +282,7 @@ def install(pkgs):
         exit(0)
     # Checking packages for atributes
     for i in nums:
-        pkg=informer(i)
+        pkg=informer(info.cutted, i)
         if pkg.ver == pkg.localver:
             print(" "+thic+"Info:\033[0m "+pkg.name+"-"+pkg.localver+" is up to date -- reistalling")
         elif pkg.localver == "---":
@@ -321,7 +291,7 @@ def install(pkgs):
             print(" "+thic+"Info:\033[0m "+pkg.name+"-"+pkg.localver+" will be updated to "+pkg.ver)
         elif sorter(pkg.ver, pkg.localver) == pkg.localver:
             print(" "+yellow+"Warning:\033[0m "+pkg.name+"-"+pkg.localver+" is higher than AUR "+pkg.ver+"!")
-        if pkg.outdate != "None":
+        if str(pkg.outdate) != "None":
             print(" "+yellow+"Warning:\033[0m "+pkg.name+" is flagged as out-of-date since: "+datetime.utcfromtimestamp(int(pkg.outdate)).strftime('%Y-%m-%d %H:%M:%S')+"!")
         install.append(i)
         pkgsout.append(pkg.name)
@@ -336,7 +306,7 @@ def install(pkgs):
     print("Packages ("+str(len(nums))+"): ", end='')
     packs=[]
     for i in install:
-         pkg=informer(i)
+         pkg=informer(info.cutted, i)
          packs.append(pkg.name+"-"+pkg.ver)
     liner(len("Packages ("+str(len(nums))+"): "), packs)
     if options.confirm:
@@ -351,7 +321,7 @@ def install(pkgs):
         for pkg in install:
             # full makeprocess
             # vars
-            ipkg=informer(pkg)
+            ipkg=informer(info.cutted, pkg)
             print("("+str(count)+"/"+max+") Making package "+thic+ipkg.name+"\033[0m...")
             # Git repository
             os.chdir(home+"/.cache/buildaur/build")
@@ -448,7 +418,7 @@ def depts():
         info(resolve.res, True)
         if int(info.rescount) != 0:
             for i in range(int(info.rescount)):
-                pkg=informer(i)
+                pkg=informer(info.cutteed, i)
                 neaurdeps.append(pkg.name)
             curdir=os.getcwd()
             os.chdir(home)
