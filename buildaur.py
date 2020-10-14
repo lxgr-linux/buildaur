@@ -90,10 +90,10 @@ def resolve(pkgs, type="multiinfo", quiet=False, searchby="name"):
     if quiet == False:
         print(":: Downloading packagelist...")
     for pkgs in pkgss:
+        url=proto+"://aur.archlinux.org/rpc/?v=5&type="+type
         if quiet == False and len(pkgss) > 1:
             progressbar.progress(m, len(pkgss), "Downloading packagelist...")
             m+=1
-        url=proto+"://aur.archlinux.org/rpc/?v=5&type="+type
         if len(pkgs) == 0:
             exit()
         if type == "search":
@@ -107,7 +107,7 @@ def resolve(pkgs, type="multiinfo", quiet=False, searchby="name"):
             pkgs=npkgs
             # producing url
             for pkg in pkgs:
-                url=url+"&arg[]="+pkg
+                url+="&arg[]="+pkg
         try:
             r=urllib.request.urlopen(url)
         except:
@@ -118,40 +118,29 @@ def resolve(pkgs, type="multiinfo", quiet=False, searchby="name"):
 def info(ress, quiet=False):
     rescount=0
     cutted=[]
-    info.respkgs=[]
     for res in ress:
         abc=res.split("b'")[1].split("}'")[0]+"}"
-        #print(abc)
-        y=json.loads(abc.replace("\\'", "'").replace('\\\\"', "'"))
-        rescount+=int(y["resultcount"])
-        cutted+=y["results"]
+        jsons=json.loads(abc.replace("\\'", "'").replace('\\\\"', "'"))
+        rescount+=int(jsons["resultcount"])
+        cutted+=jsons["results"]
     info.cutted=cutted
     info.rescount=rescount
 
 def aspinfo(pkgs, quiet):
+    cutted=[]
+    info.rescount=0
     print(":: Updatting asp database...")
     os.system("asp update 2>/dev/null")
-    info.rescount=0
     if quiet == False:
         print(":: Collecting package data...")
-    n=0
     for pkg, i in zip(pkgs, range(len(pkgs))):
-        pkgname=pkg
         pkgver=os.popen("/usr/share/buildaur/outputter.sh asp "+pkg).read().split("\n")[0]
-        try:
-            pkg=localdb.get_pkg(pkgname)
-            localver=pkg.version
-        except:
-            localver="---"
-        pkgoutdate="null"
-        pkgdesc="some pkg from asp"
         if pkgver != "error":
-            array=[pkgname, pkgver, localver, pkgoutdate, pkgdesc]
-            exec("info.array_"+str(n)+"=array")
+            cutted.append({"Name": pkg, "Version": pkgver, "Description": "some pkg from asp", "OutOfDate": "None"})
             info.rescount+=1
-            n+=1
         if quiet == False:
-            progressbar.progress(i+1, int(len(pkgs)), "Collecting "+pkgname+"...")
+            progressbar.progress(i+1, int(len(pkgs)), "Collecting "+pkg+"...")
+        info.cutted=cutted
 
 def update():
     msg=[]
@@ -159,14 +148,8 @@ def update():
     pkgs=os.popen("pacman -Qqm").read().split("\n")
     resolve(pkgs)
     if mode == "asp":
-        info(resolve.res, True)
-        npkgs=[]
-        for pkg in pkgs:
-            if pkg not in info.respkgs:
-                npkgs.append(pkg)
-        del npkgs[-1]
         info.rescount=0
-        aspinfo(npkgs, False)
+        aspinfo(pkgs, False)
     else:
         info(resolve.res, False)
     print(":: Checking for outdated packages...")
@@ -204,7 +187,7 @@ class informer():
                     break
         for name, sname in zip(["name", "ver", "votes", "outdate", "desc", "depends", "makedepends", "optdepends", "license", "url", "maintainer", "submitted", "modified", "popularity", "keywords"], ["Name", "Version", "NumVotes", "OutOfDate", "Description", "Depends", "MakeDepends", "OptDepends", "License", "URL", "Maintainer", "FirstSubmitted", "LastModified", "Popularity", "Keywords"]):
             try:
-                exec("self."+name+"=splitted['"+sname+"']")
+                exec("self."+name+"=splitted[sname]")
             except:
                 exec("self."+name+"=['None']")
         try:
@@ -226,7 +209,7 @@ def infoout(res, quiet=False, veryquiet=False):
             print(pkg.name, pkg.ver)
         else:
             print(" "+pkg.name+"-"+pkg.ver+" (local: "+pkg.localver+")")
-            print("    "+pkg.desc)
+            print("    "+str(pkg.desc))
 
 def detailinfo(res):
     info(res, True)
@@ -533,6 +516,10 @@ if __name__ == "__main__":
     ask_warn_inst=0
     pcarg=""
     mkopts=""
+    handle=Handle(".", "/var/lib/pacman")
+    localdb=handle.get_localdb()
+    args=sys.argv
+    black=open("/usr/share/buildaur/blacklist").read().split("\n")
     # configfile
     conf=open("/etc/buildaur/buildaur.conf").read()
     try:
@@ -543,11 +530,6 @@ if __name__ == "__main__":
     if home == "/root":
         print(":: "+red+"ERROR:\033[0m DON'T run this script as root, stupid!")
         exit(1)
-    handle=Handle(".", "/var/lib/pacman")
-    localdb=handle.get_localdb()
-    # args
-    args=sys.argv
-    black=open("/usr/share/buildaur/blacklist").read().split("\n")
     # checking if args are given
     if len(args) == 1:
         print(":: "+red+"ERROR:\033[0m No options given!")
@@ -561,84 +543,73 @@ if __name__ == "__main__":
         mode="asp"
         update()
     elif args[1] in ["-Q", "-Qq", "-Qqq"]:
-        pkgs=args
-        arg=args[1]
-        del pkgs[0:2]
+        pkgs=args[2:]
         if len(pkgs) == 0:
             pkgs=os.popen("pacman -Qqm").read().split('\n')
-        if "qq" in arg:
+        if "qq" in args[1]:
             resolve(pkgs, quiet=True)
         else:
             resolve(pkgs)
-        if arg == "-Q":
+        if args[1] == "-Q":
             infoout(resolve.res)
-        elif arg =="-Qq":
+        elif args[1] =="-Qq":
             infoout(resolve.res, quiet=True)
-        elif arg =="-Qqq":
+        elif args[1] =="-Qqq":
             infoout(resolve.res, veryquiet=True)
     elif args[1] in ["-Qs", "-Qsq", "-Qsqq"]:
         searchby="name"
-        pkgs=args
-        arg=args[1]
+        pkgs=args[2:]
         try:
             secarg=args[2]
         except:
             exit()
         if secarg == "--by":
-            searchby=args[3]
             if args[3] in ["name", "name-desc", "maintainer", "depends", "makedepends", "optdepends", "checkdepends"]:
                 searchby=args[3]
-            del pkgs[0:4]
-        else:
+            else:
+                print(":: "+red+"ERROR:\033[0m "++"!")
             del pkgs[0:2]
         for pkg in pkgs:
-            if "qq" in arg:
+            if "qq" in args[1]:
                 resolve([pkg], type="search", searchby=searchby, quiet=True)
             else:
                 resolve([pkg], type="search", searchby=searchby)
-            if arg == "-Qs":
+            if args[1] == "-Qs":
                 infoout(resolve.res, False)
-            elif arg =="-Qsq":
+            elif args[1] =="-Qsq":
                 infoout(resolve.res, quiet=True)
-            elif arg =="-Qsqq":
+            elif args[1] =="-Qsqq":
                 infoout(resolve.res, veryquiet=True)
     elif args[1] == "-Qi":
-        pkgs=args
-        arg=args[1]
-        del pkgs[0:2]
+        pkgs=args[2:]
         if len(pkgs) == 0:
             pkgs=os.popen("pacman -Qqm").read().split('\n')
         resolve(pkgs, quiet=True)
         detailinfo(resolve.res)
     elif args[1][:2] == "-S":
         options(args[1], 2)
-        pkgs=args
-        del pkgs[0:2]
+        pkgs=args[2:]
         if len(pkgs) == 0:
             print(":: "+red+"ERROR:\033[0m No packages given!")
             exit(1)
         install(pkgs)
     elif args[1][:4] == "-asp":
         options(args[1], 4)
-        pkgs=args
-        del pkgs[0:2]
+        pkgs=args[2:]
         if len(pkgs) == 0:
             print(":: "+red+"ERROR:\033[0m No packages given!")
             exit(1)
         mode="asp"
         install(pkgs)
-    elif args[1] == "-h" or args[1] == "--help":
+    elif args[1] in ["-h", "--help"]:
         help()
     elif args[1] == "--about":
         about()
-    elif args[1] == "--clear":
-        print(":: Cleaning builddir...")
-        print(" "+os.popen("echo $(du -hcs ~/.cache/buildaur/build | xargs | awk {'print $1'})").read().split("\n")[0]+"B will be removed!")
-        os.system("rm -rf ~/.cache/buildaur/build/*")
-        print(":: Done!")
-    elif args[1] == "--make-chroot":
-        print(":: Creating a chrootdir")
-        os.system('sudo rm -rf ~/chroot 2>/dev/null; mkdir ~/chroot; export CHROOT=$HOME/chroot; mkarchroot $CHROOT/root base-devel; echo "export CHROOT=$HOME/chroot" >> $HOME/.bashrc; exit 0')
+    elif args[1] in ["--license", "-l"]:
+        print(open("/usr/share/licenses/buildaur/LICENSE").read())
+    elif args[1] in ["--version", "-v"]:
+        pkg=localdb.get_pkg("buildaur")
+        print(pkg.version)
     elif args[1] == "--listhooks":
         list_hooks()
     elif args[1] == "--hook-activate":
@@ -657,14 +628,14 @@ if __name__ == "__main__":
         else:
             hooks=args[2:]
         hook_deactivate(hooks)
-    elif args[1] in ["--license", "-l"]:
-        print(open("/usr/share/licenses/buildaur/LICENSE").read())
-    elif args[1] in ["--version", "-v"]:
-        pkg=localdb.get_pkg("buildaur")
-        print(pkg.version)
-    # elif args[1] in ["--test", "-t"]:
-    #     resolve(["buildaur", "cava", "brave-bin"])
-    #     json_test(resolve.res)
+    elif args[1] == "--clear":
+        print(":: Cleaning builddir...")
+        print(" "+os.popen("echo $(du -hcs ~/.cache/buildaur/build | xargs | awk {'print $1'})").read().split("\n")[0]+"B will be removed!")
+        os.system("rm -rf ~/.cache/buildaur/build/*")
+        print(":: Done!")
+    elif args[1] == "--make-chroot":
+        print(":: Creating a chrootdir")
+        os.system('sudo rm -rf ~/chroot 2>/dev/null; mkdir ~/chroot; export CHROOT=$HOME/chroot; mkarchroot $CHROOT/root base-devel; echo "export CHROOT=$HOME/chroot" >> $HOME/.bashrc; exit 0')
     elif args[1] == "--show":
         try:
             secarg=args[2]
@@ -684,7 +655,7 @@ if __name__ == "__main__":
         info(resolve.res, True)
         for i in range(int(info.rescount)):
             os.chdir(home+"/.cache/buildaur/build")
-            pkg=informer(i)
+            pkg=informer(info.cutted, i)
             os.system("rm -rf ./"+pkg.name+" 2>/dev/null; git clone "+proto+"://aur.archlinux.org/"+pkg.name+" 2>/dev/null")
             os.chdir(os.getcwd()+"/"+pkg.name)
             if secarg == "--diff":
