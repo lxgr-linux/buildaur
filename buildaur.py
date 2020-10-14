@@ -356,7 +356,6 @@ def install(pkgs):
                 pkgpathes.append(os.getcwd()+"/"+pkgname+"-"+ver+"-"+arch+".pkg"+compmeth)
             os.chdir(home)
             print("")
-            print(info.cutted)
         # installing packages
         if options.install:
             print(":: Installing packages...")
