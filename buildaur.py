@@ -245,8 +245,8 @@ def detailinfo(res):
 def install(pkgs):
     pkgpathes=[]
     pkgsout=[]
-    install=[]
     nums=[]
+    packs=[]
     try:
         # Looking if pkgs are already in res
         for pkg in pkgs:
@@ -276,21 +276,16 @@ def install(pkgs):
             print(" "+yellow+"Warning:\033[0m "+pkg.name+"-"+pkg.localver+" is higher than AUR "+pkg.ver+"!")
         if str(pkg.outdate) != "None":
             print(" "+yellow+"Warning:\033[0m "+pkg.name+" is flagged as out-of-date since: "+datetime.utcfromtimestamp(int(pkg.outdate)).strftime('%Y-%m-%d %H:%M:%S')+"!")
-        install.append(i)
         pkgsout.append(pkg.name)
+        packs.append(pkg.name+"-"+pkg.ver)
     # Check if package is realy in AUR
-    if len(pkgs) != len(pkgsout):
+    if len(pkgs) != len(nums):
         for pkg in pkgs:
             if pkg not in pkgsout:
                 print(":: "+red+"ERROR:\033[0m "+pkg+" not found!")
                 exit(1)
     # asking to continue
-    print("")
-    print("Packages ("+str(len(nums))+"): ", end='')
-    packs=[]
-    for i in install:
-         pkg=informer(info.cutted, i)
-         packs.append(pkg.name+"-"+pkg.ver)
+    print("\nPackages ("+str(len(nums))+"): ", end='')
     liner(len("Packages ("+str(len(nums))+"): "), packs)
     if options.confirm:
         ask=input("\n:: Continnue installation? [Y/n] ")
@@ -298,14 +293,13 @@ def install(pkgs):
         ask="y"
     if ask == "Y" or ask == "y" or ask == "":
         print("")
-        # home=os.getcwd()
-        count=1
         max=str(len(nums))
-        for pkg in install:
+        cutted=info.cutted
+        for pkg in nums:
             # full makeprocess
             # vars
-            ipkg=informer(info.cutted, pkg)
-            print("("+str(count)+"/"+max+") Making package "+thic+ipkg.name+"\033[0m...")
+            ipkg=informer(cutted, pkg)
+            print("("+str(pkg+i)+"/"+max+") Making package "+thic+ipkg.name+"\033[0m...")
             # Git repository
             os.chdir(home+"/.cache/buildaur/build")
             if mode == "asp":
@@ -361,8 +355,8 @@ def install(pkgs):
             for pkgname in os.popen("/usr/share/buildaur/outputter.sh pkgname").read().split('\n')[0].split(' '):
                 pkgpathes.append(os.getcwd()+"/"+pkgname+"-"+ver+"-"+arch+".pkg"+compmeth)
             os.chdir(home)
-            count+=1
             print("")
+            print(info.cutted)
         # installing packages
         if options.install:
             print(":: Installing packages...")
@@ -401,7 +395,7 @@ def depts():
         info(resolve.res, True)
         if int(info.rescount) != 0:
             for i in range(int(info.rescount)):
-                pkg=informer(info.cutteed, i)
+                pkg=informer(info.cutted, i)
                 neaurdeps.append(pkg.name)
             curdir=os.getcwd()
             os.chdir(home)
