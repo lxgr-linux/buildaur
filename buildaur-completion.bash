@@ -28,16 +28,16 @@ else
 		-S)
 		if ! [[ ${#cur} -lt 2 ]]
 		then
-			COMPREPLY=($(compgen -W "$(buildaur.py -Qsqq $cur)" -- "$cur"))
+			COMPREPLY=($(compgen -W "$(buildaur -Qsqq $cur)" -- "$cur"))
 		fi
 		;;
 		--show)
-			COMPREPLY=($(compgen -W "$(buildaur.py -Qsqq $cur) --diff" -- "$cur"))
+			COMPREPLY=($(compgen -W "$(buildaur -Qsqq $cur) --diff" -- "$cur"))
 		;;
 		--diff)
 		if ! [[ ${#cur} -lt 2 ]]
 		then
-			COMPREPLY=($(compgen -W "$(buildaur.py -Qsqq $cur)" -- "$cur"))
+			COMPREPLY=($(compgen -W "$(buildaur -Qsqq $cur)" -- "$cur"))
 		fi
 		;;
 		--by)
@@ -51,13 +51,13 @@ else
 			COMPREPLY=($(compgen -W "$(ls /etc/buildaur/prehooks) $(ls /etc/buildaur/posthooks) $(ls /etc/buildaur/prerunhooks) $(ls /etc/buildaur/postrunhooks) all" -- "$cur"))
 		;;
 		-Qs*)
-			COMPREPLY=($(compgen -W "$(buildaur.py -Qsqq $cur) --by" -- "$cur"))
+			COMPREPLY=($(compgen -W "$(buildaur -Qsqq $cur) --by" -- "$cur"))
 		;;
 		-Q* | name | name-desc | maintainer | depends | makedepends | optdepends | checkdepends)
-			COMPREPLY=($(compgen -W "$(buildaur.py -Qsqq $cur)" -- "$cur"))
+			COMPREPLY=($(compgen -W "$(buildaur -Qsqq $cur)" -- "$cur"))
 		;;
 	esac
 fi
 }
 
-complete -F _buildaur buildaur.py
+complete -F _buildaur buildaur

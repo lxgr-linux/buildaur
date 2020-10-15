@@ -36,37 +36,48 @@ $ makepkg -si
 
 Like most other shell programs buildaur has some options which can be used to specify what the program should exactly do:
 
-Usage: /usr/bin/buildaur "<option> <string>"<br>
+buildaur - An AUR helper with asp support<br>
+Usage: /usr/bin/buildaur <option> <string><br>
    General options:<br>
       -S                : Installs a package<br>
       -R                : Removes a package<br>
       -Q                : Lists installed packages or searches for ones in the AUR<br>
       -Qs               : Search the AUR<br>
+      -Qi               : Gives detailed package information<br>
       -Syu              : Updates all AUR packages<br>
-      -url              : Installs a package from a given git-repository<br>
       -asp              : Builds a package from source using asp (usefull for archlinux arm)<br>
+      -aspyu            : Updates all asp packages (usefull for archlinux arm)<br>
       --show            : Shows the PKGBUILD of a given package<br>
       --clear           : Cleanes build dir<br>
-      -v|--version      : Displays the version of this program<br>
-      -l|--license      : Displays the license of this program<br>
+      -v|--version      : Displays version of this program<br>
+      -l|--license      : Displays license of this program<br>
       --make-chroot     : Creates a chroot dir which can be used for building packages<br>
       --about           : Displays an about text<br>
-
-   Additional options for -S,-R,-Syu,-asp:<br>
+<br>
+   Additional options for -S,-R,-Syu,-asp,-aspyu:<br>
       n                 : Doesn't ask questions<br>
       spgp              : Skips pgp checks of sourcecode<br>
       ch                : Builds the package in a clean chroot (you may run into some problems using this on archlinux arm!)<br>
       di                : Just builds the package<br>
       co                : Toggles colored output on and off<br>
-
+<br>
+<br>
+   Additional options for --show:<br>
+      --diff            : Outputs diff between current pkgbuildver and former pkgbuildver<br>
+<br>
+   Additional options for -Q,-Qs<br>
+      q                 : Just outputs pknames and vers<br>
+      qq                : JUST outputs pknames<br>
+      --by              : Defines the value that should be searched by (values: name name-desc maintainer depends makedepends optdepends checkdepends<br>
+<br>
    Hookoptions:<br>
       --listhooks       : Lists all available and installed hooks<br>
       --hook-activate   : Activates a hook<br>
       --hook-deactivate : Deactivates a hook<br>
-
+<br>
    Help options:<br>
       -h|--help         : Displays this help-dialog<br>
-      --help-hooks      : Displays help-dialog for hooks<br>
+<br>
 
 Examples:<br>
     buildaur -S cava    : Installes the package 'cava'<br>
@@ -122,6 +133,6 @@ color="true" # Toggels colored output<br>
 
 The blacklist stored in /usr/share/buildaur/blacklist contains package names which are excluded in updates.
 
-# Python version
+# Bash version
 
-The python version of buildaur (buildaur.py) is still in development, but brings some advantages. It is for example way faster and impliments buildaurs keyfeatures in less code. At the downside some features are not implimented yet (asp), so the bashscript is still the default.
+There are two versions of this script, one is written in bash (buildaur.sh) and one in python (buildaur). The bash version was the former standart but was replaced in version 42.0.7.7 and is not longer in development.

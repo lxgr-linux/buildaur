@@ -1,1042 +1,659 @@
-#!/usr/bin/env bash
+#!/usr/bin/env python3
 # maintainer lxgr <lxgr@protonmail.com>
+# this software is licensed under the GPL v3
 
-editor=nano
-showPKGBUILD=1
-sudoreset=1
-ask_warn_inst=1
-layout=new
-color=true
-proto=https
-. /etc/buildaur/buildaur.conf
-black="$(cat /usr/share/buildaur/blacklist)"
-# asp set-git-protocol $proto
+import os, urllib.request, time, sys, math, json
+import progressbar_buildaur as progressbar
+from pyalpm import Handle
+from pathlib import Path
+from datetime import datetime
+# res=os.popen("cat /usr/share/buildaur/res").read()
 
-colorer(){
-	if [[ $color = true ]]
-	then
-		bold=$(tput bold)
-		red=$(tput setaf 1)
-		grey=$(tput setaf 7)
-		yellow=$(tput setaf 11)
-		normal=$(tput sgr0)
-		colored=
-	else
-		bold=
-		red=
-		grey=
-		yellow=
-		normal=
-		colored=--nocolor
-	fi
-}
+def options(string, optlen):
+    global mkopts
+    global pcarg
+    options.confirm=True
+    options.install=True
+    options.color=True
+    options.chroot=False
+    if string.find("n") != -1:
+        options.confirm=False
+        pcarg+=" --noconfirm"
+        optlen+=1
+    if string.find("di") != -1:
+        options.install=False
+        optlen+=2
+    if string.find("co") != -1:
+        global yellow
+        global red
+        global thic
+        mkopts+=" -m"
+        yellow=""
+        red=""
+        thic=""
+        optlen+=2
+    if string.find("spgp") != -1:
+        mkopts+=" --skippgpcheck"
+        optlen+=4
+    if string.find("ch") != -1:
+        options.chroot=True
+        optlen+=2
+    if optlen != len(string):
+        print(":: "+red+"ERROR:\033[0m "+string+" is no valid option!")
+        exit(1)
 
-colorer
+def liner(length, names, sep=""):
+    width, height = os.get_terminal_size()
+    lens=0
+    for name in names:
+        if lens+len(name)+2 < width-length:
+            print(name+"  ", end="")
+            lens+=len(name)+2
+        else:
+            lens=len(name)+2
+            print("\n"+(length-len(sep))*" "+sep+name+"  ", end="")
+    print("")
 
-if [[ $(whoami) = root ]]
-then
-	echo ":: ${red}${bold}ERROR:${normal} Don't run this script as root!"
-	exit 1
-fi
+def sorter(ver1, ver2):
+	arr1=ver1.split("-")[0].split(".")
+	arr2=ver2.split("-")[0].split(".")
+	for i in range(sorted([len(arr2), len(arr1)])[1]):
+		try:
+			a=arr1[i]
+		except:
+			a="0"
+		try:
+			b=arr2[i]
+		except:
+			b="0"
+		arg1=len(b)*"0"+a
+		arg2=len(a)*"0"+b
+		arrs=[arg1, arg2]
+		if sorted(arrs)[0] == arg2 and arg1 != arg2:
+			return ver1
+		elif sorted(arrs)[0] == arg1 and arg1 != arg2:
+			return ver2
+	if ver1.split("-")[1] > ver2.split("-")[1]:
+		return ver1
+	elif ver2.split("-")[1] > ver1.split("-")[1]:
+		return ver2
 
-progress(){
-	python3 -c "import os; import math; max=$2; i=$1; width, height = os.get_terminal_size(); string=' $3'+200*' ';pl=round(math.log(width/57 ,1.01644658));  print('\r('+(len(str(max))-len(str(i)))*' '+str(i)+'/'+str(max)+')'+string[:width-16+(6-2*len(str(max)))-pl]+'['+round((i/max)*pl)*'#'+(pl-round((i/max)*pl))*'-'+'] '+(3-len(str(round((i/max)*100))))*' '+str(round((i/max)*100))+'%', end='', flush=True)"
-}
+def resolve(pkgs, type="multiinfo", quiet=False, searchby="name"):
+    pkgss=[]
+    resolve.res=[]
+    m=1
+    # cut pkglists in 200 pkgs bytes
+    for i in range(math.ceil(len(pkgs)/200+1)):
+        pkgss.append(pkgs[(i*200)-200:i*200])
+    del pkgss[0]
+    if quiet == False:
+        print(":: Downloading packagelist...")
+    for pkgs in pkgss:
+        url=proto+"://aur.archlinux.org/rpc/?v=5&type="+type
+        if quiet == False and len(pkgss) > 1:
+            progressbar.progress(m, len(pkgss), "Downloading packagelist...")
+            m+=1
+        if len(pkgs) == 0:
+            exit()
+        if type == "search":
+            url+="&by="+searchby+"&arg="+pkgs[0]
+        else:
+            # name processing to avoid bad packagenames
+            npkgs=[]
+            for pkg in pkgs:
+                npkg=pkg.replace("+", "%2B")
+                npkgs.append(npkg)
+            pkgs=npkgs
+            # producing url
+            for pkg in pkgs:
+                url+="&arg[]="+pkg
+        try:
+            r=urllib.request.urlopen(url)
+        except:
+            print(":: "+red+"ERROR:\033[0m Server is not reachable!")
+            exit(1)
+        resolve.res.append(str(r.read()))
 
-options(){
-	installindex=i
-	if [[ $(echo $1 | egrep co) != "" ]]
-	then
-		if [[ $color = true ]]
-		then
-			color=false
-		elif [[ $color = false ]]
-		then
-			color=true
-		fi
-		((argleng--)); ((argleng--))
-		colorer
-	fi
-	if [[ $(echo $1 | egrep n) != "" ]]
-	then
-		ask=--noconfirm
-		((argleng--))
-	fi
-	if [[ $(echo $1 | egrep spgp) != "" ]]
-	then
-		pgp=--skippgpcheck
-		((argleng--)); ((argleng--)); ((argleng--)); ((argleng--))
-	fi
-	if [[ $(echo $1 | egrep ch) != "" ]]
-	then
-		buildchroot=yes
-		if [[ $(uname -m) = armv7l ]]
-		then
-			echo ":: ${bold}${yellow}Warning:${normal} You may run into some issues using chroots on ALARM!"
-		fi
-		((argleng--)); ((argleng--))
-	fi
-	if [[ $(echo $1 | egrep di) != "" ]]
-	then
-		installindex=""
-		((argleng--)); ((argleng--))
-	fi
-	if [[ $argleng != 0 ]]
-	then
-		echo ":: ${red}${bold}ERROR:${normal} '$fullarg' is no known option! Try --help to see all options!"
-		exit 2
-	fi
-}
+def info(ress, quiet=False):
+    rescount=0
+    cutted=[]
+    for res in ress:
+        abc=res.split("b'")[1].split("}'")[0]+"}"
+        jsons=json.loads(abc.replace("\\'", "'").replace('\\\\"', "'"))
+        rescount+=int(jsons["resultcount"])
+        cutted+=jsons["results"]
+    info.cutted=cutted
+    info.rescount=rescount
 
-netcheck(){
-	inet=1
-	if [[ $net != true ]]
-	then
-		if [[ $(ping -c 1 google.de >/dev/null 2>/dev/null ; echo $?) != 0 ]]
-		then
-			if [[ $1 = "-x" ]]
-			then
-				inet=0
-			else
-				echo ":: ${red}${bold}ERROR:${normal} Network is not reachable!"
-				exit 1
-			fi
-		fi
-		net=true
-  fi
-}
+def aspinfo(pkgs, quiet):
+    cutted=[]
+    info.rescount=0
+    print(":: Updatting asp database...")
+    os.system("asp update 2>/dev/null")
+    if quiet == False:
+        print(":: Collecting package data...")
+    for pkg, i in zip(pkgs, range(len(pkgs))):
+        pkgver=os.popen("/usr/share/buildaur/outputter.sh asp "+pkg).read().split("\n")[0]
+        if pkgver != "error":
+            cutted.append({"Name": pkg, "Version": pkgver, "Description": "some pkg from asp", "OutOfDate": "None"})
+            info.rescount+=1
+        if quiet == False:
+            progressbar.progress(i+1, int(len(pkgs)), "Collecting "+pkg+"...")
+        info.cutted=cutted
 
-info(){
-	netcheck -x
-	pkgnames=($@)
-	if [[ $all = true ]] && [[ $inet = 0 ]]
-	then
-		res=$(cat /usr/share/buildaur/res)
-	else
-		if [[ $inet = 0 ]]
-		then
-			if [[ $notext != 1 ]]
-			then
-			 echo -e ":: ${red}${bold}ERROR:${normal} Network is not reachable!"
-			fi
-			exit 1
-		fi
-		if [[ $notext != 1 ]]
-		then
-			if [[ $all = true ]]
-			then
-				echo ":: Updating packagelist..."
-			else
-				echo ":: Qetting package infos..."
-			fi
-			echo " AUR packages..."
-		fi
-		res="${proto}://aur.archlinux.org/rpc/?v=5&type=multiinfo"
-		counter=0
-		while [[ $counter -lt ${#pkgnames[*]} ]]
-		do
-			res=${res}"&arg[]="${pkgnames[$counter]}
-			((counter++))
-		done
-		res=$(curl -s $res)
-		if [[ $notext != 1 ]]
-		then
-			echo " ASP packages..."
-		fi
-		asp update >/dev/null 2>/dev/null
-		if [[ $all = true ]]
-		then
-			if [[ "$res" != "$(cat /usr/share/buildaur/res)" ]]
-			then
-				echo "$res" | sudo tee /usr/share/buildaur/res >/dev/null
-			fi
-		fi
-	fi
-	resultcount=$(echo "$res" | cut -d'"' -f9 | sed -e 's/://g' | sed -e 's/,//g')
-	counter=0
-	aurpacs=()
-	if [[ $notext != 1 ]]
-	then
-		echo -e ":: Giving out package infos..."
-	fi
-	while [[ $counter -lt $resultcount ]]
-	do
-		cutted=$(echo $res | cut -d{ -f$(expr $counter + 3))
-		name=$(echo $cutted | cut -d'"' -f6)
-		ver=$(pacman -Qqi $name 2>/dev/null | xargs 2>/dev/null | awk {'print $6'})
-		remoteinfo=$(echo $cutted | cut -d'"' -f20)
-		if [[ $name = "" ]] || [[ $ver = "" ]]
-		then
-			ver="--- "
-		fi
-		if [[ $q = 1 ]]
-		then
-			echo $name
-		else
-			echo " "$name $(echo $cutted | cut -d'"' -f16) "(local: $ver)"
-			if [[ $remoteinfo = "" ]]
-			then
-				echo "    ${bold}${yellow}Warning:${normal} AUR does not provide information about this package!"
-			else
-				echo "    "$remoteinfo
-			fi
-		fi
-		aurpacs[$counter]=$name
-		((counter++))
-	done
-	if [[ $only = aur ]]
-	then
-		exit
-	fi
-	localpacs=($(echo ${aurpacs[@]} $@ | tr ' ' '\n' | sort | uniq -u))
-	counter=0
-	for pac in ${localpacs[@]}
-	do
-		aspinfo=$(asp show $pac 2>/dev/null)
-		pkgver=0
-		if [[ $aspinfo = "" ]]
-		then
-			if [[ $(pacman -Qi $pac 2>/dev/null) != "" ]]
-			then
-				if [[ $q = 1 ]]
-				then
-					echo $pac
-				else
-					pkgver=$(pacman -Qi $pac 2>/dev/null | xargs | awk {'print $6'})
-					echo "  $pac $ver is not installed from ASP!"
-					echo "     ${bold}${yellow}Warning:${normal} AUR does not provide information about this package!"
-				fi
-			fi
-		else
-			if [[ $q = 1 ]]
-			then
-				echo $pac
-			else
-				declare $(echo "$aspinfo" | egrep pkgver | head -1)
-				declare $(echo "$aspinfo" | egrep pkgrel | head -1)
-				declare "$(echo "$aspinfo" | egrep pkgdesc | head -1)"
-				ver=$(pacman -Qqi $pac | xargs 2>/dev/null | awk {'print $6'})
-				echo "  $pac $pkgver-$pkgrel (local: $ver)"
-				echo "     $(echo $pkgdesc | sed 's/"//g')"
-			fi
-		fi
-		((count++))
-	done
-}
+def update():
+    msg=[]
+    update.willinst=[]
+    pkgs=os.popen("pacman -Qqm").read().split("\n")
+    resolve(pkgs)
+    if mode == "asp":
+        info.rescount=0
+        aspinfo(pkgs, False)
+    else:
+        info(resolve.res, False)
+    print(":: Checking for outdated packages...")
+    for i in range(int(info.rescount)):
+        pkg=informer(info.cutted, i)
+        progressbar.progress(i+1, int(info.rescount), "Checking "+pkg.name+"...")
+        if pkg.ver == pkg.localver or pkg.name in black:
+            print("", end="")
+        elif sorter(pkg.ver, pkg.localver) == pkg.ver:
+            update.willinst.append(pkg.name)
+        elif sorter(pkg.ver, pkg.localver) == pkg.localver:
+            msg.append(" "+yellow+"Warning:\033[0m "+pkg.name+"-"+pkg.localver+" is higher than AUR "+pkg.ver+"!")
+            if ask_warn_inst == 1:
+                update.willinst.append(pkg.name)
+        if str(pkg.outdate) != "None":
+            msg.append(" "+yellow+"Warning:\033[0m "+pkg.name+" is flagged as out-of-date since: "+datetime.utcfromtimestamp(int(pkg.outdate)).strftime('%Y-%m-%d %H:%M:%S')+"!")
+    print(":: Done")
+    for i in msg:
+        print(i)
+    if update.willinst == []:
+        print(" Nothing to do")
+    else:
+        install(update.willinst)
 
-search(){
-	netcheck
-	while [[ $# -gt 1 ]]
-	do
-		key=$2
-		echo ":: Checking AUR packages..."
-		res=$(curl -s ''${proto}'://aur.archlinux.org/rpc/?v=5&type=search&arg='$key'')
-		resultcount=$(echo $res | cut -d'"' -f9 | sed -e 's/://g' | sed -e 's/,//g')
-		echo "  $resultcount packages found"
-  	echo ":: Giving out package infos..."
-		counter=0
-		while [[ $counter -lt $resultcount ]]
-		do
-			cutted=$(echo $res | cut -d{ -f$(expr $counter + 3))
-			name=$(echo $cutted | cut -d'"' -f6)
-			ver=$(pacman -Q $name 2>/dev/null | cut -d" " -f2 | xargs)
-			remoteinfo=$(echo $cutted | cut -d'"' -f20)
-			if [[ $name = "" ]] || [[ $ver = "" ]]
-			then
-				ver="--- "
-			fi
-			echo " "$name $(echo $cutted | cut -d'"' -f16) "(local: $ver)"
-			if [[ $remoteinfo = "" ]]
-			then
-				echo "    ${bold}${yellow}Warning:${normal} AUR does not provide information about this package!"
-			else
-				echo "    "$remoteinfo
-			fi
-			((counter++))
-		done
-		shift
-	done
-}
+class informer():
+    def __init__(self, cutted, pkg, type="by_num"):
+        if type == "by_num":
+            splitted=cutted[pkg]
+            self.num=pkg
+        elif type == "by_name":
+            for i in range(int(info.rescount)):
+                self.num=i
+                splitted=cutted[pkg]
+                if splitted["Name"] == pkg:
+                    break
+        for name, sname in zip(["name", "ver", "votes", "outdate", "desc", "depends", "makedepends", "optdepends", "license", "url", "maintainer", "submitted", "modified", "popularity", "keywords"], ["Name", "Version", "NumVotes", "OutOfDate", "Description", "Depends", "MakeDepends", "OptDepends", "License", "URL", "Maintainer", "FirstSubmitted", "LastModified", "Popularity", "Keywords"]):
+            try:
+                exec("self."+name+"=splitted[sname]")
+            except:
+                exec("self."+name+"=['None']")
+        try:
+            pkg=localdb.get_pkg(splitted["Name"])
+            self.localver=pkg.version
+        except:
+            self.localver="---"
+        self.url=str(self.url).replace("\\/", "/")
+        if self.keywords == []:
+            self.keywords=["None"]
 
-show_PKGBUILD(){
-	notext=1
-	q=1
-	if [[ $1 = "" ]]
-	then
-		echo ":: ${red}${bold}ERROR:${normal} No package is given!"
-		exit 1
-	elif [[ $# -gt 1 ]]
-	then
-		echo ":: ${red}${bold}ERROR:${normal} Just one package should be given!"
-		exit 1
-	elif [[ $(info $1) = $1 ]]
-	then
-		cd ~/.cache/buildaur/build
-		rm -rf ./$1
-		git clone "https://aur.archlinux.org/$1.git" 2>/dev/null
-		cd ./$1
-		less ./PKGBUILD
-	else
-		echo ":: ${red}${bold}ERROR:${normal} $1 ist not in the AUR!"
-		exit 1
-	fi
-}
+def infoout(res, quiet=False, veryquiet=False):
+    info(res, True)
+    for i in range(int(info.rescount)):
+        pkg=informer(info.cutted, i)
+        if veryquiet:
+            print(pkg.name)
+        elif quiet:
+            print(pkg.name, pkg.ver)
+        else:
+            print(" "+pkg.name+"-"+pkg.ver+" (local: "+pkg.localver+")")
+            print("    "+str(pkg.desc))
 
-depts(){
-	. ./PKGBUILD
-	depends=($(echo -e ${depends[@]} ${makedepends[@]} | sed 's/ /\n/g'| uniq))
-	aurdeps=()
-	depmaxcount=${#depends[*]}
-	echo ":: Checking for dependecies..."
-	echo " ($depmaxcount) Packages: ${depends[@]}"
-	echo ":: Checking for unresolved dependecies..."
-	for pac in ${depends[@]}
-	do
-		if [[ $(pacman -Si $pac 2>/dev/null) = "" ]] && [[ $(pacman -Qi $pac 2>/dev/null) = "" ]]
-		then
-			aurdeps=(${aurdeps[@]} $pac)
-		fi
-	done
-	notext=1
-	q=1
-	aurdeps=($(info ${aurdeps[@]}))
-	echo " (${#aurdeps[*]}) Packages: ${aurdeps[@]}"
-	if [[ ${aurdeps[@]} != "" ]]
-	then
-		echo ":: Installing them..."
-		echo
-		install ${aurdeps[@]}
-		echo
-	fi
-}
+def detailinfo(res):
+    info(res, True)
+    for i in range(int(info.rescount)):
+        pkg=informer(info.cutted, i)
+        print("Name                  : "+str(pkg.name))
+        print("Version               : "+str(pkg.ver))
+        print("Local Version         : "+str(pkg.localver))
+        print("Description           : "+str(pkg.desc))
+        print("Maintainer            : "+str(pkg.maintainer))
+        print("URL                   : "+str(pkg.url))
+        print("Licenses              : ", end='')
+        liner(24, pkg.license)
+        print("First submitted       : "+datetime.utcfromtimestamp(int(pkg.submitted)).strftime('%Y-%m-%d %H:%M:%S'))
+        print("Last modified         : "+datetime.utcfromtimestamp(int(pkg.modified)).strftime('%Y-%m-%d %H:%M:%S'))
+        print("Popularity            : "+str(pkg.popularity))
+        print("Votes                 : "+str(pkg.votes))
+        print("Keywords              : ", end='')
+        liner(24, pkg.keywords)
+        print("Pkg out-of-date       : ", end='')
+        if str(pkg.outdate) == 'None':
+            print(pkg.outdate)
+        else:
+            print(datetime.utcfromtimestamp(int(pkg.outdate)).strftime('%Y-%m-%d %H:%M:%S'))
+        print("Dependencies          : ", end='')
+        liner(24, pkg.depends)
+        print("Makedependencies      : ", end='')
+        liner(24, pkg.makedepends)
+        print("Optional Dependencies : ", end='')
+        liner(24, pkg.optdepends)
+        print("")
 
-install(){
-	if [[ $@ = "" ]]
-	then
-		echo " Nothing to do"
-	else
-		netcheck
-		hooks prerunhooks
-		installcount=1
-		preinst $@
-		hooks postrunhooks
-	fi
-}
+def install(pkgs):
+    pkgpathes=[]
+    pkgsout=[]
+    nums=[]
+    packs=[]
+    try:
+        # Looking if pkgs are already in res
+        for pkg in pkgs:
+            ipkg=informer(info.cutted, pkg, type="by_name")
+            nums.append(ipkg.num)
+    except:
+        if mode == "asp":
+            aspinfo(pkgs, True)
+        else:
+            resolve(pkgs)
+            info(resolve.res, True)
+        nums=range(int(info.rescount))
+    print(":: Checking packages...")
+    if len(nums) == "0":
+        print(" Nothing to do")
+        exit(0)
+    # Checking packages for atributes
+    for i in nums:
+        pkg=informer(info.cutted, i)
+        if pkg.ver == pkg.localver:
+            print(" "+thic+"Info:\033[0m "+pkg.name+"-"+pkg.localver+" is up to date -- reistalling")
+        elif pkg.localver == "---":
+            print("", end="")
+        elif sorter(pkg.ver, pkg.localver) == pkg.ver:
+            print(" "+thic+"Info:\033[0m "+pkg.name+"-"+pkg.localver+" will be updated to "+pkg.ver)
+        elif sorter(pkg.ver, pkg.localver) == pkg.localver:
+            print(" "+yellow+"Warning:\033[0m "+pkg.name+"-"+pkg.localver+" is higher than AUR "+pkg.ver+"!")
+        if str(pkg.outdate) != "None":
+            print(" "+yellow+"Warning:\033[0m "+pkg.name+" is flagged as out-of-date since: "+datetime.utcfromtimestamp(int(pkg.outdate)).strftime('%Y-%m-%d %H:%M:%S')+"!")
+        pkgsout.append(pkg.name)
+        packs.append(pkg.name+"-"+pkg.ver)
+    # Check if package is realy in AUR
+    if len(pkgs) != len(nums):
+        for pkg in pkgs:
+            if pkg not in pkgsout:
+                print(":: "+red+"ERROR:\033[0m "+pkg+" not found!")
+                exit(1)
+    # asking to continue
+    print("\nPackages ("+str(len(nums))+"): ", end='')
+    liner(len("Packages ("+str(len(nums))+"): "), packs)
+    if options.confirm:
+        ask=input("\n:: Continnue installation? [Y/n] ")
+    else:
+        ask="y"
+    if ask == "Y" or ask == "y" or ask == "":
+        print("")
+        max=str(len(nums))
+        cutted=info.cutted
+        for pkg in nums:
+            # full makeprocess
+            # vars
+            ipkg=informer(cutted, pkg)
+            print("("+str(pkg+i)+"/"+max+") Making package "+thic+ipkg.name+"\033[0m...")
+            # Git repository
+            os.chdir(home+"/.cache/buildaur/build")
+            if mode == "asp":
+                print(":: Exporting package...")
+                os.system('rm -rf ./'+ipkg.name+' 2>/dev/null; asp export '+ipkg.name+' 2>/dev/null')
+            else:
+                print(":: Cloning git repository...")
+                os.system("rm -rf ./"+ipkg.name+" 2>/dev/null;")
+                while not os.path.exists("./"+ipkg.name+"/PKGBUILD"):
+                    os.system("git clone "+proto+"://aur.archlinux.org/"+ipkg.name)
+            os.chdir(os.getcwd()+"/"+ipkg.name)
+            # edit
+            if showPKGBUILD == 1:
+                print(":: Printing PKGBUILD...")
+                pkgbuild=open("PKGBUILD", "rt").read()
+                print("\033[37m"+str(pkgbuild)+"\033[0m", end="")
+            if showDiff == 1:
+                print(":: Printing PKGDIFF...")
+                diff=os.popen('git diff $(git log --pretty=format:"%h" | head -2 | xargs)').read()
+                print("\033[37m"+diff+"\033[0m", end="")
+            if options.confirm:
+                ask=input("\n:: Edit PKGBUILD? [y/c/N] ")
+            else:
+                ask="n"
+            if ask in ['y', 'Y']:
+                os.system(editor+" ./PKGBUILD")
+                print(":: Going on")
+            if ask in ['c', 'C']:
+                print(":: Exiting")
+                exit()
+            # Hooks
+            hooks("prehooks")
+            # depends
+            depts()
+            # makepkg
+            if options.chroot:
+                print(":: Updating chrootpackages...")
+                os.system("arch-nspawn $CHROOT/root pacman -Syu "+pcarg)
+                print(":: Making the package...")
+                os.system("PKGEXT='.pkg"+compmeth+"' makechrootpkg -c -r $CHROOT -- -s"+mkopts)
+            else:
+                print(":: Making the package...")
+                os.system(" PKGEXT='.pkg"+compmeth+"' makepkg -s "+mkopts)
+            # Hooks
+            hooks("posthooks")
+            # Defining pkgpath
+            if os.popen('/usr/share/buildaur/outputter.sh arch').read().split('\n')[0] == "any":
+                arch='any'
+            else:
+                arch=os.popen('uname -m').read().split('\n')[0]
+            # versioning for packages with multiple packagenames
+            ver=os.popen("/usr/share/buildaur/outputter.sh vers").read().split('\n')[0]
+            for pkgname in os.popen("/usr/share/buildaur/outputter.sh pkgname").read().split('\n')[0].split(' '):
+                pkgpathes.append(os.getcwd()+"/"+pkgname+"-"+ver+"-"+arch+".pkg"+compmeth)
+            os.chdir(home)
+            print("")
+        # installing packages
+        if options.install:
+            print(":: Installing packages...")
+            inststring=""
+            for path in pkgpathes:
+                inststring=inststring+path+" "
+            os.system("sudo pacman -U "+pcarg+" "+inststring)
+        else:
+            print(":: Package(s) created in:")
+            for path in pkgpathes:
+                print(" "+path)
+    else:
+        exit()
 
-preinst(){
-	echo ":: Checking packages..."
-	installpac=()
-	niceinstallpac=()
-	for key in $@
-	do
-		if [[ $mode != asp ]] && [[ $mode != url ]]
-		then
-			ver=$(pacman -Qqi $key 2>/dev/null| xargs 2>/dev/null | awk {'print $6'})
-			res=$(curl -s ''${proto}'://aur.archlinux.org/rpc/?v=5&type=multiinfo&arg[]='$key'')
-			remotever=$(echo $res | cut -d'"' -f26)
-			if [[ $(echo $res | cut -d'"' -f9) = ":0," ]]
-			then
-				echo "${red}${bold}ERROR:${normal} $key ist not in the AUR!"
-				exit 1
-			fi
-			if [[ $ver = "" ]]
-			then
-				printf ""
-			elif [[ $ver = $remotever ]]
-			then
-				echo " ${bold}${yellow}Warning:${normal} $key-$ver is allready on $remotever -- reinstalling"
-			elif [[ $(echo -e "$ver\n$remotever" | sort -V | xargs | awk {'print $1'}) = $ver ]]
-			then
-				echo " ${bold}Info:${normal} $key-$ver will be updated to $remotever!"
-			else
-				echo " ${bold}${yellow}Warning:${normal} $key-$ver is higher than AUR $remotever!"
-			fi
-			if [[ $(echo $res | cut -d'"' -f41) != :null, ]]
-			then
-				echo " ${bold}${yellow}Warning:${normal} $key is flagged out of date!"
-			fi
-		elif [[ $mode = asp ]]
-		then
-			echo ":: Updating ASP packagelist..."
-			asp update 2>/dev/null >/dev/null
-			aspout=$(echo "$(asp show $key 2>/dev/null)" | egrep pkgver | head -1)
-			aspoutrel=$(echo "$(asp show $key 2>/dev/null)" | egrep pkgrel | head -1)
-			ver=$(pacman -Qqi $key 2>/dev/null| xargs 2>/dev/null | awk {'print $6'})
-			pkgver=0
-		 	if [[ $aspout = "" ]]
-			then
-				echo "${red}${bold}ERROR:${normal} $key ist not on ASP!"
-				exit 1
-			fi
-			declare $aspout
-			declare $aspoutrel
-			remotever=$pkgver-$pkgrel
-			if [[ $ver = "" ]]
-			then
-				printf ""
-			elif [[ $ver = $pkgver-$pkgrel ]]
-			then
-				echo " ${bold}${yellow}Warning:${normal} $key-$ver is allready on $pkgver-$pkgrel -- reinstalling"
-			elif [[ $(echo -e "$ver\n$pkgver-$pkgrel" | sort -V | xargs | awk {'print $1'}) = $ver ]]
-			then
-				echo " ${bold}Info:${normal} $key-$ver will be updated to $pkgver-$pkgrel!"
-			else
-				echo " ${bold}${yellow}Warning:${normal} $key-$ver is higher than ASP $pkgver-$pkgrel!"
-			fi
-		fi
-		installpac=(${installpac[@]} $key)
-		niceinstallpac=(${niceinstallpac[@]} $key-$remotever)
-		shift
-	done
-	echo ""
-	echo "Packages (${#installpac[*]}): ${niceinstallpac[@]}"
-	echo ""
-	if [[ $ask = "--noconfirm" ]]
-	then
-		ans=y
-	else
-		echo ":: Continnue installation? [Y/n]"
-		read ans
-	fi
-	if [[ $ans == y ]] || [[ $ans == "" ]]
-	then
-		realinst ${installpac[@]}
-	fi
-}
+def depts():
+    nedeps=[]
+    neaurdeps=[]
+    depends=[]
+    print(":: Checking for unresolved dependencies...")
+    udepends=os.popen("/usr/share/buildaur/outputter.sh deps").read().split("\n")[0].split(" ")
+    for dep in udepends:
+        if ">" in dep:
+            depends.append(dep.split(">")[0])
+        elif "<" in dep:
+            depends.append(dep.split("<")[0])
+        elif "=" in dep:
+            depends.append(dep.split("=")[0])
+        else:
+            depends.append(dep)
+    for pkg in depends:
+        paca=localdb.get_pkg(pkg)
+        if str(paca) == "None":
+            nedeps.append(pkg)
+    if len(nedeps) > 0:
+        resolve(nedeps, quiet=True)
+        info(resolve.res, True)
+        if int(info.rescount) != 0:
+            for i in range(int(info.rescount)):
+                pkg=informer(info.cutted, i)
+                neaurdeps.append(pkg.name)
+            curdir=os.getcwd()
+            os.chdir(home)
+            install(neaurdeps)
+            os.chdir(curdir)
 
-realinst(){
-	sudo pacman -Sy
-	while [[ $# -gt 0 ]]
-	do
-		echo ""
-		if [[ $mode = asp ]] || [[ $mode = url ]]
-		then
-			echo "($installcount/$(expr $# + $installcount - 1)) Installing ${bold}$1${normal} ..."
-		else
-			echo "($installcount/$(expr $# + $installcount - 1)) Installing ${bold}$1-$remotever${normal} ..."
-		fi
-		mkdir -p ~/.cache/buildaur/build
-		cd ~/.cache/buildaur/build
-		if [[ $mode = url ]]
-		then
-			find ./urlbuild/buildaur.lock >/dev/null 2>/dev/null
-			if [[ $? = 0 ]]
-			then
-				echo ":: ${red}${bold}ERROR:${normal} Buildaur is currendly working in this directory! Finnish the process or remove $(pwd)/urlbuild/buildaur.lock!"
-				exit 1
-			fi
-		else
-			find ./$1/buildaur.lock >/dev/null 2>/dev/null
-			if [[ $? = 0 ]]
-			then
-				echo ":: ${red}${bold}ERROR:${normal} Buildaur is currendly working in this directory! Finnish the process or remove $(pwd)/$1/buildaur.lock!"
-				exit 1
-			fi
-		fi
-		rm -rf  ~/.cache/buildaur/build/$1 ~/.cache/buildaur/build/urlbuild
-		if [[ $mode = asp ]]
-		then
-			echo ":: Updating asp packagelist..."
-			asp update >/dev/null 2>/dev/null
-			echo ":: Exporting package..."
-			asp export $1 2>/dev/null
-			cd ~/.cache/buildaur/build/$1
-			if [[ $? != 0 ]]
-			then
-				echo ":: ${red}${bold}ERROR:${normal} $1 not found!"
-				exit 2
-			fi
-		else
-			echo ":: Clonig git repository..."
-			if [[ $mode = url ]]
-			then
-				git clone $1 ~/.cache/buildaur/build/urlbuild 2>/dev/null
-				cd ~/.cache/buildaur/build/urlbuild
-			else
-				git clone ${proto}://aur.archlinux.org/$1.git ~/.cache/buildaur/build/$1 2>/dev/null
-				cd ~/.cache/buildaur/build/$1
-			fi
-		fi
-		touch ./buildaur.lock
-		if [[ $showPKGBUILD = 1 ]]
-		then
-			echo ":: Printing out PKGBUILD...${grey}"
-			echo ""
-			cat ./PKGBUILD | sed 's/^/  /g'
-			echo "$normal"
-		fi
-		if [[ $ask = "--noconfirm" ]]
-		then
-			ans=n
-		else
-			echo ":: Edit the PKGBUILD? [y/N]"
-			read ans
-		fi
-		if [[ $ans == n ]] || [[ $ans == "" ]]
-		then
-			echo ":: Going on..."
-		else
-			$editor ./PKGBUILD
-		fi
-		if [[ $sudoreset = 1 ]]
-		then
-			sudo -k
-		fi
-		hooks prehooks
-		depts
-		if [[ $mode = url ]]
-		then
-			cd ~/.cache/buildaur/build/urlbuild
-		else
-			cd ~/.cache/buildaur/build/$1
-		fi
-		if [[ $buildchroot = yes ]]
-		then
-			if [[ $CHROOT = "" ]]
-			then
-				echo ":: ${red}${bold}ERROR:${normal}: CHROOT variable is not defined! Use '--make-chroot' to create a chroot first"
-				exit 1
-			fi
-			echo ":: Updating chrootpackages..."
-			arch-nspawn $CHROOT/root pacman -Syu $ask
-			echo ":: Making and installing the package..."
-			makechrootpkg -c -r $CHROOT -- -sf $ask $pgp $colored
-			. ./PKGBUILD
-			if [[ $installindex = i ]]
-			then
-				sudo pacman -U $ask ./${pkgname}-${pkgver}-${pkgrel}-${arch}.pkg.tar.zst
-			fi
-		else
-			echo ":: Making and installing the package..."
-			makepkg -s${installindex}f $ask $pgp $colored
-		fi
-		if [[ $? = 0 ]]
-		then
-			hooks posthooks
-			if [[ $installindex = "" ]]
-			then
-				echo ":: Info: Succesfully created package in $(pwd)!"
-			else
-				echo ":: Installation finished!"
-			fi
-		else
-			echo ":: ${red}${bold}ERROR:${normal} Package installation FAILED!"
-			errorcount=$(expr $errorcount + 1)
-		fi
-		rm ./buildaur.lock
-		shift
-		((installcount++))
-	done
-}
+def list_hooks():
+    hooktypes=["prehooks", "posthooks", "prerunhooks", "postrunhooks", "hooks"]
+    for hookdir in hooktypes:
+        if hookdir == "hooks":
+            print(":: deactivated hooks:")
+        else:
+            print(":: "+hookdir+":")
+        for hook in sorted(os.listdir("/etc/buildaur/"+hookdir)):
+            print(" "+hook)
+            print(os.popen('. /etc/buildaur/'+hookdir+'/'+hook+'; echo "  $desc"').read().split("\n")[0])
 
-update(){
-	netcheck
-	pkgnames=($(pacman -Qqm))
-	res="${proto}://aur.archlinux.org/rpc/?v=5&type=multiinfo"
-	counter=0
-	while [[ $counter -lt ${#pkgnames[*]} ]]
-	do
-		res=${res}"&arg[]="${pkgnames[$counter]}
-		((counter++))
-	done
-	echo ":: Updating packagelist..."
-	echo " AUR packages..."
-	res=$(curl -s $res)
-	if [[ "$res" != "$(cat /usr/share/buildaur/res)" ]]
-	then
-		echo "$res" | sudo tee /usr/share/buildaur/res >/dev/null
-	fi
-	echo " ASP packages..."
-	asp update >/dev/null 2>/dev/null
-	if [[ $layout = new ]]
-	then
-	  new_checker
-	else
-		old_checker
-	fi
-	if [[ ${willinst[@]} != "" ]]
-	then
-		install ${willinst[@]}
-	fi
-	if [[ ${willinstasp[@]} != "" ]]
-	then
-		mode=asp
-		install ${willinstasp[@]}
-	fi
-	if [[ ${willinstasp[@]} = "" ]] && [[ ${willinst[@]} = "" ]]
-	then
-		echo " Nothing to do"
-	elif [[ $errorcount = 0 ]]
-	then
-		echo " No errors accured"
-	else
-		echo " $errorcount error(s) accured!"
-	fi
-}
+def hook_activate(hooks):
+    for hook in hooks:
+        if hook in os.listdir('/etc/buildaur/hooks/'):
+            hooktype=os.popen('. /etc/buildaur/hooks/'+hook+' 2>/dev/null; echo $type').read().split("\n")[0]
+            os.system('sudo mv /etc/buildaur/hooks/'+hook+' /etc/buildaur/'+hooktype+'hooks/ 2>/dev/null')
+            print(":: Activated "+hook+"!")
+        else:
+            print(':: '+red+'ERROR:\033[0m '+hook+' not found!')
 
-new_checker(){
-	resultcount=$(echo $res | cut -d'"' -f9 | sed -e 's/://g' | sed -e 's/,//g')
-	fullcount=$(pacman -Qqm | wc -l)
-	willinst=()
-	aurpacs=()
-	errorcount=0
-	count=1
-	textcounter=0
-	echo ":: Checking localy installed packages..."
-	echo " $fullcount packages are curently installed!"
-	echo ":: Checking for outdated packages..."
-	until [[ $count = $(expr $resultcount + 1 ) ]]
-	do
-		cutted=$(echo $res | cut -d{ -f$(expr $count + 2))
-	  name=$(echo $cutted | cut -d'"' -f6)
-	  ver=$(pacman -Qqi $name | xargs 2>/dev/null | awk {'print $6'})
-		remotever=$(echo $cutted | cut -d'"' -f16)
-		progress $count $fullcount "Checking packages $name..."
-		if [[ $remotever = "$ver" ]] || [[ $(echo "$black" | egrep -xE $name) = "$name" ]]
-		then
-			printf "" >/dev/null
-		elif [[ $(echo -e "$ver\n$remotever" | sort -V | xargs | awk {'print $1'}) = $ver ]]
-		then
-			willinst=(${willinst[@]} $name)
-		else
-			text[$textcounter]="${bold}${yellow}Warning:${normal} $name-$ver is higher than AUR $remotever!"
-			((textcounter++))
-			if [[ $ask_warn_inst = 1 ]]
-			then
-				willinst=(${willinst[@]} $name)
-			fi
-		fi
-		aurpacs[$count]=$name
-		((count++))
-	done
-	localpacs=($(echo ${aurpacs[@]} $(pacman -Qqm) | tr ' ' '\n' | sort | uniq -u))
-	willinstasp=()
-	for pac in ${localpacs[@]}
-	do
-		aspinfo=$(asp show $pac 2>/dev/null)
-		pkgver=0
-		progress $count $fullcount "Checking packages $pac..."
-		if [[ $aspinfo = "" ]]
-		then
-			pkgver=$(pacman -Qqi $pac | xargs 2>/dev/null | awk {'print $6'})
-		else
-			if [[ $(asp list-all | egrep -Ex $pac) != "" ]]
-			then
-				declare $(echo "$aspinfo" | egrep pkgver | head -1)
-				declare $(echo "$aspinfo" | egrep pkgrel | head -1)
-				ver=$(pacman -Qqi $pac | xargs 2>/dev/null | awk {'print $6'})
-				if [[ $(echo ${black[*]} | sed -e 's/ /\n/g'| egrep -xE $pac) = "$pac" ]] || [[ $pkgver-$pkgrel = "$ver" ]]
-				then
-					printf "" >/dev/null
-				elif [[ $(echo -e "$ver\n$pkgver-$pkgrel" | sort -V | xargs | awk {'print $1'}) = $ver ]]
-				then
-					willinstasp=(${willinstasp[@]} $pac)
-				else
-					text[$textcounter]="${bold}${yellow}Warning:${normal} $pac-$ver is higher than ASP $pkgver-$pkgrel!"
-					((textcounter++))
-					if [[ $ask_warn_inst = 1 ]]
-					then
-						willinstasp=(${willinstasp[@]} $pac)
-					fi
-				fi
-			fi
-		fi
-		((count++))
-	done
-	progress $fullcount $fullcount "Checking packages..."
-	echo
-	echo ":: Done"
-	for message in "${text[@]}"
-	do
-		echo " $message"
-	done
-}
+def hook_deactivate(hooks):
+    hooktypes=["prehooks", "posthooks", "prerunhooks", "postrunhooks"]
+    for hook in hooks:
+        a=0
+        for hookdir in hooktypes:
+            if hook in os.listdir("/etc/buildaur/"+hookdir):
+                os.system('sudo mv  /etc/buildaur/'+hookdir+'/'+hook+' /etc/buildaur/hooks/ 2>/dev/null')
+                print(":: Deactivated "+hook+"!")
+                a=1
+        if a != 1:
+            print(':: '+red+'ERROR:\033[0m '+hook+' not found!')
 
-# old check function -- may be removed later
-old_checker(){
-	resultcount=$(echo $res | cut -d'"' -f9 | sed -e 's/://g' | sed -e 's/,//g')
-	willinst=()
-	aurpacs=()
-	errorcount=0
-	counter=0
-	count=1
-	echo ":: Checking installed AUR packages..."
-	echo "  $resultcount packages are curently installed from the AUR!"
-	echo ":: Checking for outdated packages..."
-	while [[ $counter -lt $resultcount ]]
-	do
-		cutted=$(echo $res | cut -d{ -f$(expr $counter + 3))
-	  name=$(echo $cutted | cut -d'"' -f6)
-	  ver=$(pacman -Qqi $name | xargs 2>/dev/null | awk {'print $6'})
-		remotever=$(echo $cutted | cut -d'"' -f16)
-	  if [[ $name = "" ]] || [[ $ver = "" ]]
-	  then
-	  ver="--- "
-	  fi
-		if [[ $(echo ${black[*]} | sed -e 's/ /\n/g'| egrep -xE $name) = "$name" ]]
-		then
-			echo "($count/$resultcount) $name-$ver is out of date! $remotever is available! But it's on the blacklist and will not be updated!"
-		elif [[ $remotever = "$ver" ]]
-		then
-			echo "($count/$resultcount) $name-$ver is up to date"
-		elif [[ $(echo -e "$ver\n$remotever" | sort -V | xargs | awk {'print $1'}) = $ver ]]
-		then
-			echo "($count/$resultcount) $name-$ver is out of date! $remotever is available!"
-			askinst
-		else
-			echo "($count/$resultcount) ${bold}${yellow}Warning:${normal} $name-$ver is higher than AUR $remotever!"
-			if [[ $ask_warn_inst = 1 ]]
-			then
-				askinst
-			fi
-		fi
-		aurpacs[$count]=$name
-		((count++))
-    ((counter++))
-	done
-	echo
-	echo ":: Searching non AUR packages..."
-	localpacs=($(echo ${aurpacs[@]} $(pacman -Qqm) | tr ' ' '\n' | sort | uniq -u))
-	echo "  ${#localpacs[*]} packages are not installed from any repository"
-	count=1
-	willinstasp=()
-	echo ":: Listing them..."
-	for pac in ${localpacs[@]}
-	do
-		aspinfo=$(asp show $pac 2>/dev/null)
-		pkgver=0
-		if [[ $aspinfo = "" ]]
-		then
-			pkgver=$(pacman -Qqi $pac | xargs 2>/dev/null | awk {'print $6'})
-			echo "($count/${#localpacs[*]}) $pac-$ver is not installed from ASP!"
-		else
-			aspout=$(echo "$aspinfo" | egrep pkgver | head -1)
-			aspoutrel=$(echo "$aspinfo" | egrep pkgrel | head -1)
-			declare $aspout
-			declare $aspoutrel
-			ver=$(pacman -Qqi $pac | xargs 2>/dev/null | awk {'print $6'})
-			if [[ $(echo ${black[*]} | sed -e 's/ /\n/g'| egrep -xE $pac) = "$pac" ]]
-			then
-				echo "($count/${#localpacs[*]})) $pac-$pkgver-$pkgrel is out of date! $pkgver-$pkgrel is available! But it's on the blacklist and will not be updated!"
-			elif [[ $pkgver-$pkgrel = "$ver" ]]
-			then
-				echo "($count/${#localpacs[*]}) $pac-$ver is up to date"
-			elif [[ $(echo -e "$ver\n$pkgver-$pkgrel" | sort -V | xargs | awk {'print $1'}) = $ver ]]
-			then
-				echo "($count/${#localpacs[*]}) $pac-$ver is out of date! $pkgver-$pkgrel is available!"
-				askinst asp
-			else
-				echo "($count/${#localpacs[*]}) ${bold}${yellow}Warning:${normal} $pac-$ver is higher than ASP $pkgver-$pkgrel!"
-				if [[ $ask_warn_inst = 1 ]]
-				then
-					askinst asp
-				fi
-			fi
-		fi
-		((count++))
-	done
-}
+def help():
+    print("buildaur - An AUR helper with asp support")
+    print("Usage: "+args[0]+" <option> <string>")
+    print("   General options:")
+    print("      -S                : Installs a package")
+    print("      -R                : Removes a package")
+    print("      -Q                : Lists installed packages or searches for ones in the AUR")
+    print("      -Qs               : Search the AUR")
+    print("      -Qi               : Gives detailed package information")
+    print("      -Syu              : Updates all AUR packages")
+    #print("      -url              : Installs a package from a given git-repository")
+    print("      -asp              : Builds a package from source using asp (usefull for archlinux arm)")
+    print("      -aspyu            : Updates all asp packages (usefull for archlinux arm)")
+    print("      --show            : Shows the PKGBUILD of a given package")
+    print("      --clear           : Cleanes build dir")
+    print("      -v|--version      : Displays version of this program")
+    print("      -l|--license      : Displays license of this program")
+    print("      --make-chroot     : Creates a chroot dir which can be used for building packages")
+    print("      --about           : Displays an about text")
+    print("")
+    print("   Additional options for -S,-R,-Syu,-asp,-aspyu:")
+    print("      n                 : Doesn't ask questions")
+    print("      spgp              : Skips pgp checks of sourcecode")
+    print("      ch                : Builds the package in a clean chroot (you may run into some problems using this on archlinux arm!)")
+    print("      di                : Just builds the package")
+    print("      co                : Toggles colored output on and off")
+    print("")
+    print("")
+    print("   Additional options for --show:")
+    print("      --diff            : Outputs diff between current pkgbuildver and former pkgbuildver")
+    print("")
+    print("   Additional options for -Q,-Qs")
+    print("      q                 : Just outputs pknames and vers")
+    print("      qq                : JUST outputs pknames")
+    print("      --by              : Defines the value that should be searched by (values: name name-desc maintainer depends makedepends optdepends checkdepends")
+    print("")
+    print("   Hookoptions:")
+    print("      --listhooks       : Lists all available and installed hooks")
+    print("      --hook-activate   : Activates a hook")
+    print("      --hook-deactivate : Deactivates a hook")
+    print("")
+    print("   Help options:")
+    print("      -h|--help         : Displays this help-dialog")
+    #print("      --help-hooks      : Displays help-dialog for hooks")
 
-askinst(){
-	if [[ $ask = "--noconfirm" ]]
-	then
-		ans=y
-	else
-		echo ":: Should it be updated? [Y/n]"
-		read ans
-	fi
-	if [[ $ans == y ]] || [[ $ans == "" ]]
-	then
-		if [[ $1 != asp ]]
-		then
-			willinst=(${willinst${1}[@]} $name)
-	  else
-			willinstasp=(${willinstasp[@]} $pac)
-		fi
-	fi
-}
+def about():
+    pkg=localdb.get_pkg("buildaur")
+    print("Buildaur "+pkg.version+" -- An AUR helper with asp support\n\nThis package is submited and maintained by lxgr -- <lxgr@protonmail.com>\nThis software is licensed under the GPL3.\n\nThis software is made to help archlinux users to install and update packages from the AUR in a save and consistent way.")
 
-hooks(){
-	hooks=($(ls /etc/buildaur/$1))
-	if [[ $hooks -gt 0 ]]
-	then
-		echo ":: Running $1..."
-		for hook in ${hooks[@]}
-		do
-			echo " ${hook}..."
-			/etc/buildaur/$1/${hook} -u
-			if [[ $? != 0 ]]
-			then
-				echo "${bold}${red}ERROR:${normal} Hook '$hook' exitet with exitstatus '$?' !"
-				echo ":: Exiting..."
-				rm ./buildaur.lock
-				exit 1
-			fi
-		done
-	fi
-}
+def hooks(type):
+    hooks=os.popen("ls /etc/buildaur/"+type).read().split('\n')
+    del hooks[-1]
+    if len(hooks) > 0:
+        print(":: Running "+type+"...")
+        for hook in hooks:
+            print(" "+hook+"...")
+            os.system("/etc/buildaur/"+type+"/"+hook+" -u")
 
-listhooks(){
-	hookers=(prehooks posthooks prerunhooks postrunhooks hooks)
-	for hook in ${hookers[@]}
-		do
-		if [[ $hook = hooks ]]
-		then
-			echo "deactivated hooks:"
-		else
-			echo "$hook:"
-		fi
-		hooks=($(ls /etc/buildaur/$hook))
-		for hoook in ${hooks[@]}
-		do
-			. /etc/buildaur/$hook/$hoook
-			echo " $hoook"
-			echo "  $desc"
-		done
-	done
-}
-
-activate(){
-	for hook in $@
-	do
-		. /etc/buildaur/hooks/$hook 2>/dev/null
-		sudo mv /etc/buildaur/hooks/$hook /etc/buildaur/${type}hooks/ 2>/dev/null
-		if [[ $? = 0 ]]
-		then
-			echo ":: Activated $hook!"
-		else
-			echo ":: ${red}${bold}ERROR:${normal} $hook is not available!"
-			exit 1
-		fi
-	done
-}
-
-deactivate(){
-	for hook in $@
-	do
-		. /etc/buildaur/prehooks/$hook 2>/dev/null
-		. /etc/buildaur/posthooks/$hook 2>/dev/null
-		. /etc/buildaur/prerunhooks/$hook 2>/dev/null
-		. /etc/buildaur/postrunhooks/$hook 2>/dev/null
-		sudo mv /etc/buildaur/${type}hooks/$hook /etc/buildaur/hooks/ 2>/dev/null
-		if [[ $? = 0 ]]
-		then
-			echo ":: Deactivated $hook!"
-		else
-			echo ":: ${red}${bold}ERROR:${normal} $hook is not available!"
-			exit 1
-		fi
-	done
-}
-
-hookhelp(){
-	echo "Help-dialog for hooks"
-	echo ""
-	echo "  Hooks are skripts that run before and after the packagebuild."
-	echo "  They are made to for example modify the PKGBUILD"
-	echo "  All hooks are stored in /etc/buildaur/hooks"
-	echo "  In /etc/buildaur/prehooks are the hooks stored wich run before the packagebuild"
-	echo "  and in /etc/buildaur/posthooks those wich run after the packagebuild."
-	echo "  A hook always contains a 'type' (pre oder post) and a 'desc' variable."
-	echo "  It also contains an if-function wich contains the modifications for the PKGBUILD and so on"
-	echo "  See /etc/buildaur/prehooks/1-arm-archfix as an example."
-	echo ""
-	echo "   Hookoptions:"
-	echo "      --listhooks       : Lists all available and installed hooks"
-	echo "      --hook-activate   : Activates a hook"
-	echo "      --hook-deactivate : Deactivates a hook"
-}
-
-help(){
-	echo "buildaur - An AUR helper with asp support"
-	echo "Usage: $0 <option> <string>"
-	echo "   General options:"
-	echo "      -S                : Installs a package"
-	echo "      -R                : Removes a package"
-	echo "      -Q                : Lists installed packages or searches for ones in the AUR"
-	echo "      -Qs               : Search the AUR"
-	echo "      -Syu              : Updates all AUR packages"
-	echo "      -url              : Installs a package from a given git-repository"
-	echo "      -asp              : Builds a package from source using asp (usefull for archlinux arm)"
-	echo "      --show            : Shows the PKGBUILD of a given package"
-	echo "      --clear           : Cleanes build dir"
-	echo "      -v|--version      : Displays version of this program"
-	echo "      -l|--license      : Displays license of this program"
-	echo "      --make-chroot     : Creates a chroot dir which can be used for building packages"
-	echo "      --about           : Displays an about text"
-	echo ""
-	echo "   Additional options for -S,-R,-Syu,-asp:"
-	echo "      n                 : Doesn't ask questions"
-	echo "      spgp              : Skips pgp checks of sourcecode"
-	echo "      ch                : Builds the package in a clean chroot (you may run into some problems using this on archlinux arm!)"
-	echo "      di                : Just builds the package"
-	echo "      co                : Toggles colored output on and off"
-	echo ""
-	echo "   Hookoptions:"
-	echo "      --listhooks       : Lists all available and installed hooks"
-	echo "      --hook-activate   : Activates a hook"
-  echo "      --hook-deactivate : Deactivates a hook"
-	echo ""
-	echo "   Help options:"
-	echo "      -h|--help         : Displays this help-dialog"
-	echo "      --help-hooks      : Displays help-dialog for hooks"
-}
-
-about(){
-	echo -e "Buildaur $(pacman -Q buildaur | cut -d" " -f2 | xargs) -- An AUR helper with asp support\n\nThis package is submited and maintained by lxgr -- <lxgr@protonmail.com>\nThis software is licensed under the GPL3.\n\nThis software is made to help archlinux users to install and update packages from the AUR in a save and consistent way."
-}
-
-fullarg=$@
-
-case $1 in
-	-S | -Sn* | -Sspgp* | -Sc* | -Sdi* | -Sus* )
-		argleng=$(expr ${#1} - 2)
-		options $@
-		shift
-		install $@
-		exit 0
-	;;
-	-url*)
-		argleng=$(expr ${#1} - 4)
-		options $@
-		shift
-		mode=url
-		install $@
-		exit 0
-	;;
-	-asp*)
-		argleng=$(expr ${#1} - 4)
-		options $@
-		shift
-		mode=asp
-		install $@
-		exit 0
-	;;
-	-Q)
-		shift
-		if [[ $1 = "" ]]
-		then
-			echo ":: Checking installed AUR packages..."
-			echo " $(pacman -Qqm | wc -l) packages are curently installed!"
-			all=true
-			info $(pacman -Qqm)
-		else
-			info $@
-		fi
-		exit 0
-	;;
-	-Qq)
-		shift
-		q=1
-		if [[ $1 = "" ]]
-		then
-			echo ":: Checking installed AUR packages..."
-			instpac=$(pacman -Qqm)
-			echo " $(echo "$instpac" | wc -l) packages are curently installed!"
-			all=true
-			info $instpac
-		else
-			info $@
-		fi
-		exit 0
-	;;
-	-Qs)
-		if [[ $2 = "" ]]
-		then
-			echo ":: ${red}${bold}ERROR:${normal} No search subject given!"
-			exit 2
-		else
-			search $@
-		fi
-		exit 0
-	;;
-	-R)
-		sudo pacman $@
-		exit 0
-	;;
-	-Rn)
-		sudo pacman --noconfirm $@
-		exit 0
-	;;
-	-Syu*)
-		argleng=$(expr ${#1} - 4)
-		options $@
-		update
-		exit 0
-	;;
-	--help | -h)
-		help
-		exit 0
-	;;
-	-v | --version)
-		pacman -Q buildaur | cut -d" " -f2 | xargs
-		exit 0
-	;;
-	-l | --license)
-		less /usr/share/licenses/buildaur/LICENSE
-		exit 0
-	;;
-	--clear)
-		echo ":: Cleaning builddir..."
-		echo "  $(du -hcs ~/.cache/buildaur/build | xargs | awk {'print $1'})B will be removed!"
-		rm -rf ~/.cache/buildaur/build/*
-		echo ":: Done!"
-		exit 0
-	;;
-	--about)
-		about
-		exit 0
-	;;
-	--listhooks)
-		listhooks
-		exit 0
-	;;
-	--hook-activate)
-		shift
-		if [[ $1 = all ]]
-		then
-			activate $(ls /etc/buildaur/hooks)
-		else
-			activate $@
-		fi
-		exit 0
-	;;
-	--hook-deactivate)
-		shift
-		if [[ $1 = all ]]
-		then
-			deactivate $(ls /etc/buildaur/prehooks) $(ls /etc/buildaur/posthooks) $(ls /etc/buildaur/prerunhooks) $(ls /etc/buildaur/postrunhooks)
-		else
-			deactivate $@
-		fi
-		exit 0
-	;;
-	--help-hooks)
-		hookhelp
-		exit 0
-	;;
-	--make-chroot)
-		echo ":: Creating a chrootdir"
-		sudo rm -rf ~/chroot 2>/dev/null
-		mkdir ~/chroot
-		export CHROOT=$HOME/chroot
-		mkarchroot $CHROOT/root base-devel
-		echo "export CHROOT=$HOME/chroot" >> $HOME/.bashrc
-		exit 0
-	;;
-	--show)
-		shift
-		show_PKGBUILD $@
-		exit 0
-	;;
-	*)
-		if [[ $1 = "" ]]
-		then
-			echo ":: ${red}${bold}ERROR:${normal} No options are given! Try --help to see all options!"
-			exit 2
-		else
-			echo ":: ${red}${bold}ERROR:${normal} '$@' is no known option! Try --help to see all options!"
-			exit 2
-		fi
-	;;
-esac
+if __name__ == "__main__":
+    # global home and pathchecking
+    home=str(Path.home())
+    Path(home+"/.cache/buildaur/build").mkdir(parents=True, exist_ok=True)
+    # colors
+    yellow="\033[33;1m"
+    red="\033[31;1m"
+    thic="\033[1m"
+    # config file
+    proto="https"
+    editor="nano"
+    compmeth=".tar.zst"
+    mode="normal"
+    showPKGBUILD=1
+    showDiff=0
+    ask_warn_inst=0
+    pcarg=""
+    mkopts=""
+    handle=Handle(".", "/var/lib/pacman")
+    localdb=handle.get_localdb()
+    args=sys.argv
+    black=open("/usr/share/buildaur/blacklist").read().split("\n")
+    # configfile
+    conf=open("/etc/buildaur/buildaur.conf").read()
+    try:
+        exec(conf)
+    except:
+        print(":: "+yellow+"Warning:\033[0m The config has errors in it.")
+    # checking for root
+    if home == "/root":
+        print(":: "+red+"ERROR:\033[0m DON'T run this script as root, stupid!")
+        exit(1)
+    # checking if args are given
+    if len(args) == 1:
+        print(":: "+red+"ERROR:\033[0m No options given!")
+        exit(1)
+    # args
+    if args[1][:4] == "-Syu":
+        options(args[1], 4)
+        update()
+    elif args[1][:6] == "-aspyu":
+        options(args[1], 6)
+        mode="asp"
+        update()
+    elif args[1] in ["-Q", "-Qq", "-Qqq"]:
+        pkgs=args[2:]
+        if len(pkgs) == 0:
+            pkgs=os.popen("pacman -Qqm").read().split('\n')
+        if "qq" in args[1]:
+            resolve(pkgs, quiet=True)
+        else:
+            resolve(pkgs)
+        if args[1] == "-Q":
+            infoout(resolve.res)
+        elif args[1] =="-Qq":
+            infoout(resolve.res, quiet=True)
+        elif args[1] =="-Qqq":
+            infoout(resolve.res, veryquiet=True)
+    elif args[1] in ["-Qs", "-Qsq", "-Qsqq"]:
+        searchby="name"
+        pkgs=args[2:]
+        try:
+            secarg=args[2]
+        except:
+            exit()
+        if secarg == "--by":
+            if args[3] in ["name", "name-desc", "maintainer", "depends", "makedepends", "optdepends", "checkdepends"]:
+                searchby=args[3]
+            else:
+                print(":: "+red+"ERROR:\033[0m "++"!")
+            del pkgs[0:2]
+        for pkg in pkgs:
+            if "qq" in args[1]:
+                resolve([pkg], type="search", searchby=searchby, quiet=True)
+            else:
+                resolve([pkg], type="search", searchby=searchby)
+            if args[1] == "-Qs":
+                infoout(resolve.res, False)
+            elif args[1] =="-Qsq":
+                infoout(resolve.res, quiet=True)
+            elif args[1] =="-Qsqq":
+                infoout(resolve.res, veryquiet=True)
+    elif args[1] == "-Qi":
+        pkgs=args[2:]
+        if len(pkgs) == 0:
+            pkgs=os.popen("pacman -Qqm").read().split('\n')
+        resolve(pkgs, quiet=True)
+        detailinfo(resolve.res)
+    elif args[1][:2] == "-S":
+        options(args[1], 2)
+        pkgs=args[2:]
+        if len(pkgs) == 0:
+            print(":: "+red+"ERROR:\033[0m No packages given!")
+            exit(1)
+        install(pkgs)
+    elif args[1][:4] == "-asp":
+        options(args[1], 4)
+        pkgs=args[2:]
+        if len(pkgs) == 0:
+            print(":: "+red+"ERROR:\033[0m No packages given!")
+            exit(1)
+        mode="asp"
+        install(pkgs)
+    elif args[1] in ["-h", "--help"]:
+        help()
+    elif args[1] == "--about":
+        about()
+    elif args[1] in ["--license", "-l"]:
+        print(open("/usr/share/licenses/buildaur/LICENSE").read())
+    elif args[1] in ["--version", "-v"]:
+        pkg=localdb.get_pkg("buildaur")
+        print(pkg.version)
+    elif args[1] == "--listhooks":
+        list_hooks()
+    elif args[1] == "--hook-activate":
+        hooks=[]
+        if args[2] == "all":
+            hooks+=os.listdir("/etc/buildaur/hooks")
+        else:
+            hooks=args[2:]
+        hook_activate(hooks)
+    elif args[1] == "--hook-deactivate":
+        hooks=[]
+        if args[2] == "all":
+            hooktypes=["prehooks", "posthooks", "prerunhooks", "postrunhooks"]
+            for hookdir in hooktypes:
+                hooks+=os.listdir("/etc/buildaur/"+hookdir)
+        else:
+            hooks=args[2:]
+        hook_deactivate(hooks)
+    elif args[1] == "--clear":
+        print(":: Cleaning builddir...")
+        print(" "+os.popen("echo $(du -hcs ~/.cache/buildaur/build | xargs | awk {'print $1'})").read().split("\n")[0]+"B will be removed!")
+        os.system("rm -rf ~/.cache/buildaur/build/*")
+        print(":: Done!")
+    elif args[1] == "--make-chroot":
+        print(":: Creating a chrootdir")
+        os.system('sudo rm -rf ~/chroot 2>/dev/null; mkdir ~/chroot; export CHROOT=$HOME/chroot; mkarchroot $CHROOT/root base-devel; echo "export CHROOT=$HOME/chroot" >> $HOME/.bashrc; exit 0')
+    elif args[1] == "--show":
+        try:
+            secarg=args[2]
+        except:
+            print(":: "+red+"ERROR:\033[0m No package or other option is given!")
+            exit(1)
+        pkgs=args
+        arg=args[1]
+        if secarg == "--diff":
+            del pkgs[0:3]
+            if len(pkgs) == 0:
+                print(":: "+red+"ERROR:\033[0m No package given!")
+                exit(1)
+        else:
+            del pkgs[0:2]
+        resolve(pkgs, quiet=True)
+        info(resolve.res, True)
+        for i in range(int(info.rescount)):
+            os.chdir(home+"/.cache/buildaur/build")
+            pkg=informer(info.cutted, i)
+            os.system("rm -rf ./"+pkg.name+" 2>/dev/null; git clone "+proto+"://aur.archlinux.org/"+pkg.name+" 2>/dev/null")
+            os.chdir(os.getcwd()+"/"+pkg.name)
+            if secarg == "--diff":
+                os.system('git diff $(git log --pretty=format:"%h" | head -2 | xargs)')
+            else:
+                pkgbuild = open("PKGBUILD", "rt").read()
+                print(pkgbuild)
+    else:
+        print(":: "+red+"ERROR:\033[0m "+args[1]+" is no valid option!")
