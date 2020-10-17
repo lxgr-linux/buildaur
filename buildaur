@@ -9,6 +9,34 @@ from pathlib import Path
 from datetime import datetime
 # res=os.popen("cat /usr/share/buildaur/res").read()
 
+# global home and pathchecking
+home=str(Path.home())
+Path(home+"/.cache/buildaur/build").mkdir(parents=True, exist_ok=True)
+# colors
+yellow="\033[33;1m"
+red="\033[31;1m"
+thic="\033[1m"
+# config file
+proto="https"
+editor="nano"
+compmeth=".tar.zst"
+mode="normal"
+showPKGBUILD=1
+showDiff=0
+ask_warn_inst=0
+pcarg=""
+mkopts=""
+handle=Handle(".", "/var/lib/pacman")
+localdb=handle.get_localdb()
+args=sys.argv
+black=open("/usr/share/buildaur/blacklist").read().split("\n")
+# configfile
+conf=open("/etc/buildaur/buildaur.conf").read()
+try:
+    exec(conf)
+except:
+    print(":: "+yellow+"Warning:\033[0m The config has errors in it.")
+
 def options(string, optlen):
     global mkopts
     global pcarg
@@ -80,7 +108,7 @@ def sorter(ver1, ver2):
 
 def resolve(pkgs, type="multiinfo", quiet=False, searchby="name"):
     pkgss=[]
-    resolve.res=[]
+    res=[]
     m=1
     # cut pkglists in 200 pkgs bytes
     for i in range(math.ceil(len(pkgs)/200+1)):
@@ -112,7 +140,8 @@ def resolve(pkgs, type="multiinfo", quiet=False, searchby="name"):
         except:
             print(":: "+red+"ERROR:\033[0m Server is not reachable!")
             exit(1)
-        resolve.res.append(str(r.read()))
+        res.append(str(r.read()))
+    return res
 
 def info(ress, quiet=False):
     rescount=0
@@ -122,66 +151,64 @@ def info(ress, quiet=False):
         jsons=json.loads(abc.replace("\\'", "'").replace('\\\\"', "'"))
         rescount+=int(jsons["resultcount"])
         cutted+=jsons["results"]
-    info.cutted=cutted
-    info.rescount=rescount
+    return rescount, cutted
 
 def aspinfo(pkgs, quiet):
     cutted=[]
-    info.rescount=0
+    rescount=0
     print(":: Updatting asp database...")
     os.system("asp update 2>/dev/null")
     if quiet == False:
         print(":: Collecting package data...")
-    for pkg, i in zip(pkgs, range(len(pkgs))):
+    for i, pkg in enumerate(pkgs):
         pkgver=os.popen("/usr/share/buildaur/outputter.sh asp "+pkg).read().split("\n")[0]
         if pkgver != "error":
             cutted.append({"Name": pkg, "Version": pkgver, "Description": "some pkg from asp", "OutOfDate": "None"})
-            info.rescount+=1
+            rescount+=1
         if quiet == False:
             progressbar.progress(i+1, int(len(pkgs)), "Collecting "+pkg+"...")
-        info.cutted=cutted
+    return rescount, cutted
 
 def update():
     msg=[]
-    update.willinst=[]
+    willinst=[]
     pkgs=os.popen("pacman -Qqm").read().split("\n")
-    resolve(pkgs)
+    res=resolve(pkgs)
     if mode == "asp":
-        info.rescount=0
-        aspinfo(pkgs, False)
+        rescount, cutted=aspinfo(pkgs, False)
     else:
-        info(resolve.res, False)
+        rescount, cutted=info(res, False)
     print(":: Checking for outdated packages...")
-    for i in range(int(info.rescount)):
-        pkg=informer(info.cutted, i)
-        progressbar.progress(i+1, int(info.rescount), "Checking "+pkg.name+"...")
+    for i in range(int(rescount)):
+        pkg=Informer(cutted, i)
+        progressbar.progress(i+1, int(rescount), "Checking "+pkg.name+"...")
         if pkg.ver == pkg.localver or pkg.name in black:
             print("", end="")
         elif sorter(pkg.ver, pkg.localver) == pkg.ver:
-            update.willinst.append(pkg.name)
+            willinst.append(pkg.name)
         elif sorter(pkg.ver, pkg.localver) == pkg.localver:
             msg.append(" "+yellow+"Warning:\033[0m "+pkg.name+"-"+pkg.localver+" is higher than AUR "+pkg.ver+"!")
             if ask_warn_inst == 1:
-                update.willinst.append(pkg.name)
+                willinst.append(pkg.name)
         if str(pkg.outdate) != "None":
             msg.append(" "+yellow+"Warning:\033[0m "+pkg.name+" is flagged as out-of-date since: "+datetime.utcfromtimestamp(int(pkg.outdate)).strftime('%Y-%m-%d %H:%M:%S')+"!")
     print(":: Done")
     for i in msg:
         print(i)
-    if update.willinst == []:
+    if willinst == []:
         print(" Nothing to do")
     else:
-        install(update.willinst)
+        install(willinst, rescount, cutted)
 
-class informer():
-    def __init__(self, cutted, pkg, type="by_num"):
+class Informer():
+    def __init__(self, cutted, pkg, type="by_num", rescount=0):
         if type == "by_num":
             splitted=cutted[pkg]
             self.num=pkg
         elif type == "by_name":
-            for i in range(int(info.rescount)):
+            for i in range(int(rescount)):
                 self.num=i
-                splitted=cutted[pkg]
+                splitted=cutted[i]
                 if splitted["Name"] == pkg:
                     break
         for name, sname in zip(["name", "ver", "votes", "outdate", "desc", "depends", "makedepends", "optdepends", "license", "url", "maintainer", "submitted", "modified", "popularity", "keywords"], ["Name", "Version", "NumVotes", "OutOfDate", "Description", "Depends", "MakeDepends", "OptDepends", "License", "URL", "Maintainer", "FirstSubmitted", "LastModified", "Popularity", "Keywords"]):
@@ -199,9 +226,9 @@ class informer():
             self.keywords=["None"]
 
 def infoout(res, quiet=False, veryquiet=False):
-    info(res, True)
-    for i in range(int(info.rescount)):
-        pkg=informer(info.cutted, i)
+    rescount, cutted=info(res, True)
+    for i in range(int(rescount)):
+        pkg=Informer(cutted, i)
         if veryquiet:
             print(pkg.name)
         elif quiet:
@@ -211,9 +238,9 @@ def infoout(res, quiet=False, veryquiet=False):
             print("    "+str(pkg.desc))
 
 def detailinfo(res):
-    info(res, True)
-    for i in range(int(info.rescount)):
-        pkg=informer(info.cutted, i)
+    rescount, cutted=info(res, True)
+    for i in range(int(rescount)):
+        pkg=Informer(cutted, i)
         print("Name                  : "+str(pkg.name))
         print("Version               : "+str(pkg.ver))
         print("Local Version         : "+str(pkg.localver))
@@ -241,7 +268,7 @@ def detailinfo(res):
         liner(24, pkg.optdepends)
         print("")
 
-def install(pkgs):
+def install(pkgs, rescount=0, cutted=[]):
     pkgpathes=[]
     pkgsout=[]
     nums=[]
@@ -249,22 +276,22 @@ def install(pkgs):
     try:
         # Looking if pkgs are already in res
         for pkg in pkgs:
-            ipkg=informer(info.cutted, pkg, type="by_name")
+            ipkg=Informer(cutted, pkg, type="by_name", rescount=rescount)
             nums.append(ipkg.num)
     except:
         if mode == "asp":
-            aspinfo(pkgs, True)
+            rescount, cutted=aspinfo(pkgs, True)
         else:
-            resolve(pkgs)
-            info(resolve.res, True)
-        nums=range(int(info.rescount))
+            res=resolve(pkgs)
+            rescount, cutted=info(res, True)
+        nums=range(int(rescount))
     print(":: Checking packages...")
     if len(nums) == "0":
         print(" Nothing to do")
         exit(0)
     # Checking packages for atributes
     for i in nums:
-        pkg=informer(info.cutted, i)
+        pkg=Informer(cutted, i)
         if pkg.ver == pkg.localver:
             print(" "+thic+"Info:\033[0m "+pkg.name+"-"+pkg.localver+" is up to date -- reistalling")
         elif pkg.localver == "---":
@@ -293,12 +320,11 @@ def install(pkgs):
     if ask == "Y" or ask == "y" or ask == "":
         print("")
         max=str(len(nums))
-        cutted=info.cutted
         for pkg in nums:
             # full makeprocess
             # vars
-            ipkg=informer(cutted, pkg)
-            print("("+str(pkg+i)+"/"+max+") Making package "+thic+ipkg.name+"\033[0m...")
+            ipkg=Informer(cutted, pkg)
+            print("("+str(pkg+1)+"/"+max+") Making package "+thic+ipkg.name+"\033[0m...")
             # Git repository
             os.chdir(home+"/.cache/buildaur/build")
             if mode == "asp":
@@ -329,9 +355,7 @@ def install(pkgs):
             if ask in ['c', 'C']:
                 print(":: Exiting")
                 exit()
-            # Hooks
             hooks("prehooks")
-            # depends
             depts()
             # makepkg
             if options.chroot:
@@ -389,11 +413,11 @@ def depts():
         if str(paca) == "None":
             nedeps.append(pkg)
     if len(nedeps) > 0:
-        resolve(nedeps, quiet=True)
-        info(resolve.res, True)
-        if int(info.rescount) != 0:
-            for i in range(int(info.rescount)):
-                pkg=informer(info.cutted, i)
+        res=resolve(nedeps, quiet=True)
+        rescount, cutted=info(res, True)
+        if int(rescount) != 0:
+            for i in range(int(rescount)):
+                pkg=Informer(cutted, i)
                 neaurdeps.append(pkg.name)
             curdir=os.getcwd()
             os.chdir(home)
@@ -437,7 +461,6 @@ def help():
     print("Usage: "+args[0]+" <option> <string>")
     print("   General options:")
     print("      -S                : Installs a package")
-    print("      -R                : Removes a package")
     print("      -Q                : Lists installed packages or searches for ones in the AUR")
     print("      -Qs               : Search the AUR")
     print("      -Qi               : Gives detailed package information")
@@ -491,33 +514,6 @@ def hooks(type):
             os.system("/etc/buildaur/"+type+"/"+hook+" -u")
 
 if __name__ == "__main__":
-    # global home and pathchecking
-    home=str(Path.home())
-    Path(home+"/.cache/buildaur/build").mkdir(parents=True, exist_ok=True)
-    # colors
-    yellow="\033[33;1m"
-    red="\033[31;1m"
-    thic="\033[1m"
-    # config file
-    proto="https"
-    editor="nano"
-    compmeth=".tar.zst"
-    mode="normal"
-    showPKGBUILD=1
-    showDiff=0
-    ask_warn_inst=0
-    pcarg=""
-    mkopts=""
-    handle=Handle(".", "/var/lib/pacman")
-    localdb=handle.get_localdb()
-    args=sys.argv
-    black=open("/usr/share/buildaur/blacklist").read().split("\n")
-    # configfile
-    conf=open("/etc/buildaur/buildaur.conf").read()
-    try:
-        exec(conf)
-    except:
-        print(":: "+yellow+"Warning:\033[0m The config has errors in it.")
     # checking for root
     if home == "/root":
         print(":: "+red+"ERROR:\033[0m DON'T run this script as root, stupid!")
@@ -539,15 +535,15 @@ if __name__ == "__main__":
         if len(pkgs) == 0:
             pkgs=os.popen("pacman -Qqm").read().split('\n')
         if "qq" in args[1]:
-            resolve(pkgs, quiet=True)
+            res=resolve(pkgs, quiet=True)
         else:
-            resolve(pkgs)
+            res=resolve(pkgs)
         if args[1] == "-Q":
-            infoout(resolve.res)
+            infoout(res)
         elif args[1] =="-Qq":
-            infoout(resolve.res, quiet=True)
+            infoout(res, quiet=True)
         elif args[1] =="-Qqq":
-            infoout(resolve.res, veryquiet=True)
+            infoout(res, veryquiet=True)
     elif args[1] in ["-Qs", "-Qsq", "-Qsqq"]:
         searchby="name"
         pkgs=args[2:]
@@ -563,21 +559,21 @@ if __name__ == "__main__":
             del pkgs[0:2]
         for pkg in pkgs:
             if "qq" in args[1]:
-                resolve([pkg], type="search", searchby=searchby, quiet=True)
+                res=resolve([pkg], type="search", searchby=searchby, quiet=True)
             else:
-                resolve([pkg], type="search", searchby=searchby)
+                res=resolve([pkg], type="search", searchby=searchby)
             if args[1] == "-Qs":
-                infoout(resolve.res, False)
+                infoout(res, False)
             elif args[1] =="-Qsq":
-                infoout(resolve.res, quiet=True)
+                infoout(res, quiet=True)
             elif args[1] =="-Qsqq":
-                infoout(resolve.res, veryquiet=True)
+                infoout(res, veryquiet=True)
     elif args[1] == "-Qi":
         pkgs=args[2:]
         if len(pkgs) == 0:
             pkgs=os.popen("pacman -Qqm").read().split('\n')
-        resolve(pkgs, quiet=True)
-        detailinfo(resolve.res)
+        res=resolve(pkgs, quiet=True)
+        detailinfo(res)
     elif args[1][:2] == "-S":
         options(args[1], 2)
         pkgs=args[2:]
@@ -643,11 +639,11 @@ if __name__ == "__main__":
                 exit(1)
         else:
             del pkgs[0:2]
-        resolve(pkgs, quiet=True)
-        info(resolve.res, True)
-        for i in range(int(info.rescount)):
+        res=resolve(pkgs, quiet=True)
+        rescount, cutted=info(res, True)
+        for i in range(int(rescount)):
             os.chdir(home+"/.cache/buildaur/build")
-            pkg=informer(info.cutted, i)
+            pkg=Informer(cutted, i)
             os.system("rm -rf ./"+pkg.name+" 2>/dev/null; git clone "+proto+"://aur.archlinux.org/"+pkg.name+" 2>/dev/null")
             os.chdir(os.getcwd()+"/"+pkg.name)
             if secarg == "--diff":

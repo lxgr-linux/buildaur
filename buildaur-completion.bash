@@ -1,6 +1,5 @@
 _buildaur(){
 local OPTIONS=(-S
-		 -R
 		 -Q{q,qq,' '}
 		 -Qs{q,qq,' '}
 		 -Syu
