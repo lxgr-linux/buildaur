@@ -320,11 +320,11 @@ def install(pkgs, rescount=0, cutted=[]):
     if ask == "Y" or ask == "y" or ask == "":
         print("")
         max=str(len(nums))
-        for pkg in nums:
+        for i, pkg in enumerate(nums):
             # full makeprocess
             # vars
             ipkg=Informer(cutted, pkg)
-            print("("+str(pkg+1)+"/"+max+") Making package "+thic+ipkg.name+"\033[0m...")
+            print("("+str(i+1)+"/"+max+") Making package "+thic+ipkg.name+"\033[0m...")
             # Git repository
             os.chdir(home+"/.cache/buildaur/build")
             if mode == "asp":
