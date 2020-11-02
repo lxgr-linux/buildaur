@@ -38,8 +38,7 @@ except:
     print(":: "+yellow+"Warning:\033[0m The config has errors in it.")
 
 def options(string, optlen):
-    global mkopts
-    global pcarg
+    global mkopts, pcarg
     options.confirm=True
     options.install=True
     options.color=True
@@ -52,9 +51,7 @@ def options(string, optlen):
         options.install=False
         optlen+=2
     if string.find("co") != -1:
-        global yellow
-        global red
-        global thic
+        global yellow, red, thic
         mkopts+=" -m"
         yellow=""
         red=""
