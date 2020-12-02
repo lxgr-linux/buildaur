@@ -39,9 +39,7 @@ except:
 
 def options(string, optlen):
     global mkopts, pcarg
-    options.confirm=True
-    options.install=True
-    options.color=True
+    options.confirm=options.install=options.color=True
     options.chroot=False
     if string.find("n") != -1:
         options.confirm=False
@@ -53,9 +51,7 @@ def options(string, optlen):
     if string.find("co") != -1:
         global yellow, red, thic
         mkopts+=" -m"
-        yellow=""
-        red=""
-        thic=""
+        yellow=red=thic=""
         optlen+=2
     if string.find("spgp") != -1:
         mkopts+=" --skippgpcheck"
@@ -169,7 +165,11 @@ def aspinfo(pkgs, quiet):
 def update():
     msg=[]
     willinst=[]
-    pkgs=os.popen("pacman -Qqm").read().split("\n")
+    pkgs=[]
+    pkglist=localdb.search(".*")
+    for pkg in pkglist:
+        if pkg.packager == "Unknown Packager":
+            pkgs.append(pkg.name)
     res=resolve(pkgs)
     if mode == "asp":
         rescount, cutted=aspinfo(pkgs, False)
