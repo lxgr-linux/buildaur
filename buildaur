@@ -208,7 +208,7 @@ class Informer():
                 splitted=cutted[i]
                 if splitted["Name"] == pkg:
                     break
-        for name, sname in zip(["name", "ver", "votes", "outdate", "desc", "depends", "makedepends", "optdepends", "license", "url", "maintainer", "submitted", "modified", "popularity", "keywords"], ["Name", "Version", "NumVotes", "OutOfDate", "Description", "Depends", "MakeDepends", "OptDepends", "License", "URL", "Maintainer", "FirstSubmitted", "LastModified", "Popularity", "Keywords"]):
+        for name, sname in zip(["name", "ver", "votes", "outdate", "desc", "depends", "makedepends", "optdepends", "license", "url", "maintainer", "submitted", "modified", "popularity", "keywords" ,"pkgbase"], ["Name", "Version", "NumVotes", "OutOfDate", "Description", "Depends", "MakeDepends", "OptDepends", "License", "URL", "Maintainer", "FirstSubmitted", "LastModified", "Popularity", "Keywords", "PackageBase"]):
             try:
                 exec("self."+name+"=splitted[sname]")
             except:
@@ -240,6 +240,7 @@ def detailinfo(res):
         pkg=Informer(cutted, i)
         print("Name                  : "+str(pkg.name))
         print("Version               : "+str(pkg.ver))
+        print("Packagebase           : "+str(pkg.pkgbase))
         print("Local Version         : "+str(pkg.localver))
         print("Description           : "+str(pkg.desc))
         print("Maintainer            : "+str(pkg.maintainer))
@@ -329,10 +330,10 @@ def install(pkgs, rescount=0, cutted=[]):
                 os.system('rm -rf ./'+ipkg.name+' 2>/dev/null; asp export '+ipkg.name+' 2>/dev/null')
             else:
                 print(":: Cloning git repository...")
-                os.system("rm -rf ./"+ipkg.name+" 2>/dev/null;")
-                while not os.path.exists("./"+ipkg.name+"/PKGBUILD"):
-                    os.system("git clone "+proto+"://aur.archlinux.org/"+ipkg.name)
-            os.chdir(os.getcwd()+"/"+ipkg.name)
+                os.system("rm -rf ./"+ipkg.pkgbase+" 2>/dev/null;")
+                while not os.path.exists("./"+ipkg.pkgbase+"/PKGBUILD"):
+                    os.system("git clone "+proto+"://aur.archlinux.org/"+ipkg.pkgbase+".git")
+            os.chdir(os.getcwd()+"/"+ipkg.pkgbase)
             # edit
             if showPKGBUILD == 1:
                 print(":: Printing PKGBUILD...")
