@@ -24,8 +24,7 @@ mode="normal"
 showPKGBUILD=1
 showDiff=0
 ask_warn_inst=0
-pcarg=""
-mkopts=""
+pcarg=mkopts=""
 handle=Handle(".", "/var/lib/pacman")
 localdb=handle.get_localdb()
 args=sys.argv
@@ -140,8 +139,8 @@ def info(ress, quiet=False):
     rescount=0
     cutted=[]
     for res in ress:
-        abc=res.split("b'")[1].split("}'")[0]+"}"
-        jsons=json.loads(abc.replace("\\'", "'").replace('\\\\"', "'"))
+        exec("info.utf_res="+res)
+        jsons=json.loads(info.utf_res.decode())
         rescount+=int(jsons["resultcount"])
         cutted+=jsons["results"]
     return rescount, cutted
@@ -156,7 +155,7 @@ def aspinfo(pkgs, quiet):
     for i, pkg in enumerate(pkgs):
         pkgver=os.popen("/usr/share/buildaur/outputter.sh asp "+pkg).read().split("\n")[0]
         if pkgver != "error":
-            cutted.append({"Name": pkg, "Version": pkgver, "Description": "some pkg from asp", "OutOfDate": "None"})
+            cutted.append({"Name": pkg, "Version": pkgver, "Description": "some pkg from asp", "OutOfDate": "None", "PackageBase": pkg})
             rescount+=1
         if quiet == False:
             progressbar.progress(i+1, int(len(pkgs)), "Collecting "+pkg+"...")
