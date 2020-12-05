@@ -217,7 +217,6 @@ class Informer():
             self.localver=pkg.version
         except:
             self.localver="---"
-        self.url=str(self.url).replace("\\/", "/")
         if self.keywords == []:
             self.keywords=["None"]
 
