@@ -174,24 +174,21 @@ def update():
     willinst=[]
     pkgs=get_local_pkgs()
     res=resolve(pkgs)
-    if mode == "asp":
-        rescount, cutted=aspinfo(pkgs, False)
-    else:
-        rescount, cutted=info(res, False)
+    rescount, cutted=aspinfo(pkgs, False) if mode == "asp" else info(res, False)
     print(":: Checking for outdated packages...")
     for i in range(int(rescount)):
         pkg=Informer(cutted, i)
         progressbar.progress(i+1, int(rescount), "Checking "+pkg.name+"...")
         if pkg.ver == pkg.localver or pkg.name in black:
-            print("", end="")
+            pass
         elif sorter(pkg.ver, pkg.localver) == pkg.ver:
             willinst.append(pkg.name)
         elif sorter(pkg.ver, pkg.localver) == pkg.localver:
-            msg.append(" "+yellow+"Warning:\033[0m "+pkg.name+"-"+pkg.localver+" is higher than AUR "+pkg.ver+"!")
+            msg.append(" %sWarning:\033[0m %s-%s is higher than AUR %s!"%(yellow, pkg.name, pkg.localver, pkg.ver))
             if ask_warn_inst == 1:
                 willinst.append(pkg.name)
         if str(pkg.outdate) != "None":
-            msg.append(" "+yellow+"Warning:\033[0m "+pkg.name+" is flagged as out-of-date since: "+datetime.utcfromtimestamp(int(pkg.outdate)).strftime('%Y-%m-%d %H:%M:%S')+"!")
+            msg.append(" %sWarning:\033[0m %s is flagged as out-of-date since: %s!"%(yellow, pkg.name, datetime.utcfromtimestamp(int(pkg.outdate)).strftime('%Y-%m-%d %H:%M:%S')))
     print(":: Done")
     for i in msg:
         print(i)
@@ -272,15 +269,15 @@ def install(pkgs, rescount=0, cutted=[]):
     for i in nums:
         pkg=Informer(cutted, i)
         if pkg.ver == pkg.localver:
-            print(" "+thic+"Info:\033[0m "+pkg.name+"-"+pkg.localver+" is up to date -- reistalling")
+            print(" %sInfo:\033[0m %s-%s is up to date -- reistalling"%(thic, pkg.name, pkg.localver))
         elif pkg.localver == "---":
             print("", end="")
         elif sorter(pkg.ver, pkg.localver) == pkg.ver:
-            print(" "+thic+"Info:\033[0m "+pkg.name+"-"+pkg.localver+" will be updated to "+pkg.ver)
+            print(" %sInfo:\033[0m %s-%s will be updated to %s"%(thic, pkg.name, pkg.localver, pkg.ver))
         elif sorter(pkg.ver, pkg.localver) == pkg.localver:
-            print(" "+yellow+"Warning:\033[0m "+pkg.name+"-"+pkg.localver+" is higher than AUR "+pkg.ver+"!")
+            print(" %sWarning:\033[0m %s-%s is higher than AUR %s!"%(yellow, pkg.name, pkg.localver, pkg.ver))
         if str(pkg.outdate) != "None":
-            print(" "+yellow+"Warning:\033[0m "+pkg.name+" is flagged as out-of-date since: "+datetime.utcfromtimestamp(int(pkg.outdate)).strftime('%Y-%m-%d %H:%M:%S')+"!")
+            print(" %sWarning:\033[0m %s is flagged as out-of-date since: %s!"%(yellow, pkg.name, datetime.utcfromtimestamp(int(pkg.outdate)).strftime('%Y-%m-%d %H:%M:%S')))
         pkgsout.append(pkg.name)
         packs.append(pkg.name+"-"+pkg.ver)
     # Check if package is realy in AUR
