@@ -36,6 +36,14 @@ try:
 except:
     print(":: "+yellow+"Warning:\033[0m The config has errors in it.")
 
+def get_local_pkgs():
+    pkgs=[]
+    pkglist=localdb.search(".*")
+    for pkg in pkglist:
+        if pkg.packager == "Unknown Packager":
+            pkgs.append(pkg.name)
+    return pkgs
+
 def options(string, optlen):
     global mkopts, pcarg
     options.confirm=options.install=options.color=True
@@ -164,11 +172,7 @@ def aspinfo(pkgs, quiet):
 def update():
     msg=[]
     willinst=[]
-    pkgs=[]
-    pkglist=localdb.search(".*")
-    for pkg in pkglist:
-        if pkg.packager == "Unknown Packager":
-            pkgs.append(pkg.name)
+    pkgs=get_local_pkgs()
     res=resolve(pkgs)
     if mode == "asp":
         rescount, cutted=aspinfo(pkgs, False)
@@ -236,32 +240,11 @@ def detailinfo(res):
     rescount, cutted=info(res, True)
     for i in range(int(rescount)):
         pkg=Informer(cutted, i)
-        print("Name                  : "+str(pkg.name))
-        print("Version               : "+str(pkg.ver))
-        print("Packagebase           : "+str(pkg.pkgbase))
-        print("Local Version         : "+str(pkg.localver))
-        print("Description           : "+str(pkg.desc))
-        print("Maintainer            : "+str(pkg.maintainer))
-        print("URL                   : "+str(pkg.url))
-        print("Licenses              : ", end='')
-        liner(24, pkg.license)
-        print("First submitted       : "+datetime.utcfromtimestamp(int(pkg.submitted)).strftime('%Y-%m-%d %H:%M:%S'))
-        print("Last modified         : "+datetime.utcfromtimestamp(int(pkg.modified)).strftime('%Y-%m-%d %H:%M:%S'))
-        print("Popularity            : "+str(pkg.popularity))
-        print("Votes                 : "+str(pkg.votes))
-        print("Keywords              : ", end='')
-        liner(24, pkg.keywords)
-        print("Pkg out-of-date       : ", end='')
-        if str(pkg.outdate) == 'None':
-            print(pkg.outdate)
-        else:
-            print(datetime.utcfromtimestamp(int(pkg.outdate)).strftime('%Y-%m-%d %H:%M:%S'))
-        print("Dependencies          : ", end='')
-        liner(24, pkg.depends)
-        print("Makedependencies      : ", end='')
-        liner(24, pkg.makedepends)
-        print("Optional Dependencies : ", end='')
-        liner(24, pkg.optdepends)
+        for name, value in zip(["Name", "Version", "Packagebase", "Local Version", "Description", "Maintainer", "URL", "First submitted", "Last modified", "Popularity", "Votes", "Pkg out-of-date"], [pkg.name, pkg.ver, pkg.pkgbase, pkg.localver, pkg.desc, pkg.maintainer, pkg.url, datetime.utcfromtimestamp(int(pkg.submitted)).strftime('%Y-%m-%d %H:%M:%S'), datetime.utcfromtimestamp(int(pkg.modified)).strftime('%Y-%m-%d %H:%M:%S'), pkg.popularity, pkg.votes, pkg.outdate if str(pkg.outdate) == 'None' else datetime.utcfromtimestamp(int(pkg.outdate)).strftime('%Y-%m-%d %H:%M:%S')]):
+            print(name+(22-len(name))*" "+": "+str(value))
+        for name, value in zip(["Licenses", "Keywords", "Dependencies", "Makedependencies", "Optional dependencies"], [pkg.license, pkg.keywords, pkg.depends, pkg.makedepends, pkg.optdepends]):
+            print(name+(22-len(name))*" "+": ", end='')
+            liner(24, value)
         print("")
 
 def install(pkgs, rescount=0, cutted=[]):
@@ -526,50 +509,6 @@ if __name__ == "__main__":
         options(args[1], 6)
         mode="asp"
         update()
-    elif args[1] in ["-Q", "-Qq", "-Qqq"]:
-        pkgs=args[2:]
-        if len(pkgs) == 0:
-            pkgs=os.popen("pacman -Qqm").read().split('\n')
-        if "qq" in args[1]:
-            res=resolve(pkgs, quiet=True)
-        else:
-            res=resolve(pkgs)
-        if args[1] == "-Q":
-            infoout(res)
-        elif args[1] =="-Qq":
-            infoout(res, quiet=True)
-        elif args[1] =="-Qqq":
-            infoout(res, veryquiet=True)
-    elif args[1] in ["-Qs", "-Qsq", "-Qsqq"]:
-        searchby="name"
-        pkgs=args[2:]
-        try:
-            secarg=args[2]
-        except:
-            exit()
-        if secarg == "--by":
-            if args[3] in ["name", "name-desc", "maintainer", "depends", "makedepends", "optdepends", "checkdepends"]:
-                searchby=args[3]
-            else:
-                print(":: "+red+"ERROR:\033[0m "++"!")
-            del pkgs[0:2]
-        for pkg in pkgs:
-            if "qq" in args[1]:
-                res=resolve([pkg], type="search", searchby=searchby, quiet=True)
-            else:
-                res=resolve([pkg], type="search", searchby=searchby)
-            if args[1] == "-Qs":
-                infoout(res, False)
-            elif args[1] =="-Qsq":
-                infoout(res, quiet=True)
-            elif args[1] =="-Qsqq":
-                infoout(res, veryquiet=True)
-    elif args[1] == "-Qi":
-        pkgs=args[2:]
-        if len(pkgs) == 0:
-            pkgs=os.popen("pacman -Qqm").read().split('\n')
-        res=resolve(pkgs, quiet=True)
-        detailinfo(res)
     elif args[1][:2] == "-S":
         options(args[1], 2)
         pkgs=args[2:]
@@ -585,6 +524,34 @@ if __name__ == "__main__":
             exit(1)
         mode="asp"
         install(pkgs)
+    elif args[1] in ["-Q", "-Qq", "-Qqq"]:
+        pkgs=get_local_pkgs() if len(args[2:]) == 0 else args[2:]
+        res=resolve(pkgs, quiet=True if "qq" in args[1] else False)
+        for arg, option in zip(["-Q", "-Qq", "-Qqq"], ["infoout(res)", "infoout(res, quiet=True)", "infoout(res, veryquiet=True)"]):
+            if args[1] == arg:
+                exec(option)
+    elif args[1] in ["-Qs", "-Qsq", "-Qsqq"]:
+        searchby="name"
+        pkgs=args[2:]
+        try:
+            secarg=args[2]
+        except:
+            exit()
+        if secarg == "--by":
+            if args[3] in ["name", "name-desc", "maintainer", "depends", "makedepends", "optdepends", "checkdepends"]:
+                searchby=args[3]
+            else:
+                print(":: "+red+"ERROR:\033[0m "+args[3]+" is not a valid search term!")
+            del pkgs[0:2]
+        for pkg in pkgs:
+            res=resolve([pkg], type="search", searchby=searchby, quiet=True if "qq" in args[1] else False)
+            for arg, option in zip(["-Qs", "-Qsq", "-Qsqq"], ["infoout(res)", "infoout(res, quiet=True)", "infoout(res, veryquiet=True)"]):
+                if args[1] == arg:
+                    exec(option)
+    elif args[1] == "-Qi":
+        pkgs=get_local_pkgs() if len(args[2:]) == 0 else args[2:]
+        res=resolve(pkgs, quiet=True)
+        detailinfo(res)
     elif args[1] in ["-h", "--help"]:
         help()
     elif args[1] == "--about":
