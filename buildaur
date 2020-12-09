@@ -18,7 +18,7 @@ yellow="\033[33;1m"
 red="\033[31;1m"
 thic="\033[1m"
 # config file
-trans=trans[os.environ["LANG"][:2] if os.environ["LANG"][:2] in ["en", "de"] else "en"]
+trans=trans[os.environ["LANG"][:2] if os.environ["LANG"][:2] in ["en"] else "en"]
 proto="https"
 editor="nano"
 compmeth=".tar.zst"
@@ -69,7 +69,7 @@ def options(string, optlen):
         options.chroot=True
         optlen+=2
     if optlen != len(string):
-        print(":: "+red+"ERROR:\033[0m "+string+" is no valid option!")
+        print(trans["error_opts"]%(red, string))
         exit(1)
 
 def liner(length, names, sep=""):
@@ -426,48 +426,11 @@ def hook_deactivate(hooks):
             print(trans["error_hook_not_found"]%(red, hook))
 
 def help():
-    print("buildaur - An AUR helper with asp support")
-    print("Usage: "+args[0]+" <option> <string>")
-    print("   General options:")
-    print("      -S                : Installs a package")
-    print("      -Q                : Lists installed packages or searches for ones in the AUR")
-    print("      -Qs               : Search the AUR")
-    print("      -Qi               : Gives detailed package information")
-    print("      -Syu              : Updates all AUR packages")
-    #print("      -url              : Installs a package from a given git-repository")
-    print("      -asp              : Builds a package from source using asp (usefull for archlinux arm)")
-    print("      -aspyu            : Updates all asp packages (usefull for archlinux arm)")
-    print("      --show            : Shows the PKGBUILD of a given package")
-    print("      --clear           : Cleanes build dir")
-    print("      -v|--version      : Displays version of this program")
-    print("      -l|--license      : Displays license of this program")
-    print("      --make-chroot     : Creates a chroot dir which can be used for building packages")
-    print("      --about           : Displays an about text")
-    print("")
-    print("   Additional options for -S,-R,-Syu,-asp,-aspyu:")
-    print("      n                 : Doesn't ask questions")
-    print("      spgp              : Skips pgp checks of sourcecode")
-    print("      ch                : Builds the package in a clean chroot (you may run into some problems using this on archlinux arm!)")
-    print("      di                : Just builds the package")
-    print("      co                : Toggles colored output on and off")
-    print("")
-    print("")
-    print("   Additional options for --show:")
-    print("      --diff            : Outputs diff between current pkgbuildver and former pkgbuildver")
-    print("")
-    print("   Additional options for -Q,-Qs")
-    print("      q                 : Just outputs pknames and vers")
-    print("      qq                : JUST outputs pknames")
-    print("      --by              : Defines the value that should be searched by (values: name name-desc maintainer depends makedepends optdepends checkdepends")
-    print("")
-    print("   Hookoptions:")
-    print("      --listhooks       : Lists all available and installed hooks")
-    print("      --hook-activate   : Activates a hook")
-    print("      --hook-deactivate : Deactivates a hook")
-    print("")
-    print("   Help options:")
-    print("      -h|--help         : Displays this help-dialog")
-    #print("      --help-hooks      : Displays help-dialog for hooks")
+    print(trans["help_start"]%(args[0]), end="")
+    for type in trans["help"]:
+        print("\n   "+trans["help"][type]["desc"])
+        for arg in trans["help"][type]["content"]:
+            print("      "+arg+(18-len(arg))*" "+": "+trans["help"][type]["content"][arg])
 
 def about():
     pkg=localdb.get_pkg("buildaur")
@@ -605,4 +568,4 @@ if __name__ == "__main__":
                 pkgbuild = open("PKGBUILD", "rt").read()
                 print(pkgbuild)
     else:
-        print(":: %sERROR:\033[0m %s is no valid option!"%(red, args[1]))
+        print(trans["error_opts"]%(red, args[1]))
