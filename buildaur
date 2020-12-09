@@ -18,7 +18,7 @@ yellow="\033[33;1m"
 red="\033[31;1m"
 thic="\033[1m"
 # config file
-trans=trans[os.environ["LANG"][:2] if os.environ["LANG"][:2] in ["en"] else "en"]
+trans=trans[os.environ["LANG"][:2] if os.environ["LANG"][:2] in ["en", "de"] else "en"]
 proto="https"
 editor="nano"
 compmeth=".tar.zst"
