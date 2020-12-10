@@ -2,7 +2,7 @@
 # maintainer lxgr <lxgr@protonmail.com>
 # this software is licensed under the GPL v3
 
-import os, urllib.request, time, sys, math, json
+import os, urllib.request, time, sys, math, json, platform
 import progressbar_buildaur as progressbar
 from buildaur_translations import *
 from pyalpm import Handle
@@ -350,7 +350,7 @@ def install(pkgs, rescount=0, cutted=[]):
             hooks("posthooks")
             # Defining pkgpath
             this=LocalInfo()
-            arch='any' if "any" in this.pkgdata["arch"] else os.popen('uname -m').read().split('\n')[0]
+            arch='any' if "any" in this.pkgdata["arch"] else platform.machine()
             # versioning for packages with multiple packagenames
             for pkgname in this.pkgdata["pkgnames"]:
                 pkgpathes.append(os.getcwd()+"/"+pkgname+"-"+this.pkgdata["ver"]+"-"+arch+".pkg"+compmeth)
