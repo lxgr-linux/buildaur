@@ -6,34 +6,26 @@ then
   echo "$pkgout" > ./PKGBUILD
 fi
 . ./PKGBUILD
-out="{'pkgnames' : ["
-for name in ${pkgname[@]}
-do
-  out+="'$name', "
-done
-out+="], 'arch' : ["
-for arc in ${arch[@]}
-do
-  out+="'$arc', "
-done
-out+="],"
+atributes=("'pkgnames'" "'arch'" "'deps'" "'makedeps'")
+arrays=("pkgname[@]" "arch[@]" "depends[@]" "makedepends[@]")
+out="{"
 if [[ $epoch != "" ]] && [[ $epoch != 0 ]]
 then
-  epoch=${epoch}:
+  epoch+=:
 else
   epoch=""
 fi
-out+=" 'ver' : '${epoch}$pkgver-$pkgrel', 'deps' : ["
-for dep in ${depends[@]}
+for ((i=0; i<${#arrays[*]}; i++))
 do
-  out+="'$dep', "
+  out+="${atributes[$i]} : ["
+  arr=${arrays[$i]}
+  for j in ${!arr}
+  do
+    out+="'$j', "
+  done
+  out+="], "
 done
-out+="], 'makedeps' : ["
-for dep in ${makedepends[@]}
-do
-  out+="'$dep', "
-done
-out+="]}"
+out+=" 'ver' : '${epoch}$pkgver-$pkgrel'}"
 echo $out
 if [[ $1 = asp ]]
 then
