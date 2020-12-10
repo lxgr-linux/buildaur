@@ -121,7 +121,7 @@ def resolve(pkgs, type="multiinfo", quiet=False, searchby="name"):
     for pkgs in pkgss:
         url=proto+"://aur.archlinux.org/rpc/?v=5&type="+type
         if quiet == False and len(pkgss) > 1:
-            progressbar.progress(m, len(pkgss), trans["downloading"])
+            progressbar.progress(m, len(pkgss), trans["downloading2"])
             m+=1
         if len(pkgs) == 0:
             exit()

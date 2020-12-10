@@ -2,6 +2,7 @@ trans={
 "en" : {
     "conf_warning" : ":: %sWarning:\033[0m The config has errors in it.",
     "downloading" : ":: Downloading packagelist...",
+    "downloading2" : "Downloading packagelist...",
     "error_server" : ":: %sERROR:\033[0m Server is not reachable!",
     "update_asp" : ":: Updatting asp database...",
     "collecting" : ":: Collecting package data...",
@@ -125,6 +126,7 @@ trans={
 "de": {
     "conf_warning" : ":: %sWarnung:\033[0m Die Konfigurationsdatei beinhaltet Fehler!",
     "downloading" : ":: Lade Packetliste herunter...",
+    "downloading2" : "Lade Packetliste herunter...",
     "error_server" : ":: %sERROR:\033[0m Server nicht erreichbar!",
     "update_asp" : ":: Update asp Datenbank...",
     "collecting" : ":: Sammle Packetdaten...",
