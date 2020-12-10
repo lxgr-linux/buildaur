@@ -341,11 +341,11 @@ def install(pkgs, rescount=0, cutted=[]):
             # Hooks
             hooks("posthooks")
             # Defining pkgpath
-            arch='any' if os.popen('/usr/share/buildaur/outputter.sh arch').read().split('\n')[0] == "any" else os.popen('uname -m').read().split('\n')[0]
+            exec("install.pkgdata="+os.popen("~/Bash/buildaur/outputter.sh all").read().split("\n")[0])
+            arch='any' if "any" in install.pkgdata["arch"] else os.popen('uname -m').read().split('\n')[0]
             # versioning for packages with multiple packagenames
-            ver=os.popen("/usr/share/buildaur/outputter.sh vers").read().split('\n')[0]
-            for pkgname in os.popen("/usr/share/buildaur/outputter.sh pkgname").read().split('\n')[0].split(' '):
-                pkgpathes.append(os.getcwd()+"/"+pkgname+"-"+ver+"-"+arch+".pkg"+compmeth)
+            for pkgname in install.pkgdata["pkgnames"]:
+                pkgpathes.append(os.getcwd()+"/"+pkgname+"-"+install.pkgdata["ver"]+"-"+arch+".pkg"+compmeth)
             os.chdir(home)
             print("")
         # installing packages
