@@ -163,7 +163,8 @@ def aspinfo(pkgs, quiet):
     if quiet == False:
         print(trans["collecting"])
     for i, pkg in enumerate(pkgs):
-        pkgver=os.popen("/usr/share/buildaur/outputter.sh asp "+pkg).read().split("\n")[0]
+        this=LocalInfo(True, pkg)
+        pkgver=this.pkgdata["ver"]
         if pkgver != "error":
             cutted.append({"Name": pkg, "Version": pkgver, "Description": "some pkg from asp", "OutOfDate": "None", "PackageBase": pkg})
             rescount+=1
@@ -222,6 +223,13 @@ class Informer():
             self.localver="---"
         if self.keywords == []:
             self.keywords=["None"]
+
+
+class LocalInfo():
+    def __init__(self, asp=False, pkg=""):
+        path="~/Bash/buildaur/outputter.sh"
+        exec("self.pkgdata="+os.popen(path+" asp "+pkg if asp else path).read().split("\n")[0])
+
 
 def infoout(res, quiet=False, veryquiet=False):
     rescount, cutted=info(res, True)
@@ -341,11 +349,11 @@ def install(pkgs, rescount=0, cutted=[]):
             # Hooks
             hooks("posthooks")
             # Defining pkgpath
-            exec("install.pkgdata="+os.popen("~/Bash/buildaur/outputter.sh all").read().split("\n")[0])
-            arch='any' if "any" in install.pkgdata["arch"] else os.popen('uname -m').read().split('\n')[0]
+            this=LocalInfo()
+            arch='any' if "any" in this.pkgdata["arch"] else os.popen('uname -m').read().split('\n')[0]
             # versioning for packages with multiple packagenames
-            for pkgname in install.pkgdata["pkgnames"]:
-                pkgpathes.append(os.getcwd()+"/"+pkgname+"-"+install.pkgdata["ver"]+"-"+arch+".pkg"+compmeth)
+            for pkgname in this.pkgdata["pkgnames"]:
+                pkgpathes.append(os.getcwd()+"/"+pkgname+"-"+this.pkgdata["ver"]+"-"+arch+".pkg"+compmeth)
             os.chdir(home)
             print("")
         # installing packages
@@ -367,7 +375,8 @@ def depts():
     neaurdeps=[]
     depends=[]
     print(trans["checking_deps"])
-    udepends=os.popen("/usr/share/buildaur/outputter.sh deps").read().split("\n")[0].split(" ")
+    this=LocalInfo()
+    udepends=this.pkgdata["deps"]+this.pkgdata["makedeps"]
     for dep in udepends:
         if ">" in dep:
             depends.append(dep.split(">")[0])
