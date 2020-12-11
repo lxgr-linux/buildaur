@@ -39,12 +39,7 @@ except:
     print(trans["conf_warning"]%(yellow))
 
 def get_local_pkgs():
-    pkgs=[]
-    pkglist=localdb.search(".*")
-    for pkg in pkglist:
-        if pkg.packager == "Unknown Packager":
-            pkgs.append(pkg.name)
-    return pkgs
+    return [pkg.name for pkg in localdb.search(".*") if pkg.packager == "Unknown Packager"]
 
 def options(string, optlen):
     global mkopts, pcarg
@@ -109,13 +104,10 @@ def sorter(ver1, ver2):
 		return ver2
 
 def resolve(pkgs, type="multiinfo", quiet=False, searchby="name"):
-    pkgss=[]
     res=[]
     m=1
     # cut pkglists in 200 pkgs bytes
-    for i in range(math.ceil(len(pkgs)/200+1)):
-        pkgss.append(pkgs[(i*200)-200:i*200])
-    del pkgss[0]
+    pkgss=[pkgs[(i*200)-200:i*200] for i in range(math.ceil(len(pkgs)/200+1))][1:]
     if quiet == False:
         print(trans["downloading"])
     for pkgs in pkgss:
@@ -129,11 +121,7 @@ def resolve(pkgs, type="multiinfo", quiet=False, searchby="name"):
             url+="&by="+searchby+"&arg="+pkgs[0]
         else:
             # name processing to avoid bad packagenames
-            npkgs=[]
-            for pkg in pkgs:
-                npkg=pkg.replace("+", "%2B")
-                npkgs.append(npkg)
-            pkgs=npkgs
+            pkgs=[pkg.replace("+", "%2B") for pkg in pkgs]
             # producing url
             for pkg in pkgs:
                 url+="&arg[]="+pkg
@@ -257,13 +245,10 @@ def detailinfo(res):
 def install(pkgs, rescount=0, cutted=[]):
     pkgpathes=[]
     pkgsout=[]
-    nums=[]
     packs=[]
     try:
         # Looking if pkgs are already in res
-        for pkg in pkgs:
-            ipkg=Informer(cutted, pkg, type="by_name", rescount=rescount)
-            nums.append(ipkg.num)
+        nums=[Informer(cutted, pkg, type="by_name", rescount=rescount).num for pkg in pkgs]
     except:
         if mode == "asp":
             rescount, cutted=aspinfo(pkgs, True)
@@ -375,8 +360,7 @@ def depts():
     this=LocalInfo()
     depends=[pkg for pkg in [dep.split(">")[0].split("<")[0].split("=")[0] for dep in this.pkgdata["deps"]+this.pkgdata["makedeps"]] if str(localdb.get_pkg(pkg)) == "None"]
     if len(depends) > 0:
-        res=resolve(depends, quiet=True)
-        rescount, cutted=info(res, True)
+        rescount, cutted=info(resolve(depends, quiet=True), True)
         if int(rescount) != 0:
             deps=[Informer(cutted, i).name for i in range(int(rescount))]
             curdir=os.getcwd()
@@ -423,15 +407,11 @@ def help():
         for arg in trans["help"][type]["content"]:
             print("      "+arg+(18-len(arg))*" "+": "+trans["help"][type]["content"][arg])
 
-def about():
-    pkg=localdb.get_pkg("buildaur")
-    print(trans["about"]%pkg.version)
-
 def hooks(type):
     hooks=os.popen("ls /etc/buildaur/"+type).read().split('\n')
     del hooks[-1]
     if len(hooks) > 0:
-        print(":: Running %s..."%type)
+        print(trans["running_hook"]%type)
         for hook in hooks:
             print(" "+hook+"...")
             os.system("/etc/buildaur/"+type+"/"+hook+" -u")
@@ -499,12 +479,11 @@ if __name__ == "__main__":
     elif args[1] in ["-h", "--help"]:
         help()
     elif args[1] == "--about":
-        about()
+        print(trans["about"]%localdb.get_pkg("buildaur").version)
     elif args[1] in ["--license", "-l"]:
         print(open("/usr/share/licenses/buildaur/LICENSE").read())
     elif args[1] in ["--version", "-v"]:
-        pkg=localdb.get_pkg("buildaur")
-        print(pkg.version)
+        print(localdb.get_pkg("buildaur").version)
     elif args[1] == "--listhooks":
         list_hooks()
     elif args[1] == "--hook-activate":
