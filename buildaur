@@ -371,35 +371,17 @@ def install(pkgs, rescount=0, cutted=[]):
         exit()
 
 def depts():
-    nedeps=[]
-    neaurdeps=[]
-    depends=[]
     print(trans["checking_deps"])
     this=LocalInfo()
-    udepends=this.pkgdata["deps"]+this.pkgdata["makedeps"]
-    for dep in udepends:
-        if ">" in dep:
-            depends.append(dep.split(">")[0])
-        elif "<" in dep:
-            depends.append(dep.split("<")[0])
-        elif "=" in dep:
-            depends.append(dep.split("=")[0])
-        else:
-            depends.append(dep)
-    for pkg in depends:
-        paca=localdb.get_pkg(pkg)
-        if str(paca) == "None":
-            nedeps.append(pkg)
-    if len(nedeps) > 0:
-        res=resolve(nedeps, quiet=True)
+    depends=[pkg for pkg in [dep.split(">")[0].split("<")[0].split("=")[0] for dep in this.pkgdata["deps"]+this.pkgdata["makedeps"]] if str(localdb.get_pkg(pkg)) == "None"]
+    if len(depends) > 0:
+        res=resolve(depends, quiet=True)
         rescount, cutted=info(res, True)
         if int(rescount) != 0:
-            for i in range(int(rescount)):
-                pkg=Informer(cutted, i)
-                neaurdeps.append(pkg.name)
+            deps=[Informer(cutted, i).name for i in range(int(rescount))]
             curdir=os.getcwd()
             os.chdir(home)
-            install(neaurdeps)
+            install(deps)
             os.chdir(curdir)
 
 def list_hooks():
