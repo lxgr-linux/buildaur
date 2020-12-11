@@ -235,10 +235,10 @@ def detailinfo(res):
     rescount, cutted=info(res, True)
     for i in range(int(rescount)):
         pkg=Informer(cutted, i)
-        for name, value in zip(["name", "pkgb", "ver", "lver", "desc", "main", "url", "fsub", "lsub", "pop", "votes", "oof"], [pkg.name, pkg.pkgbase, pkg.ver, pkg.localver, pkg.desc, pkg.maintainer, pkg.url, datetime.utcfromtimestamp(int(pkg.submitted)).strftime('%Y-%m-%d %H:%M:%S'), datetime.utcfromtimestamp(int(pkg.modified)).strftime('%Y-%m-%d %H:%M:%S'), pkg.popularity, pkg.votes, pkg.outdate if str(pkg.outdate) == 'None' else datetime.utcfromtimestamp(int(pkg.outdate)).strftime('%Y-%m-%d %H:%M:%S')]):
-            print(trans[name]+(trans["max_name_len"]-len(trans[name]))*" "+": "+str(value))
-        for name, value in zip(["license", "key", "deps", "makedeps", "optdeps"], [pkg.license, pkg.keywords, pkg.depends, pkg.makedepends, pkg.optdepends]):
-            print(trans[name]+(trans["max_name_len"]-len(trans[name]))*" "+": ", end='')
+        for name, value in zip(trans["info_single"], [pkg.name, pkg.pkgbase, pkg.ver, pkg.localver, pkg.desc, pkg.maintainer, pkg.url, datetime.utcfromtimestamp(int(pkg.submitted)).strftime('%Y-%m-%d %H:%M:%S'), datetime.utcfromtimestamp(int(pkg.modified)).strftime('%Y-%m-%d %H:%M:%S'), pkg.popularity, pkg.votes, pkg.outdate if str(pkg.outdate) == 'None' else datetime.utcfromtimestamp(int(pkg.outdate)).strftime('%Y-%m-%d %H:%M:%S')]):
+            print(trans["info_single"][name]+(trans["max_name_len"]-len(trans["info_single"][name]))*" "+": "+str(value))
+        for name, value in zip(trans["info_arrays"], [pkg.license, pkg.keywords, pkg.depends, pkg.makedepends, pkg.optdepends]):
+            print(trans["info_arrays"][name]+(trans["max_name_len"]-len(trans["info_arrays"][name]))*" "+": ", end='')
             liner(trans["max_name_len"]+2, value)
         print("")
 
