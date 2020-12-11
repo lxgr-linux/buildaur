@@ -215,7 +215,7 @@ class Informer():
 
 class LocalInfo():
     def __init__(self, asp=False, pkg=""):
-        path="~/Bash/buildaur/outputter.sh"
+        path="/usr/share/buildaur/outputter.sh"
         exec("self.pkgdata="+os.popen(path+" asp "+pkg if asp else path).read().split("\n")[0])
 
 
