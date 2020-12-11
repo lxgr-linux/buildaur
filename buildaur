@@ -153,7 +153,7 @@ def aspinfo(pkgs, quiet):
     for i, pkg in enumerate(pkgs):
         this=LocalInfo(True, pkg)
         pkgver=this.pkgdata["ver"]
-        if pkgver != "error":
+        if pkgver != "-":
             cutted.append({"Name": pkg, "Version": pkgver, "Description": "some pkg from asp", "OutOfDate": "None", "PackageBase": pkg})
             rescount+=1
         if quiet == False:
