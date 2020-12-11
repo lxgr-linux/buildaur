@@ -5,7 +5,7 @@ then
   pkgout="$(asp show $2 2>/dev/null)"
   echo "$pkgout" > ./PKGBUILD
 fi
-. ./PKGBUILD
+. ./PKGBUILD 2>/dev/null
 atributes=("'pkgnames'" "'arch'" "'deps'" "'makedeps'")
 arrays=("pkgname[@]" "arch[@]" "depends[@]" "makedepends[@]")
 out="{"

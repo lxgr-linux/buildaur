@@ -165,7 +165,8 @@ def update():
     willinst=[]
     pkgs=get_local_pkgs()
     res=resolve(pkgs)
-    rescount, cutted=aspinfo(pkgs, False) if mode == "asp" else info(res, False)
+    rescount, cutted=info(res, False)
+    rescount, cutted=aspinfo([pkg for pkg in pkgs if pkg not in [Informer(cutted, i).name for i in range(int(rescount))]], False) if mode == "asp" else (rescount, cutted)
     print(trans["checking"])
     for i in range(int(rescount)):
         pkg=Informer(cutted, i)
