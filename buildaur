@@ -31,6 +31,7 @@ handle=Handle(".", "/var/lib/pacman")
 localdb=handle.get_localdb()
 args=sys.argv
 black=open("/usr/share/buildaur/blacklist").read().split("\n")
+pkg_obs=[]
 # configfile
 conf=open("/etc/buildaur/buildaur.conf").read()
 try:
@@ -187,10 +188,11 @@ def update():
     if willinst == []:
         print(trans["nothing"])
     else:
-        install(willinst, pkgs)
+        install(willinst)
 
 class Informer():
     def __init__(self, cutted, pkg):
+        global pkg_obs
         splitted=cutted[pkg]
         self.num=pkg
         for name, sname in zip(["name", "ver", "votes", "outdate", "desc", "depends", "makedepends", "optdepends", "license", "url", "maintainer", "submitted", "modified", "popularity", "keywords" ,"pkgbase"], ["Name", "Version", "NumVotes", "OutOfDate", "Description", "Depends", "MakeDepends", "OptDepends", "License", "URL", "Maintainer", "FirstSubmitted", "LastModified", "Popularity", "Keywords", "PackageBase"]):
@@ -205,6 +207,7 @@ class Informer():
             self.localver="---"
         if self.keywords == []:
             self.keywords=["None"]
+        pkg_obs.append(self)
 
 
 class LocalInfo():
@@ -236,7 +239,7 @@ def detailinfo(res):
             liner(trans["max_name_len"]+2, value)
         print("")
 
-def install(pkgs, pkg_obs=[]):
+def install(pkgs):
     pkgpathes=[]
     start_pkgs=pkgs.copy()
     pkgs=[pkg for pkg in pkg_obs if pkg.name in start_pkgs]
@@ -351,10 +354,9 @@ def depts():
         rescount, cutted=info(resolve(depends, quiet=True), True)
         if int(rescount) != 0:
             deps=[Informer(cutted, i).name for i in range(int(rescount))]
-            ob_deps=[Informer(cutted, i) for i in range(int(rescount))]
             curdir=os.getcwd()
             os.chdir(home)
-            install(deps, ob_deps)
+            install(deps)
             os.chdir(curdir)
 
 def list_hooks():
