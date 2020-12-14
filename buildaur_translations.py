@@ -163,7 +163,7 @@ trans={
         "makedeps" : "Erstellungs Abhängigkeiten",
         "optdeps" : "Optionale Abhängigkeiten",
     },
-    "reinstalling" : " %sInfo:\033[0m %s-%s ist schon auf neuster Version -- reinstallire",
+    "reinstalling" : " %sInfo:\033[0m %s-%s ist schon auf neuster Version -- Reinstalliere",
     "updating" : " %sInfo:\033[0m %s-%s wird zu geupdatet %s",
     "error_not_found" : ":: %sERROR:\033[0m %s nicht gefunden!",
     "packages" : "Packete (%s): ",
