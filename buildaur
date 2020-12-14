@@ -3,6 +3,7 @@
 # this software is licensed under the GPL v3
 
 import os, urllib.request, time, sys, math, json, platform
+sys.path.append("/usr/share/buildaur/")
 import progressbar_buildaur as progressbar
 from buildaur_translations import *
 from pyalpm import Handle
