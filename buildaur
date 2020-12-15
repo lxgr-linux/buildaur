@@ -20,6 +20,7 @@ red="\033[31;1m"
 thic="\033[1m"
 # config file
 trans=trans[os.environ["LANG"][:2] if os.environ["LANG"][:2] in ["en", "de"] else "en"]
+replace_deps={"vte" : "vte-legacy"}
 proto="https"
 editor="nano"
 compmeth=".tar.zst"
@@ -44,9 +45,9 @@ def get_local_pkgs():
     return [pkg.name for pkg in localdb.search(".*") if pkg.packager == "Unknown Packager"]
 
 def options(string, optlen):
-    global mkopts, pcarg
+    global mkopts, pcarg, deps_from_local_file
     options.confirm=options.install=options.color=True
-    options.chroot=False
+    deps_from_local_file=options.chroot=False
     if string.find("n") != -1:
         options.confirm=False
         pcarg+=" --noconfirm"
@@ -65,6 +66,9 @@ def options(string, optlen):
     if string.find("ch") != -1:
         options.chroot=True
         optlen+=2
+    if string.find("dlf") != -1:
+        deps_from_local_file=True
+        optlen+=3
     if optlen != len(string):
         print(trans["error_opts"]%(red, string))
         exit(1)
@@ -309,7 +313,7 @@ def install(pkgs):
                 print(trans["exiting"])
                 exit()
             hooks("prehooks")
-            depts()
+            depts(pkg)
             # makepkg
             if options.chroot:
                 print(trans["update_chroot"])
@@ -347,10 +351,12 @@ def install(pkgs):
     else:
         exit()
 
-def depts():
+def depts(pkg):
+    global replace_deps, deps_from_local_file
     print(trans["checking_deps"])
-    this=LocalInfo()
-    depends=[pkg for pkg in [dep.split(">")[0].split("<")[0].split("=")[0] for dep in this.pkgdata["deps"]+this.pkgdata["makedeps"]] if str(localdb.get_pkg(pkg)) == "None"]
+    #this=LocalInfo()
+    depends=LocalInfo().pkgdata["deps"]+LocalInfo().pkgdata["makedeps"] if deps_from_local_file else pkg.depends+pkg.makedepends
+    depends=[pkg for pkg in [dep.split(">")[0].split("<")[0].split("=")[0] for dep in [dep if dep not in replace_deps else replace_deps[dep] for dep in depends]] if str(localdb.get_pkg(pkg)) == "None"]
     if len(depends) > 0:
         rescount, cutted=info(resolve(depends, quiet=True), True)
         if int(rescount) != 0:

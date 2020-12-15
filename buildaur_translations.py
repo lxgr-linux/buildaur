@@ -96,6 +96,7 @@ trans={
                 "ch" : "Builds the package in a clean chroot (you may run into some problems using this on archlinux arm!)",
                 "di" : "Just builds the package",
                 "co" : "Toggles colored output on and off",
+                "dlf" : "Pulls dependencies from PKGBUILD",
             },
         },
         "show" : {
@@ -225,6 +226,7 @@ trans={
                 "ch" : "Erstellt das Packet in einem sauberen chroot Ordner",
                 "di" : "Erstellt das Packet nur",
                 "co" : "Deaktiviert farbige Ausgabe",
+                "dlf" : "Holt Abhängigkeitsinformationen aus dem PKGBUILD",
             },
         },
         "show" : {
