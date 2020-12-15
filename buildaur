@@ -48,27 +48,11 @@ def options(string, optlen):
     global mkopts, pcarg, deps_from_local_file
     options.confirm=options.install=options.color=True
     deps_from_local_file=options.chroot=False
-    if string.find("n") != -1:
-        options.confirm=False
-        pcarg+=" --noconfirm"
-        optlen+=1
-    if string.find("di") != -1:
-        options.install=False
-        optlen+=2
-    if string.find("co") != -1:
-        global yellow, red, thic
-        mkopts+=" -m"
-        yellow=red=thic=""
-        optlen+=2
-    if string.find("spgp") != -1:
-        mkopts+=" --skippgpcheck"
-        optlen+=4
-    if string.find("ch") != -1:
-        options.chroot=True
-        optlen+=2
-    if string.find("dlf") != -1:
-        deps_from_local_file=True
-        optlen+=3
+    opts={'n' : 'global pcarg; options.confirm=False; pcarg+=" --noconfirm"', 'di' : 'options.install=False', 'co' : 'global yellow, red, thic, mkopts; mkopts+=" -m"; yellow=red=thic=""', 'spgp' : 'global mkopts; mkopts+=" --skippgpcheck"', 'ch' : 'options.chroot=True', 'dlf' : 'global deps_from_local_file; deps_from_local_file=True'}
+    for op in opts:
+        if string.find(op) != -1:
+             exec(opts[op])
+             optlen+=len(op)
     if optlen != len(string):
         print(trans["error_opts"]%(red, string))
         exit(1)
