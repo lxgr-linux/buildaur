@@ -189,7 +189,7 @@ trans={
     "error_root" : ":: %sERROR:\033[0m Führe dieses Skript NIEMALS als root aus, Dummkopf!",
     "error_no_opts" : ":: %sERROR:\033[0m Keine Optionen gegeben!",
     "error_no_pkgs" : ":: %sERROR:\033[0m Keine Packete gegeben!",
-    "error_makepkg": ":: %sERROR:\033[0m Ein Fehler trat beim erstellen von %s auf!",
+    "error_makepkg": ":: %sERROR:\033[0m Ein Fehler trat beim Erstellen von %s auf!",
     "error_search" : ":: %sERROR:\033[0m %s ist keine valide Suchoption!",
     "cleaning" : ":: Räume Builddir auf...",
     "will_removed" : "B werden entfernt!",
