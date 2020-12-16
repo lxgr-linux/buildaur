@@ -350,6 +350,7 @@ def deps(pkg):
             curdir=os.getcwd()
             os.chdir(home)
             install(deps)
+            print("")
             os.chdir(curdir)
 
 def list_hooks():
