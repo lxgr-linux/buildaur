@@ -297,7 +297,7 @@ def install(pkgs):
                 print(trans["exiting"])
                 exit()
             hooks("prehooks")
-            depts(pkg)
+            deps(pkg)
             # makepkg
             if options.chroot:
                 print(trans["update_chroot"])
@@ -335,11 +335,13 @@ def install(pkgs):
     else:
         exit()
 
-def depts(pkg):
+def deps(pkg):
     global replace_deps, deps_from_local_file
+    if mode == "asp":
+        return
     print(trans["checking_deps"])
-    #this=LocalInfo()
-    depends=LocalInfo().pkgdata["deps"]+LocalInfo().pkgdata["makedeps"] if deps_from_local_file else pkg.depends+pkg.makedepends
+    this=LocalInfo() if deps_from_local_file else ""
+    depends=this.pkgdata["deps"]+this.pkgdata["makedeps"] if deps_from_local_file else pkg.depends+pkg.makedepends
     depends=[pkg for pkg in [dep.split(">")[0].split("<")[0].split("=")[0] for dep in [dep if dep not in replace_deps else replace_deps[dep] for dep in depends]] if str(localdb.get_pkg(pkg)) == "None"]
     if len(depends) > 0:
         rescount, cutted=info(resolve(depends, quiet=True), True)
@@ -353,10 +355,7 @@ def depts(pkg):
 def list_hooks():
     hooktypes=["prehooks", "posthooks", "prerunhooks", "postrunhooks", "hooks"]
     for hookdir in hooktypes:
-        if hookdir == "hooks":
-            print(trans["hooks_off"])
-        else:
-            print(":: "+hookdir+":")
+        print(trans["hooks_off"] if hookdir == "hooks" else ":: "+hookdir+":")
         for hook in sorted(os.listdir("/etc/buildaur/"+hookdir)):
             print(" "+hook)
             print(os.popen('. /etc/buildaur/'+hookdir+'/'+hook+'; echo "  $desc"').read().split("\n")[0])
