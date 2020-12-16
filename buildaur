@@ -350,6 +350,7 @@ def deps(pkg):
             curdir=os.getcwd()
             os.chdir(home)
             install(deps)
+            print("")
             os.chdir(curdir)
 
 def list_hooks():
@@ -389,8 +390,7 @@ def help():
             print("      "+arg+(18-len(arg))*" "+": "+trans["help"][type]["content"][arg])
 
 def hooks(type):
-    hooks=os.popen("ls /etc/buildaur/"+type).read().split('\n')
-    del hooks[-1]
+    hooks=os.popen("ls /etc/buildaur/"+type).read().split('\n')[:-1]
     if len(hooks) > 0:
         print(trans["running_hook"]%type)
         for hook in hooks:
