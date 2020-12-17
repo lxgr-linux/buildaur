@@ -97,8 +97,7 @@ def resolve(pkgs, type="multiinfo", quiet=False, searchby="name"):
     res=[]
     # cut pkglists in 200 pkgs bytes
     pkgss=[pkgs[(i*200)-200:i*200] for i in range(math.ceil(len(pkgs)/200+1))][1:]
-    # if quiet == False:
-    print(trans["downloading"]+"\r" if not quiet else "", end="")
+    print(trans["downloading"]+"\n" if not quiet else "", end="", flush=True)
     for i, pkgs in enumerate(pkgss):
         url=proto+"://aur.archlinux.org/rpc/?v=5&type="+type
         if quiet == False and len(pkgss) > 1:
