@@ -261,7 +261,7 @@ def install(pkgs):
     # asking to continue
     print("\n"+trans["packages"]%str(len(pkgs)), end='')
     liner(len(trans["packages"]%str(len(pkgs))), [pkg.name+"-"+pkg.ver for pkg in pkgs])
-    ask=input(trans["continnue"]) if options.confirm else "y"
+    ask=input(trans["continue"]) if options.confirm else "y"
     if ask == "Y" or ask == "y" or ask == "":
         print("")
         max=str(len(pkgs))
