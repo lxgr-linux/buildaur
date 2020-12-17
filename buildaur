@@ -95,25 +95,21 @@ def sorter(ver1, ver2):
 
 def resolve(pkgs, type="multiinfo", quiet=False, searchby="name"):
     res=[]
-    m=1
     # cut pkglists in 200 pkgs bytes
     pkgss=[pkgs[(i*200)-200:i*200] for i in range(math.ceil(len(pkgs)/200+1))][1:]
-    if quiet == False:
-        print(trans["downloading"])
-    for pkgs in pkgss:
+    # if quiet == False:
+    print(trans["downloading"]+"\r" if not quiet else "", end="")
+    for i, pkgs in enumerate(pkgss):
         url=proto+"://aur.archlinux.org/rpc/?v=5&type="+type
         if quiet == False and len(pkgss) > 1:
-            progressbar.progress(m, len(pkgss), trans["downloading2"])
-            m+=1
+            progressbar.progress(i+1, len(pkgss), trans["downloading2"])
         if len(pkgs) == 0:
             exit()
         if type == "search":
             url+="&by="+searchby+"&arg="+pkgs[0]
         else:
-            # name processing to avoid bad packagenames
-            pkgs=[pkg.replace("+", "%2B") for pkg in pkgs]
-            # producing url
-            for pkg in pkgs:
+            # producing url and name processing to avoid bad packagenames
+            for pkg in [pkg.replace("+", "%2B") for pkg in pkgs]:
                 url+="&arg[]="+pkg
         try:
             r=urllib.request.urlopen(url)
