@@ -257,6 +257,14 @@ def install(pkgs):
     print("\n"+trans["packages"]%str(len(pkgs)), end='')
     liner(len(trans["packages"]%str(len(pkgs))), [pkg.name+"-"+pkg.ver for pkg in pkgs])
     ask=input(trans["continue"]) if options.confirm else trans["yes"]
+    if ask not in [trans["yes"].capitalize(), trans["yes"], trans["no"].capitalize(), trans["no"], ""]:
+        try:
+            exec("global askarr; askarr="+ask)
+            if type(askarr) is list:
+                pkgs=[pkgs[i] for i in range(len(pkgs)) if i in askarr]
+                ask=trans["yes"]
+        except:
+            pass
     if ask == trans["yes"].capitalize() or ask == trans["yes"] or ask == "":
         print("")
         max=str(len(pkgs))
