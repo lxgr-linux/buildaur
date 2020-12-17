@@ -256,13 +256,12 @@ def install(pkgs):
     # asking to continue
     print("\n"+trans["packages"]%str(len(pkgs)), end='')
     liner(len(trans["packages"]%str(len(pkgs))), [pkg.name+"-"+pkg.ver for pkg in pkgs])
-    ask=input(trans["continue"]) if options.confirm else "y"
-    if ask == "Y" or ask == "y" or ask == "":
+    ask=input(trans["continue"]) if options.confirm else trans["yes"]
+    if ask == trans["yes"].capitalize() or ask == trans["yes"] or ask == "":
         print("")
         max=str(len(pkgs))
         for i, pkg in enumerate(pkgs):
             # full makeprocess
-            # vars
             print(trans["making"]%(str(i+1), max, thic, pkg.name))
             # Git repository
             os.chdir(home+"/.cache/buildaur/build")
@@ -284,11 +283,11 @@ def install(pkgs):
                 print(trans["print_pkgdiff"])
                 diff=os.popen('git diff $(git log --pretty=format:"%h" | head -2 | xargs)').read()
                 print("\033[37m"+diff+"\033[0m", end="")
-            ask=input(trans["edit"]) if options.confirm else "n"
-            if ask in ['y', 'Y']:
+            ask=input(trans["edit"]) if options.confirm else trans["no"]
+            if ask in [trans["yes"], trans["yes"].capitalize()]:
                 os.system(editor+" ./PKGBUILD")
                 print(trans["goingon"])
-            if ask in ['c', 'C']:
+            if ask in [trans["cancel"], trans["cancel"].capitalize()]:
                 print(trans["exiting"])
                 exit()
             hooks("prehooks")
