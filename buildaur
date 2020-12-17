@@ -336,7 +336,7 @@ def deps(pkg):
     print(trans["checking_deps"])
     this=LocalInfo() if deps_from_local_file else ""
     depends=this.pkgdata["deps"]+this.pkgdata["makedeps"] if deps_from_local_file else pkg.depends+pkg.makedepends
-    depends=[pkg for pkg in [dep.split(">")[0].split("<")[0].split("=")[0] for dep in [dep if dep not in replace_deps else replace_deps[dep] for dep in depends]] if str(localdb.get_pkg(pkg)) == "None"]
+    depends=[pkg for pkg in [dep.split(">")[0].split("<")[0].split("=")[0] for dep in [dep if dep not in replace_deps else replace_deps[dep] for dep in depends if dep != "None"]] if str(localdb.get_pkg(pkg)) == "None"]
     if len(depends) > 0:
         rescount, cutted=info(resolve(depends, quiet=True), True)
         if int(rescount) != 0:
