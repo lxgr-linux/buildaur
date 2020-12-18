@@ -68,7 +68,7 @@ Usage: /usr/bin/buildaur <option> <string><br>
    Additional options for -Q,-Qs<br>
       q                 : Just outputs pknames and vers<br>
       qq                : JUST outputs pknames<br>
-      --by              : Defines the value that should be searched by (values: name name-desc maintainer depends makedepends optdepends checkdepends<br>
+      --by              : Defines the value that should be searched by (values: name name-desc maintainer depends makedepends optdepends checkdepends)<br>
 <br>
    Hookoptions:<br>
       --listhooks       : Lists all available and installed hooks<br>

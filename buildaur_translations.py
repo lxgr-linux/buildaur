@@ -113,7 +113,7 @@ trans={
             "content" : {
                 "q" : "Just outputs pknames and vers",
                 "qq" : "JUST outputs pknames",
-                "--by" : "Defines the value that should be searched by (values: name name-desc maintainer depends makedepends optdepends checkdepends",
+                "--by" : "Defines the value that should be searched by (values: name name-desc maintainer depends makedepends optdepends checkdepends)",
             },
         },
         "hooks" : {
@@ -246,7 +246,7 @@ trans={
             "content" : {
                 "q" : "Gibt nur Packetname und Version aus",
                 "qq" : "Gibt nur Packetnamen aus",
-                "--by" : "Suchoption nach der gesucht werden soll (Werte: name name-desc maintainer depends makedepends optdepends checkdepends",
+                "--by" : "Suchoption nach der gesucht werden soll (Werte: name name-desc maintainer depends makedepends optdepends checkdepends)",
             },
         },
         "hooks" : {
