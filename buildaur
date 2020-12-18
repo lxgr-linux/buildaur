@@ -144,9 +144,8 @@ def aspinfo(pkgs, quiet=False):
             progressbar.progress(i+1, int(len(pkgs)), "Collecting "+pkg+"...")
     return rescount, cutted
 
-def update():
+def update(willinst=[]):
     msg=[]
-    willinst=[]
     pkgs=get_local_pkgs()
     res=resolve(pkgs)
     rescount, cutted=info(res, False)
@@ -410,11 +409,11 @@ if __name__ == "__main__":
     # args
     if args[1][:4] == "-Syu":
         options(args[1], 4)
-        update()
+        update(args[2:])
     elif args[1][:6] == "-aspyu":
         options(args[1], 6)
         mode="asp"
-        update()
+        update(args[2:])
     elif args[1][:2] == "-S":
         options(args[1], 2)
         pkgs=args[2:]
