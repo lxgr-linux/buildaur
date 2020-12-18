@@ -9,37 +9,6 @@ from buildaur_translations import *
 from pyalpm import Handle
 from pathlib import Path
 from datetime import datetime
-# res=os.popen("cat /usr/share/buildaur/res").read()
-
-# global home and pathchecking
-home=str(Path.home())
-Path(home+"/.cache/buildaur/build").mkdir(parents=True, exist_ok=True)
-# colors
-yellow="\033[33;1m"
-red="\033[31;1m"
-thic="\033[1m"
-# config file
-trans=trans[os.environ["LANG"][:2] if os.environ["LANG"][:2] in ["en", "de"] else "en"]
-replace_deps={"vte" : "vte-legacy"}
-proto="https"
-editor="nano"
-compmeth=".tar.zst"
-mode="normal"
-showPKGBUILD=True
-showDiff=False
-ask_warn_inst=False
-pcarg=mkopts=""
-handle=Handle(".", "/var/lib/pacman")
-localdb=handle.get_localdb()
-args=sys.argv
-black=open("/usr/share/buildaur/blacklist").read().split("\n")
-pkg_obs=[]
-# configfile
-conf=open("/etc/buildaur/buildaur.conf").read()
-try:
-    exec(conf)
-except:
-    print(trans["conf_warning"]%(yellow))
 
 def get_local_pkgs():
     return [pkg.name for pkg in localdb.search(".*") if pkg.packager == "Unknown Packager"]
@@ -397,7 +366,7 @@ def hooks(type):
             print(" "+hook+"...")
             os.system("/etc/buildaur/"+type+"/"+hook+" -u")
 
-if __name__ == "__main__":
+def main():
     # checking for root
     if home == "/root":
         print(trans["error_root"]%red)
@@ -510,12 +479,45 @@ if __name__ == "__main__":
         for i in range(int(rescount)):
             os.chdir(home+"/.cache/buildaur/build")
             pkg=Informer(cutted, i)
-            os.system("rm -rf ./%s 2>/dev/null; git clone %s://aur.archlinux.org/%s 2>/dev/null"%(pkg.name, proto, pkg.name))
-            os.chdir(os.getcwd()+"/"+pkg.name)
+            os.system("rm -rf ./%s 2>/dev/null; git clone %s://aur.archlinux.org/%s 2>/dev/null"%(pkg.pkgbase, proto, pkg.pkgbase))
+            os.chdir(os.getcwd()+"/"+pkg.pkgbase)
             if secarg == "--diff":
                 os.system('git diff $(git log --pretty=format:"%h" | head -2 | xargs)')
             else:
-                pkgbuild = open("PKGBUILD", "rt").read()
-                print(pkgbuild)
+                print(open("PKGBUILD", "rt").read())
     else:
         print(trans["error_opts"]%(red, args[1]))
+
+# global home and pathchecking
+home=str(Path.home())
+Path(home+"/.cache/buildaur/build").mkdir(parents=True, exist_ok=True)
+# colors
+yellow="\033[33;1m"
+red="\033[31;1m"
+thic="\033[1m"
+# config file
+trans=trans[os.environ["LANG"][:2] if os.environ["LANG"][:2] in ["en", "de"] else "en"]
+replace_deps={"vte" : "vte-legacy"}
+proto="https"
+editor="nano"
+compmeth=".tar.zst"
+mode="normal"
+showPKGBUILD=True
+showDiff=ask_warn_inst=False
+pcarg=mkopts=""
+handle=Handle(".", "/var/lib/pacman")
+localdb=handle.get_localdb()
+args=sys.argv
+black=open("/usr/share/buildaur/blacklist").read().split("\n")
+pkg_obs=[]
+
+if __name__ == "__main__":
+    conf=open("/etc/buildaur/buildaur.conf").read()
+    try:
+        exec(conf)
+    except:
+        print(trans["conf_warning"]%(yellow))
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("KeyboardInterrupt")
