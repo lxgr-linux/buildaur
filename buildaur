@@ -128,20 +128,19 @@ def info(ress, quiet=False):
         cutted+=jsons["results"]
     return rescount, cutted
 
-def aspinfo(pkgs, quiet):
-    cutted=[]
+def aspinfo(pkgs, quiet=False):
     rescount=0
+    cutted=[]
     print(trans["update_asp"])
     os.system("asp update 2>/dev/null")
-    if quiet == False:
-        print(trans["collecting"])
+    print(trans["collecting"]+"\n" if not quiet else "", end="", flush=True)
     for i, pkg in enumerate(pkgs):
         this=LocalInfo(True, pkg)
         pkgver=this.pkgdata["ver"]
         if pkgver != "-":
             cutted.append({"Name": pkg, "Version": pkgver, "Description": "some pkg from asp", "OutOfDate": "None", "PackageBase": pkg})
             rescount+=1
-        if quiet == False:
+        if not quiet:
             progressbar.progress(i+1, int(len(pkgs)), "Collecting "+pkg+"...")
     return rescount, cutted
 
@@ -151,7 +150,7 @@ def update():
     pkgs=get_local_pkgs()
     res=resolve(pkgs)
     rescount, cutted=info(res, False)
-    rescount, cutted=aspinfo([pkg for pkg in pkgs if pkg not in [Informer(cutted, i).name for i in range(int(rescount))]], False) if mode == "asp" else (rescount, cutted)
+    rescount, cutted=aspinfo([pkg for pkg in pkgs if pkg not in [Informer(cutted, i).name for i in range(int(rescount))]]) if mode == "asp" else (rescount, cutted)
     print(trans["checking"])
     pkgs=[Informer(cutted, i) for i in range(int(rescount))]
     for i, pkg in enumerate(pkgs):
@@ -508,8 +507,7 @@ if __name__ == "__main__":
                 exit(1)
         else:
             del pkgs[0:2]
-        res=resolve(pkgs, quiet=True)
-        rescount, cutted=info(res, True)
+        rescount, cutted=info(resolve(pkgs, quiet=True), True)
         for i in range(int(rescount)):
             os.chdir(home+"/.cache/buildaur/build")
             pkg=Informer(cutted, i)

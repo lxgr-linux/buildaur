@@ -22,8 +22,8 @@ $ makepkg -si
 
 Then the installation will be finished.
 
-NOTE: If you are using manjaro linux you have to install asp first, which is not in the manjaro repository.
-To do this just asps git repo:
+NOTE: If you are using manjaro linux and want to use the asp functionality of buildaur, you have to install asp, which is not in the manjaro repositorys.
+To do this just clone asps git repo:
 
 $ git clone https://aur.archlinux.org/asp.git
 
@@ -40,7 +40,6 @@ buildaur - An AUR helper with asp support<br>
 Usage: /usr/bin/buildaur <option> <string><br>
    General options:<br>
       -S                : Installs a package<br>
-      -R                : Removes a package<br>
       -Q                : Lists installed packages or searches for ones in the AUR<br>
       -Qs               : Search the AUR<br>
       -Qi               : Gives detailed package information<br>
@@ -60,6 +59,7 @@ Usage: /usr/bin/buildaur <option> <string><br>
       ch                : Builds the package in a clean chroot (you may run into some problems using this on archlinux arm!)<br>
       di                : Just builds the package<br>
       co                : Toggles colored output on and off<br>
+      dlf               : Pulls dependencies from PKGBUILD<br>
 <br>
 <br>
    Additional options for --show:<br>
@@ -124,6 +124,7 @@ showDiff=0 # Print out diffs between former and current PKGBUILD version before 
 ask_warn_inst=0 # Ask to update packages which are higher than AUR<br>
 pcarg="" # Default arguments for pacman<br>
 mkopts="" # Default arguments for makepkg<br>
+replace_deps={"vte" : "vte-legacy"} # Items in dependency which should be replaced with another one<br>
 Bash only options:<br>
 sudoreset=1 # Reset sudo before PKGBUILD<br>
 layout="new" # Old or new look of buildaur<br>
