@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # maintainer lxgr <lxgr@protonmail.com>
 # this software is licensed under the GPL v3
+# test
 
 import os, urllib.request, time, sys, math, json, platform
 sys.path.append("/usr/share/buildaur/")
