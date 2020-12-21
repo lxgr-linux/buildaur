@@ -62,7 +62,7 @@ def resolve(pkgs, type="multiinfo", quiet=False, searchby="name"):
         url=proto+"://aur.archlinux.org/rpc/?v=5&type="+type
         if len(pkgs) == 0:
             exit()
-        if quiet == False and len(pkgss) > 1:
+        if not quiet and len(pkgss) > 1:
             progressbar.progress(i+1, len(pkgss), trans["downloading2"])
         if type == "search":
             url+="&by="+searchby+"&arg="+pkgs[0]
@@ -243,12 +243,11 @@ def install(pkgs):
             # edit
             if showPKGBUILD:
                 print(trans["print_pkgb"])
-                pkgbuild=open("PKGBUILD", "rt").read()
-                print("\033[37m"+str(pkgbuild)+"\033[0m", end="")
+                print("\033[37m"+str(open("PKGBUILD", "rt").read())+"\033[0m", end="")
             if showDiff:
                 print(trans["print_pkgdiff"])
-                diff=os.popen('git diff $(git log --pretty=format:"%h" | head -2 | xargs)').read()
-                print("\033[37m"+diff+"\033[0m", end="")
+                os.system('git diff '+os.popen('git log --pretty=format:"%h" | head -2 | xargs').read().split(" ")[1])
+                print("\033[37m"+os.popen('git diff '+os.popen('git log --pretty=format:"%h" | head -2 | xargs').read().split(" ")[1]).read()+"\033[0m", end="")
             ask=input(trans["edit"]) if options.confirm else trans["no"]
             if ask in [trans["yes"], trans["yes"].capitalize()]:
                 os.system(editor+" ./PKGBUILD")
@@ -275,7 +274,7 @@ def install(pkgs):
             hooks("posthooks")
             # Defining pkgpath
             this=LocalInfo()
-            arch='any' if "any" in this.pkgdata["arch"] else platform.machine()
+            arch="any" if "any" in this.pkgdata["arch"] else platform.machine()
             # versioning for packages with multiple packagenames
             for pkgname in this.pkgdata["pkgnames"]:
                 pkgpathes.append(os.getcwd()+"/"+pkgname+"-"+this.pkgdata["ver"]+"-"+arch+".pkg"+compmeth)
@@ -473,7 +472,7 @@ def main():
             os.system("rm -rf ./%s 2>/dev/null; git clone %s://aur.archlinux.org/%s 2>/dev/null"%(pkg.pkgbase, proto, pkg.pkgbase))
             os.chdir(os.getcwd()+"/"+pkg.pkgbase)
             if secarg == "--diff":
-                os.system('git diff $(git log --pretty=format:"%h" | head -2 | xargs)')
+                os.system('git diff '+os.popen('git log --pretty=format:"%h" | head -2 | xargs').read().split(" ")[1])
             else:
                 print(open("PKGBUILD", "rt").read())
     else:
