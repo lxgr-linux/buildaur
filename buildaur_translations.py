@@ -18,8 +18,8 @@ trans={
     "nothing" : " Nothing to do",
     "info_single" : {
         "name" : "Name",
-        "ver" : "Version",
         "pkgb" : "Package-base",
+        "ver" : "Version",
         "lver" : "Local Version",
         "desc" : "Description",
         "main" : "Maintainer",
@@ -151,8 +151,8 @@ trans={
     "nothing" : " Nichts zu tun",
     "info_single" : {
         "name" : "Name",
-        "ver" : "Version",
         "pkgb" : "Packetbasis",
+        "ver" : "Version",
         "lver" : "Lokale Version",
         "desc" : "Beschreibung",
         "main" : "Instandhalter",
