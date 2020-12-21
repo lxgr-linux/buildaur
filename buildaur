@@ -14,9 +14,6 @@ def get_local_pkgs():
     return [pkg.name for pkg in localdb.search(".*") if pkg.packager == "Unknown Packager"]
 
 def options(string, optlen):
-    global mkopts, pcarg, deps_from_local_file
-    options.confirm=options.install=options.color=True
-    deps_from_local_file=options.chroot=False
     opts={'n' : 'global pcarg; options.confirm=False; pcarg+=" --noconfirm"', 'di' : 'options.install=False', 'co' : 'global yellow, red, thic, mkopts; mkopts+=" -m"; yellow=red=thic=""', 'spgp' : 'global mkopts; mkopts+=" --skippgpcheck"', 'ch' : 'options.chroot=True', 'dlf' : 'global deps_from_local_file; deps_from_local_file=True'}
     for op in opts:
         if string.find(op) != -1:
@@ -39,28 +36,22 @@ def liner(length, names, sep=""):
     print("")
 
 def sorter(ver1, ver2):
-	arr1=ver1.split("-")[0].split(".")
-	arr2=ver2.split("-")[0].split(".")
-	for i in range(sorted([len(arr2), len(arr1)])[1]):
-		try:
-			a=arr1[i]
-		except:
-			a="0"
-		try:
-			b=arr2[i]
-		except:
-			b="0"
-		arg1=len(b)*"0"+a
-		arg2=len(a)*"0"+b
-		arrs=[arg1, arg2]
-		if sorted(arrs)[0] == arg2 and arg1 != arg2:
-			return ver1
-		elif sorted(arrs)[0] == arg1 and arg1 != arg2:
-			return ver2
-	if ver1.split("-")[1] > ver2.split("-")[1]:
-		return ver1
-	elif ver2.split("-")[1] > ver1.split("-")[1]:
-		return ver2
+    arr1=ver1.split("-")[0].split(".")
+    arr2=ver2.split("-")[0].split(".")
+    for i in range(sorted([len(arr2), len(arr1)])[1]):
+        a=arr1[i] if i < len(arr1) else "0"
+        b=arr2[i] if i < len(arr2) else "0"
+        arg1=len(b)*"0"+a
+        arg2=len(a)*"0"+b
+        arrs=[arg1, arg2]
+        if sorted(arrs)[0] == arg2 and arg1 != arg2:
+            return ver1
+        elif sorted(arrs)[0] == arg1 and arg1 != arg2:
+            return ver2
+    if ver1.split("-")[1] > ver2.split("-")[1]:
+        return ver1
+    elif ver2.split("-")[1] > ver1.split("-")[1]:
+        return ver2
 
 def resolve(pkgs, type="multiinfo", quiet=False, searchby="name"):
     res=[]
@@ -69,10 +60,10 @@ def resolve(pkgs, type="multiinfo", quiet=False, searchby="name"):
     print(trans["downloading"]+"\n" if not quiet else "", end="", flush=True)
     for i, pkgs in enumerate(pkgss):
         url=proto+"://aur.archlinux.org/rpc/?v=5&type="+type
-        if quiet == False and len(pkgss) > 1:
-            progressbar.progress(i+1, len(pkgss), trans["downloading2"])
         if len(pkgs) == 0:
             exit()
+        if quiet == False and len(pkgss) > 1:
+            progressbar.progress(i+1, len(pkgss), trans["downloading2"])
         if type == "search":
             url+="&by="+searchby+"&arg="+pkgs[0]
         else:
@@ -497,6 +488,8 @@ red="\033[31;1m"
 thic="\033[1m"
 # config file
 trans=trans[os.environ["LANG"][:2] if os.environ["LANG"][:2] in ["en", "de"] else "en"]
+options.confirm=options.install=options.color=True
+deps_from_local_file=options.chroot=False
 replace_deps={"vte" : "vte-legacy"}
 proto="https"
 editor="nano"
