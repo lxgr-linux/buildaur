@@ -294,7 +294,7 @@ def install(pkgs):
     else:
         exit()
 
-def deps(pkg):
+def deps(pkg, install=True):
     global replace_deps, deps_from_local_file
     if mode == "asp":
         return
@@ -306,11 +306,14 @@ def deps(pkg):
         rescount, cutted=info(resolve(depends, quiet=True), True)
         if int(rescount) != 0:
             deps=[Informer(cutted, i).name for i in range(int(rescount))]
-            curdir=os.getcwd()
-            os.chdir(home)
-            install(deps)
-            print("")
-            os.chdir(curdir)
+            if install:
+                curdir=os.getcwd()
+                os.chdir(home)
+                install(deps)
+                print("")
+                os.chdir(curdir)
+            else:
+                return deps
 
 def list_hooks():
     hooktypes=["prehooks", "posthooks", "prerunhooks", "postrunhooks", "hooks"]
