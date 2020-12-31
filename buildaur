@@ -313,8 +313,7 @@ def deps(pkg, do_install=True, quiet=False):
                 print("")
                 os.chdir(curdir)
             else:
-                res=resolve(deps)
-                rescount, cutted=info(res)
+                rescount, cutted=info(resolve(deps, quiet=True))
                 deps=[Informer(cutted, i) for i in range(rescount)]
                 return deps
     return []
