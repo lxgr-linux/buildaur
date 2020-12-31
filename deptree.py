@@ -14,9 +14,10 @@ def main(names):
     rescount, cutted=info(resolve(names))
     for i in range(rescount):
         pkg=Informer(cutted, i)
+        print(names[i], end="")
         for pkg in branch([pkg]):
-            print(pkg.name, end=" ")
-    print("")
+            print("-"+pkg.name, end="")
+        print("")
 
 if __name__ == "__main__":
-    main(["python2-wnck"])
+    main(["gtkdialog"])
