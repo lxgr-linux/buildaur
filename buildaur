@@ -294,11 +294,11 @@ def install(pkgs):
     else:
         exit()
 
-def deps(pkg, install=True):
+def deps(pkg, do_install=True, quiet=False):
     global replace_deps, deps_from_local_file
     if mode == "asp":
         return
-    print(trans["checking_deps"])
+    print(trans["checking_deps"]+"\n" if not quiet else "", end="", flush=True)
     this=LocalInfo() if deps_from_local_file else ""
     depends=this.pkgdata["deps"]+this.pkgdata["makedeps"] if deps_from_local_file else pkg.depends+pkg.makedepends
     depends=[pkg for pkg in [dep.split(">")[0].split("<")[0].split("=")[0] for dep in [dep if dep not in replace_deps else replace_deps[dep] for dep in depends if dep != "None"]] if str(localdb.get_pkg(pkg)) == "None"]
@@ -306,14 +306,18 @@ def deps(pkg, install=True):
         rescount, cutted=info(resolve(depends, quiet=True), True)
         if int(rescount) != 0:
             deps=[Informer(cutted, i).name for i in range(int(rescount))]
-            if install:
+            if do_install:
                 curdir=os.getcwd()
                 os.chdir(home)
                 install(deps)
                 print("")
                 os.chdir(curdir)
             else:
+                res=resolve(deps)
+                rescount, cutted=info(res)
+                deps=[Informer(cutted, i) for i in range(rescount)]
                 return deps
+    return []
 
 def list_hooks():
     hooktypes=["prehooks", "posthooks", "prerunhooks", "postrunhooks", "hooks"]
