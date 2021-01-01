@@ -269,7 +269,7 @@ def install(pkgs):
                     print(trans["print_pkgdiff"])
                     os.system('git diff '+os.popen('git log --pretty=format:"%h" | head -2 | xargs').read().split(" ")[1])
                     print("\033[37m"+os.popen('git diff '+os.popen('git log --pretty=format:"%h" | head -2 | xargs').read().split(" ")[1]).read()+"\033[0m", end="")
-                for file in [file for file in os.listdir() if (file[0] != "." and file[-4:] not in [".jpg", ".png"])]:
+                for file in [file for file in os.listdir() if (file[0] != "." and file[-4:] not in [".jpg", ".png", ".svg"])]:
                     if showPKGBUILD:
                         print(trans["print_pkgb"]%(file))
                         print("\033[37m"+str(open(file, "rt").read())+"\033[0m", end="")
