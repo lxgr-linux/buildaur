@@ -212,12 +212,12 @@ def install(pkgs):
         print(trans["nothing"])
         exit(0)
     # Searching for unresolved dependecies
-    line=pkgs.copy()
+    line=[pkg.name+"-"+pkg.ver for pkg in pkgs]
     if not (deps_from_local_file or mode == "asp"):
         print(trans["checking_deps"])
         depends=tree(pkgs)
         for arr in depends:
-            line+=arr
+            line+=[pkg.name+"-"+pkg.ver+" [dep]" for pkg in arr]
     else:
         depends=[]
     # Checking packages for atributes
@@ -234,7 +234,7 @@ def install(pkgs):
             print(trans["warning_out-of-date"]%(yellow, pkg.name, datetime.utcfromtimestamp(int(pkg.outdate)).strftime('%Y-%m-%d %H:%M:%S')))
     # asking to continue
     print("\n"+trans["packages"]%str(len(line)), end='')
-    liner(len(trans["packages"]%str(len(line))), [pkg.name+"-"+pkg.ver for pkg in line])
+    liner(len(trans["packages"]%str(len(line))), line)
     ask=input(trans["continue"]) if options.confirm else trans["yes"]
     if ask not in [trans["yes"].capitalize(), trans["yes"], trans["no"].capitalize(), trans["no"], ""]:
         try:
