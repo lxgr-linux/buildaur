@@ -21,6 +21,12 @@ def branch(pkgs):
 def tree(names):
     ret=[arr for arr in branch(names) if len(arr) != 0]
     ret.reverse()
+    for i in range(len(ret)):
+        for pkg in ret[i]:
+            for arr in ret[i+1:]:
+                namearr=[pkg.name for pkg in arr]
+                if pkg.name in namearr:
+                    del arr[namearr.index(pkg.name)]
     return ret
 
 def get_local_pkgs():
