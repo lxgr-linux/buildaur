@@ -12,8 +12,8 @@ from datetime import datetime
 
 def branch(pkgs):
     alldeps=[]
-    for pkg in pkgs:
-        alldeps.append(deps(pkg, do_install=False, quiet=True))
+    if len(pkgs) != 0:
+        alldeps.append(deps(pkgs, do_install=False, quiet=True))
     if len(alldeps) != 0:
         alldeps+=branch(alldeps[0])
     return alldeps
@@ -281,7 +281,7 @@ def install(pkgs):
                         print(trans["exiting"])
                         exit()
                 hooks("prehooks")
-                deps(pkg)
+                deps([pkg])
                 # makepkg
                 if options.chroot:
                     print(trans["update_chroot"])
@@ -319,7 +319,7 @@ def install(pkgs):
     else:
         exit()
 
-def deps(pkg, do_install=True, quiet=False):
+def deps(pkgs, do_install=True, quiet=False):
     global replace_deps, deps_from_local_file
     if mode == "asp":
         return
@@ -327,7 +327,10 @@ def deps(pkg, do_install=True, quiet=False):
     localdb=handle.get_localdb()
     print(trans["checking_deps"]+"\n" if not quiet else "", end="", flush=True)
     this=LocalInfo() if deps_from_local_file else ""
-    depends=this.pkgdata["deps"]+this.pkgdata["makedeps"] if deps_from_local_file else pkg.depends+pkg.makedepends
+    depends=[]
+    for pkg in pkgs:
+        depends+=pkg.depends+pkg.makedepends
+    depends=this.pkgdata["deps"]+this.pkgdata["makedeps"] if deps_from_local_file else depends
     depends=[pkg for pkg in [dep.split(">")[0].split("<")[0].split("=")[0] for dep in [dep if dep not in replace_deps else replace_deps[dep] for dep in depends if dep != "None"]] if str(localdb.get_pkg(pkg)) == "None"]
     if len(depends) > 0:
         rescount, cutted=info(resolve(depends, quiet=True), True)

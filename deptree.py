@@ -4,8 +4,8 @@ from buildaur import *
 
 def branch(pkgs):
     alldeps=[]
-    for pkg in pkgs:
-        alldeps.append(deps(pkg, do_install=False, quiet=True))
+    if len(pkgs) != 0:
+        alldeps.append(deps(pkgs, do_install=False, quiet=True))
     if len(alldeps) != 0:
         alldeps+=branch(alldeps[0])
     return alldeps
