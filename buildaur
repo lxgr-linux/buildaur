@@ -265,20 +265,21 @@ def install(pkgs):
                         os.system("git clone "+proto+"://aur.archlinux.org/"+pkg.pkgbase+".git")
                 os.chdir(os.getcwd()+"/"+pkg.pkgbase)
                 # edit
-                if showPKGBUILD:
-                    print(trans["print_pkgb"])
-                    print("\033[37m"+str(open("PKGBUILD", "rt").read())+"\033[0m", end="")
                 if showDiff:
                     print(trans["print_pkgdiff"])
                     os.system('git diff '+os.popen('git log --pretty=format:"%h" | head -2 | xargs').read().split(" ")[1])
                     print("\033[37m"+os.popen('git diff '+os.popen('git log --pretty=format:"%h" | head -2 | xargs').read().split(" ")[1]).read()+"\033[0m", end="")
-                ask=input(trans["edit"]) if options.confirm else trans["no"]
-                if ask in [trans["yes"], trans["yes"].capitalize()]:
-                    os.system(editor+" ./PKGBUILD")
-                    print(trans["goingon"])
-                if ask in [trans["cancel"], trans["cancel"].capitalize()]:
-                    print(trans["exiting"])
-                    exit()
+                for file in [file for file in os.listdir() if (file[0] != "." and file[-4:] not in [".jpg", ".png"])]:
+                    if showPKGBUILD:
+                        print(trans["print_pkgb"]%(file))
+                        print("\033[37m"+str(open(file, "rt").read())+"\033[0m", end="")
+                    ask=input(trans["edit"]%(file)) if options.confirm else trans["no"]
+                    if ask in [trans["yes"], trans["yes"].capitalize()]:
+                        os.system(editor+" "+file)
+                        print(trans["goingon"])
+                    if ask in [trans["cancel"], trans["cancel"].capitalize()]:
+                        print(trans["exiting"])
+                        exit()
                 hooks("prehooks")
                 deps(pkg)
                 # makepkg
