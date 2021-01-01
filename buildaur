@@ -10,6 +10,26 @@ from pyalpm import Handle
 from pathlib import Path
 from datetime import datetime
 
+def branch(pkgs):
+    alldeps=[]
+    for pkg in pkgs:
+        alldeps.append(deps(pkg, do_install=False, quiet=True))
+    if len(alldeps) != 0:
+        alldeps+=branch(alldeps[0])
+    return alldeps
+
+def tree(names):
+    # rescount, cutted=info(resolve(names))
+    # for i in range(rescount):
+    #     pkg=Informer(cutted, i)
+    ret=[arr for arr in branch(names) if len(arr) != 0]
+    ret.reverse()
+    return ret
+        # print(ret)
+        # for arr in ret:
+        #     for pkg in arr:
+        #         print(pkg.name)
+
 def get_local_pkgs():
     return [pkg.name for pkg in localdb.search(".*") if pkg.packager == "Unknown Packager"]
 
@@ -182,7 +202,6 @@ def detailinfo(res):
         print("")
 
 def install(pkgs):
-    pkgpathes=[]
     start_pkgs=pkgs.copy()
     pkgs=[pkg for pkg in pkg_obs if pkg.name in start_pkgs]
     if len(pkgs) != len(start_pkgs):
@@ -199,6 +218,12 @@ def install(pkgs):
     if len(pkgs) == 0:
         print(trans["nothing"])
         exit(0)
+    # Searching for unresolved dependecies
+    print(trans["checking_deps"])
+    depends=tree(pkgs)
+    line=pkgs.copy()
+    for arr in depends:
+        line+=arr
     # Checking packages for atributes
     for pkg in pkgs:
         if pkg.ver == pkg.localver:
@@ -212,8 +237,8 @@ def install(pkgs):
         if str(pkg.outdate) != "None":
             print(trans["warning_out-of-date"]%(yellow, pkg.name, datetime.utcfromtimestamp(int(pkg.outdate)).strftime('%Y-%m-%d %H:%M:%S')))
     # asking to continue
-    print("\n"+trans["packages"]%str(len(pkgs)), end='')
-    liner(len(trans["packages"]%str(len(pkgs))), [pkg.name+"-"+pkg.ver for pkg in pkgs])
+    print("\n"+trans["packages"]%str(len(line)), end='')
+    liner(len(trans["packages"]%str(len(line))), [pkg.name+"-"+pkg.ver for pkg in line])
     ask=input(trans["continue"]) if options.confirm else trans["yes"]
     if ask not in [trans["yes"].capitalize(), trans["yes"], trans["no"].capitalize(), trans["no"], ""]:
         try:
@@ -223,74 +248,77 @@ def install(pkgs):
                 ask=trans["yes"]
         except:
             pass
+    pkgs=depends+[pkgs]
     if ask == trans["yes"].capitalize() or ask == trans["yes"] or ask == "":
-        print("")
-        max=str(len(pkgs))
-        for i, pkg in enumerate(pkgs):
-            # full makeprocess
-            print(trans["making"]%(str(i+1), max, thic, pkg.name))
-            # Git repository
-            os.chdir(home+"/.cache/buildaur/build")
-            if mode == "asp":
-                print(trans["exporting"])
-                os.system('rm -rf ./'+pkg.name+' 2>/dev/null; asp export '+pkg.name+' 2>/dev/null')
-            else:
-                print(trans["cloning"])
-                os.system("rm -rf ./"+pkg.pkgbase+" 2>/dev/null;")
-                while not os.path.exists("./"+pkg.pkgbase+"/PKGBUILD"):
-                    os.system("git clone "+proto+"://aur.archlinux.org/"+pkg.pkgbase+".git")
-            os.chdir(os.getcwd()+"/"+pkg.pkgbase)
-            # edit
-            if showPKGBUILD:
-                print(trans["print_pkgb"])
-                print("\033[37m"+str(open("PKGBUILD", "rt").read())+"\033[0m", end="")
-            if showDiff:
-                print(trans["print_pkgdiff"])
-                os.system('git diff '+os.popen('git log --pretty=format:"%h" | head -2 | xargs').read().split(" ")[1])
-                print("\033[37m"+os.popen('git diff '+os.popen('git log --pretty=format:"%h" | head -2 | xargs').read().split(" ")[1]).read()+"\033[0m", end="")
-            ask=input(trans["edit"]) if options.confirm else trans["no"]
-            if ask in [trans["yes"], trans["yes"].capitalize()]:
-                os.system(editor+" ./PKGBUILD")
-                print(trans["goingon"])
-            if ask in [trans["cancel"], trans["cancel"].capitalize()]:
-                print(trans["exiting"])
-                exit()
-            hooks("prehooks")
-            deps(pkg)
-            # makepkg
-            if options.chroot:
-                print(trans["update_chroot"])
-                os.system("arch-nspawn $CHROOT/root pacman -Syu "+pcarg)
-                print(trans["making1"])
-                if os.system("PKGEXT='.pkg"+compmeth+"' makechrootpkg -c -r $CHROOT -- -s"+mkopts) != 0:
-                    print(trans["error_makepkg"]%(red, pkg.name))
-                    exit(1)
-            else:
-                print(trans["making1"])
-                if os.system(" PKGEXT='.pkg"+compmeth+"' makepkg -s "+mkopts) != 0:
-                    print(trans["error_makepkg"]%(red, pkg.name))
-                    exit(1)
-            # Hooks
-            hooks("posthooks")
-            # Defining pkgpath
-            this=LocalInfo()
-            arch="any" if "any" in this.pkgdata["arch"] else platform.machine()
-            # versioning for packages with multiple packagenames
-            for pkgname in this.pkgdata["pkgnames"]:
-                pkgpathes.append(os.getcwd()+"/"+pkgname+"-"+this.pkgdata["ver"]+"-"+arch+".pkg"+compmeth)
-            os.chdir(home)
+        for arr in pkgs:
             print("")
+            max=str(len(arr))
+            pkgpathes=[]
+            for i, pkg in enumerate(arr):
+                # full makeprocess
+                print(trans["making"]%(str(i+1), max, thic, pkg.name))
+                # Git repository
+                os.chdir(home+"/.cache/buildaur/build")
+                if mode == "asp":
+                    print(trans["exporting"])
+                    os.system('rm -rf ./'+pkg.name+' 2>/dev/null; asp export '+pkg.name+' 2>/dev/null')
+                else:
+                    print(trans["cloning"])
+                    os.system("rm -rf ./"+pkg.pkgbase+" 2>/dev/null;")
+                    while not os.path.exists("./"+pkg.pkgbase+"/PKGBUILD"):
+                        os.system("git clone "+proto+"://aur.archlinux.org/"+pkg.pkgbase+".git")
+                os.chdir(os.getcwd()+"/"+pkg.pkgbase)
+                # edit
+                if showPKGBUILD:
+                    print(trans["print_pkgb"])
+                    print("\033[37m"+str(open("PKGBUILD", "rt").read())+"\033[0m", end="")
+                if showDiff:
+                    print(trans["print_pkgdiff"])
+                    os.system('git diff '+os.popen('git log --pretty=format:"%h" | head -2 | xargs').read().split(" ")[1])
+                    print("\033[37m"+os.popen('git diff '+os.popen('git log --pretty=format:"%h" | head -2 | xargs').read().split(" ")[1]).read()+"\033[0m", end="")
+                ask=input(trans["edit"]) if options.confirm else trans["no"]
+                if ask in [trans["yes"], trans["yes"].capitalize()]:
+                    os.system(editor+" ./PKGBUILD")
+                    print(trans["goingon"])
+                if ask in [trans["cancel"], trans["cancel"].capitalize()]:
+                    print(trans["exiting"])
+                    exit()
+                hooks("prehooks")
+                deps(pkg)
+                # makepkg
+                if options.chroot:
+                    print(trans["update_chroot"])
+                    os.system("arch-nspawn $CHROOT/root pacman -Syu "+pcarg)
+                    print(trans["making1"])
+                    if os.system("PKGEXT='.pkg"+compmeth+"' makechrootpkg -c -r $CHROOT -- -s"+mkopts) != 0:
+                        print(trans["error_makepkg"]%(red, pkg.name))
+                        exit(1)
+                else:
+                    print(trans["making1"])
+                    if os.system(" PKGEXT='.pkg"+compmeth+"' makepkg -s "+mkopts) != 0:
+                        print(trans["error_makepkg"]%(red, pkg.name))
+                        exit(1)
+                # Hooks
+                hooks("posthooks")
+                # Defining pkgpath
+                this=LocalInfo()
+                arch="any" if "any" in this.pkgdata["arch"] else platform.machine()
+                # versioning for packages with multiple packagenames
+                for pkgname in this.pkgdata["pkgnames"]:
+                    pkgpathes.append(os.getcwd()+"/"+pkgname+"-"+this.pkgdata["ver"]+"-"+arch+".pkg"+compmeth)
+                os.chdir(home)
+                print("")
         # installing packages
-        if options.install:
-            print(trans["installing"])
-            inststring=""
-            for path in pkgpathes:
-                inststring+=path+" "
-            os.system("sudo pacman -U "+pcarg+" "+inststring)
-        else:
-            print(trans["created"])
-            for path in pkgpathes:
-                print(" "+path)
+            if options.install:
+                print(trans["installing"])
+                inststring=""
+                for path in pkgpathes:
+                    inststring+=path+" "
+                os.system("sudo pacman -U "+pcarg+" "+inststring)
+            else:
+                print(trans["created"])
+                for path in pkgpathes:
+                    print(" "+path)
     else:
         exit()
 
@@ -298,6 +326,8 @@ def deps(pkg, do_install=True, quiet=False):
     global replace_deps, deps_from_local_file
     if mode == "asp":
         return
+    handle=Handle(".", "/var/lib/pacman")
+    localdb=handle.get_localdb()
     print(trans["checking_deps"]+"\n" if not quiet else "", end="", flush=True)
     this=LocalInfo() if deps_from_local_file else ""
     depends=this.pkgdata["deps"]+this.pkgdata["makedeps"] if deps_from_local_file else pkg.depends+pkg.makedepends
