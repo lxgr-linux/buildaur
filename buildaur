@@ -19,16 +19,9 @@ def branch(pkgs):
     return alldeps
 
 def tree(names):
-    # rescount, cutted=info(resolve(names))
-    # for i in range(rescount):
-    #     pkg=Informer(cutted, i)
     ret=[arr for arr in branch(names) if len(arr) != 0]
     ret.reverse()
     return ret
-        # print(ret)
-        # for arr in ret:
-        #     for pkg in arr:
-        #         print(pkg.name)
 
 def get_local_pkgs():
     return [pkg.name for pkg in localdb.search(".*") if pkg.packager == "Unknown Packager"]
@@ -202,6 +195,7 @@ def detailinfo(res):
         print("")
 
 def install(pkgs):
+    global mode
     start_pkgs=pkgs.copy()
     pkgs=[pkg for pkg in pkg_obs if pkg.name in start_pkgs]
     if len(pkgs) != len(start_pkgs):
@@ -219,11 +213,12 @@ def install(pkgs):
         print(trans["nothing"])
         exit(0)
     # Searching for unresolved dependecies
-    print(trans["checking_deps"])
-    depends=tree(pkgs)
     line=pkgs.copy()
-    for arr in depends:
-        line+=arr
+    if not (deps_from_local_file or mode == "asp"):
+        print(trans["checking_deps"])
+        depends=tree(pkgs)
+        for arr in depends:
+            line+=arr
     # Checking packages for atributes
     for pkg in pkgs:
         if pkg.ver == pkg.localver:
@@ -515,6 +510,7 @@ def main():
         print(trans["error_opts"]%(red, args[1]))
 
 # global home and pathchecking
+global mode
 home=str(Path.home())
 Path(home+"/.cache/buildaur/build").mkdir(parents=True, exist_ok=True)
 # colors
