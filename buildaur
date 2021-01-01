@@ -195,7 +195,6 @@ def detailinfo(res):
         print("")
 
 def install(pkgs):
-    global mode
     start_pkgs=pkgs.copy()
     pkgs=[pkg for pkg in pkg_obs if pkg.name in start_pkgs]
     if len(pkgs) != len(start_pkgs):
@@ -219,6 +218,8 @@ def install(pkgs):
         depends=tree(pkgs)
         for arr in depends:
             line+=arr
+    else:
+        depends=[]
     # Checking packages for atributes
     for pkg in pkgs:
         if pkg.ver == pkg.localver:
@@ -388,6 +389,7 @@ def hooks(type):
             os.system("/etc/buildaur/"+type+"/"+hook+" -u")
 
 def main():
+    global mode
     # checking for root
     if home == "/root":
         print(trans["error_root"]%red)
@@ -510,7 +512,6 @@ def main():
         print(trans["error_opts"]%(red, args[1]))
 
 # global home and pathchecking
-global mode
 home=str(Path.home())
 Path(home+"/.cache/buildaur/build").mkdir(parents=True, exist_ok=True)
 # colors
