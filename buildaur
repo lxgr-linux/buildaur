@@ -287,7 +287,8 @@ def install(pkgs):
                         print(trans["exiting"])
                         exit()
                 hooks("prehooks")
-                deps([pkg])
+                if deps_from_local_file or mode == "asp":
+                    deps([pkg])
                 # makepkg
                 if options.chroot:
                     print(trans["update_chroot"])
