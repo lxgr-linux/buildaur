@@ -31,6 +31,7 @@ trans={
         "oof" : "Pkg out-of-date",
     },
     "info_arrays" : {
+        "provides": "Provides",
         "license" : "Licenses",
         "key" : "Keywords",
         "deps" : "Dependencies",
@@ -164,6 +165,7 @@ trans={
         "oof" : "Pkg out-of-date",
     },
     "info_arrays" : {
+        "provides": "Stellt bereit",
         "license" : "Lizenz",
         "key" : "Schlüsselwörter",
         "deps" : "Abhängigkeiten",
