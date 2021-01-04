@@ -156,7 +156,7 @@ class Informer():
         global pkg_obs
         splitted=cutted[pkg]
         self.num=pkg
-        for name, sname in zip(["name", "ver", "votes", "outdate", "desc", "depends", "makedepends", "optdepends", "license", "url", "maintainer", "submitted", "modified", "popularity", "keywords" ,"pkgbase", "provides"], ["Name", "Version", "NumVotes", "OutOfDate", "Description", "Depends", "MakeDepends", "OptDepends", "License", "URL", "Maintainer", "FirstSubmitted", "LastModified", "Popularity", "Keywords", "PackageBase", "Provides"]):
+        for name, sname in zip(["name", "ver", "votes", "outdate", "desc", "depends", "makedepends", "optdepends", "license", "url", "maintainer", "submitted", "modified", "popularity", "keywords" ,"pkgbase", "provides", "conflicts"], ["Name", "Version", "NumVotes", "OutOfDate", "Description", "Depends", "MakeDepends", "OptDepends", "License", "URL", "Maintainer", "FirstSubmitted", "LastModified", "Popularity", "Keywords", "PackageBase", "Provides", "Conflicts"]):
             try:
                 exec("self."+name+"=splitted[sname]")
             except:
@@ -195,7 +195,7 @@ def detailinfo(res):
         pkg=Informer(cutted, i)
         for name, value in zip(trans["info_single"], [pkg.name, pkg.pkgbase, pkg.ver, pkg.localver, pkg.desc, pkg.maintainer, pkg.url, datetime.utcfromtimestamp(int(pkg.submitted)).strftime('%Y-%m-%d %H:%M:%S'), datetime.utcfromtimestamp(int(pkg.modified)).strftime('%Y-%m-%d %H:%M:%S'), pkg.popularity, pkg.votes, pkg.outdate if str(pkg.outdate) == 'None' else datetime.utcfromtimestamp(int(pkg.outdate)).strftime('%Y-%m-%d %H:%M:%S')]):
             print(trans["info_single"][name]+(trans["max_name_len"]-len(trans["info_single"][name]))*" "+": "+str(value))
-        for name, value in zip(trans["info_arrays"], [pkg.provides, pkg.license, pkg.keywords, pkg.depends, pkg.makedepends, pkg.optdepends]):
+        for name, value in zip(trans["info_arrays"], [pkg.provides, pkg.conflicts, pkg.license, pkg.keywords, pkg.depends, pkg.makedepends, pkg.optdepends]):
             print(trans["info_arrays"][name]+(trans["max_name_len"]-len(trans["info_arrays"][name]))*" "+": ", end='')
             liner(trans["max_name_len"]+2, value)
         print("")

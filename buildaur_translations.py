@@ -32,6 +32,7 @@ trans={
     },
     "info_arrays" : {
         "provides": "Provides",
+        "conflicts": "Conflicts",
         "license" : "Licenses",
         "key" : "Keywords",
         "deps" : "Dependencies",
@@ -167,6 +168,7 @@ trans={
     },
     "info_arrays" : {
         "provides": "Stellt bereit",
+        "conflicts": "Konflikte",
         "license" : "Lizenz",
         "key" : "Schlüsselwörter",
         "deps" : "Abhängigkeiten",
