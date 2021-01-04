@@ -13,7 +13,7 @@ def branch(pkgs):
 def main(names):
     rescount, cutted=info(resolve(names))
     for i in range(rescount):
-        pkg=Informer(cutted, i)
+        pkg=Package(cutted, i)
         # print(names[i], end="")
         ret=[arr for arr in branch([pkg]) if len(arr) != 0]
         ret.reverse()
