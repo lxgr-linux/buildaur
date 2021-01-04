@@ -251,6 +251,7 @@ def install(pkgs):
         except:
             pass
     pkgs=depends+[pkgs]
+    # remove double pkgbases
     for arr in pkgs:
         for i in arr:
             count=0
@@ -266,7 +267,7 @@ def install(pkgs):
             pkgpathes=[]
             for i, pkg in enumerate(arr):
                 # full makeprocess
-                print(trans["making"]%(str(i+1), max, thic, pkg.name))
+                print(trans["making"]%(str(i+1), max, thic, pkg.pkgbase))
                 # Git repository
                 os.chdir(home+"/.cache/buildaur/build")
                 if mode == "asp":
