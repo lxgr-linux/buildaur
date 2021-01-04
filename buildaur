@@ -251,6 +251,14 @@ def install(pkgs):
         except:
             pass
     pkgs=depends+[pkgs]
+    for arr in pkgs:
+        for i in arr:
+            count=0
+            for j in [pkg.pkgbase for pkg in arr]:
+                if i.pkgbase == j:
+                    count+=1
+            for a in range(count-1):
+                del arr[arr.index(i)]
     if ask == trans["yes"].capitalize() or ask == trans["yes"] or ask == "":
         for arr in pkgs:
             print("")
