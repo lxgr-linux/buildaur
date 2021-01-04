@@ -126,9 +126,9 @@ def update(willinst=[]):
     pkgs=get_local_pkgs()
     res=resolve(pkgs)
     rescount, cutted=info(res, False)
-    rescount, cutted=aspinfo([pkg for pkg in pkgs if pkg not in [Informer(cutted, i).name for i in range(int(rescount))]]) if mode == "asp" else (rescount, cutted)
+    rescount, cutted=aspinfo([pkg for pkg in pkgs if pkg not in [Package(cutted, i).name for i in range(int(rescount))]]) if mode == "asp" else (rescount, cutted)
     print(trans["checking"])
-    pkgs=[Informer(cutted, i) for i in range(int(rescount))]
+    pkgs=[Package(cutted, i) for i in range(int(rescount))]
     for i, pkg in enumerate(pkgs):
         progressbar.progress(i+1, int(rescount), trans["checking1"]%(pkg.name))
         if pkg.name[-4:] == "-git" and rebuild_git:
@@ -151,7 +151,7 @@ def update(willinst=[]):
     else:
         install(willinst)
 
-class Informer():
+class Package():
     def __init__(self, cutted, pkg):
         global pkg_obs
         splitted=cutted[pkg]
@@ -180,7 +180,7 @@ class LocalInfo():
 def infoout(res, quiet=False, veryquiet=False):
     rescount, cutted=info(res, True)
     for i in range(int(rescount)):
-        pkg=Informer(cutted, i)
+        pkg=Package(cutted, i)
         if veryquiet:
             print(pkg.name)
         elif quiet:
@@ -192,7 +192,7 @@ def infoout(res, quiet=False, veryquiet=False):
 def detailinfo(res):
     rescount, cutted=info(res, True)
     for i in range(int(rescount)):
-        pkg=Informer(cutted, i)
+        pkg=Package(cutted, i)
         for name, value in zip(trans["info_single"], [pkg.name, pkg.pkgbase, pkg.ver, pkg.localver, pkg.desc, pkg.maintainer, pkg.url, datetime.utcfromtimestamp(int(pkg.submitted)).strftime('%Y-%m-%d %H:%M:%S'), datetime.utcfromtimestamp(int(pkg.modified)).strftime('%Y-%m-%d %H:%M:%S'), pkg.popularity, pkg.votes, pkg.outdate if str(pkg.outdate) == 'None' else datetime.utcfromtimestamp(int(pkg.outdate)).strftime('%Y-%m-%d %H:%M:%S')]):
             print(trans["info_single"][name]+(trans["max_name_len"]-len(trans["info_single"][name]))*" "+": "+str(value))
         for name, value in zip(trans["info_arrays"], [pkg.provides, pkg.conflicts, pkg.license, pkg.keywords, pkg.depends, pkg.makedepends, pkg.optdepends]):
@@ -205,7 +205,7 @@ def install(pkgs):
     pkgs=[pkg for pkg in pkg_obs if pkg.name in start_pkgs]
     if len(pkgs) != len(start_pkgs):
         rescount, cutted=aspinfo(start_pkgs, True) if mode == "asp" else info(resolve(start_pkgs), True)
-        pkgs=[Informer(cutted, i) for i in range(int(rescount))]
+        pkgs=[Package(cutted, i) for i in range(int(rescount))]
 
     if len(pkgs) != len(start_pkgs):
         for pkg in start_pkgs:
@@ -351,7 +351,7 @@ def deps(pkgs, do_install=True, quiet=False):
     if len(depends) > 0:
         rescount, cutted=info(resolve(depends, quiet=True), True)
         if int(rescount) != 0:
-            deps=[Informer(cutted, i).name for i in range(int(rescount))]
+            deps=[Package(cutted, i).name for i in range(int(rescount))]
             if do_install:
                 curdir=os.getcwd()
                 os.chdir(home)
@@ -360,7 +360,7 @@ def deps(pkgs, do_install=True, quiet=False):
                 os.chdir(curdir)
             else:
                 rescount, cutted=info(resolve(deps, quiet=True))
-                deps=[Informer(cutted, i) for i in range(rescount)]
+                deps=[Package(cutted, i) for i in range(rescount)]
                 return deps
     return []
 
@@ -521,7 +521,7 @@ def main():
         rescount, cutted=info(resolve(pkgs, quiet=True), True)
         for i in range(int(rescount)):
             os.chdir(home+"/.cache/buildaur/build")
-            pkg=Informer(cutted, i)
+            pkg=Package(cutted, i)
             os.system("rm -rf ./%s 2>/dev/null; git clone %s://aur.archlinux.org/%s 2>/dev/null"%(pkg.pkgbase, proto, pkg.pkgbase))
             os.chdir(os.getcwd()+"/"+pkg.pkgbase)
             if secarg == "--diff":
