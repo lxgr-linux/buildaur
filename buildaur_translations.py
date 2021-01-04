@@ -101,6 +101,7 @@ trans={
                 "di" : "Just builds the package",
                 "co" : "Toggles colored output on and off",
                 "dlf" : "Pulls dependencies from PKGBUILD",
+                "git" : "Updates all -git packages at updates",
             },
         },
         "show" : {
@@ -235,6 +236,7 @@ trans={
                 "di" : "Erstellt das Packet nur",
                 "co" : "Deaktiviert farbige Ausgabe",
                 "dlf" : "Holt Abhängigkeitsinformationen aus dem PKGBUILD",
+                "git" : "Aktualisiert alle -git Packete bei Aktualisierungen",
             },
         },
         "show" : {

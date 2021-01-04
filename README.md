@@ -60,6 +60,7 @@ Usage: /usr/bin/buildaur <option> <string><br>
       di                : Just builds the package<br>
       co                : Toggles colored output on and off<br>
       dlf               : Pulls dependencies from PKGBUILD<br>
+      git               : Updates all -git packages at updates<br>
 <br>
 <br>
    Additional options for --show:<br>
