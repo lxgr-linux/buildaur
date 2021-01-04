@@ -131,10 +131,10 @@ def update(willinst=[]):
     pkgs=[Informer(cutted, i) for i in range(int(rescount))]
     for i, pkg in enumerate(pkgs):
         progressbar.progress(i+1, int(rescount), trans["checking1"]%(pkg.name))
-        if pkg.ver == pkg.localver or pkg.name in black:
-            pass
-        elif pkg.name[-4:] == "-git" and rebuild_git:
+        if pkg.name[-4:] == "-git" and rebuild_git:
             willinst.append(pkg.name)
+        elif pkg.ver == pkg.localver or pkg.name in black:
+            pass
         elif sorter(pkg.ver, pkg.localver) == pkg.ver:
             willinst.append(pkg.name)
         elif sorter(pkg.ver, pkg.localver) == pkg.localver:
