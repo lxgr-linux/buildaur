@@ -553,7 +553,7 @@ pcarg=mkopts=""
 handle=Handle(".", "/var/lib/pacman")
 localdb=handle.get_localdb()
 args=sys.argv
-black=open("/usr/share/buildaur/blacklist").read().split("\n")
+black=[]
 pkg_obs=[]
 
 if __name__ == "__main__":
