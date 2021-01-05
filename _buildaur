@@ -9,7 +9,7 @@ _arguments -C \
 	'-Syu'\
 	'-asp'\
 	'-aspyu'\
-	'--show:pkg:( $(if [[ $words[3] != "" ]]; then buildaur -Qsqq $words[3]; fi) )'\
+	'--show:pkg:( $(if [[ $words[3] != "" ]]; then buildaur -Qsqq $words[3]; echo "--diff"; fi) )'\
 	'--clear'\
 	'(-v --version)'{-v,--version}\
 	'(-l --license)'{-l,--license}\
