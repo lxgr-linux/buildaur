@@ -1,0 +1,17 @@
+#compdef buildaur
+
+_arguments -C \
+	'(-h --help)'{-h,--help}\
+	'-S:pkg:( $(if [[ $words[3] != "" ]]; then buildaur -Qsqq $words[3]; fi) )'\
+	'-Q'{q,qq,' '}\
+	'-Qs'{q,qq,' '}\
+	'-Qi'\
+	'-Syu'\
+	'-asp'\
+	'-aspyu'\
+	'--show:pkg:( $(if [[ $words[3] != "" ]]; then buildaur -Qsqq $words[3]; fi) )'\
+	'--clear'\
+	'(-v --version)'{-v,--version}\
+	'(-l --license)'{-l,--license}\
+	'--make-chroot'\
+	'--about'
