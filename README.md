@@ -12,26 +12,26 @@ https://wiki.archlinux.org/index.php/Arch_User_Repository
 # Installation
 
 First the 'PKGBUILD' should be cloned from the AUR
-
+```shell
 $ git clone https://aur.archlinux.org/buildaur.git
-
+```
 Then the package has to be build and installed
-
+```shell
 $ cd ./buildaur
 $ makepkg -si
-
+```
 Then the installation will be finished.
 
 NOTE: If you are using manjaro linux and want to use the asp functionality of buildaur, you have to install asp, which is not in the manjaro repositorys.
 To do this just clone asps git repo:
-
+```shell
 $ git clone https://aur.archlinux.org/asp.git
-
+```
 Then the package has to be build and installed
-
+```shell
 $ cd ./asp
 $ makepkg -si
-
+```
 # Usage
 
 Like most other shell programs buildaur has some options which can be used to specify what the program should exactly do:
