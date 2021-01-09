@@ -112,24 +112,24 @@ hooks:
 
 The config file for buildaur is ' /etc/buildaur/buildaur.conf'. It can be used to set variables which appear in buildaur, like 'ask', 'pgp' and 'buildchroot'. It can also contain code that should be integrated into buildaur.
 
-Available variables:<br>
-yellow="\033[33;1m" # Color yellow<br>
-red="\033[31;1m" # Color red<br>
-thic="\033[1m" # Bold text<br>
-proto="https" # Protocol to be used at downloads<br>
-editor="nano" # Editor to edit PKGBUILD<br>
-compmeth=".tar.zst" # Compression method of package<br>
-mode="normal" # Default mode<br>
-showPKGBUILD=1 # Print out PKGBUILD before build process<br>
-showDiff=0 # Print out diffs between former and current PKGBUILD version before build process<br>
-ask_warn_inst=0 # Ask to update packages which are higher than AUR<br>
-pcarg="" # Default arguments for pacman<br>
-mkopts="" # Default arguments for makepkg<br>
-replace_deps={"vte" : "vte-legacy"} # Items in dependency which should be replaced with another one<br>
-Bash only options:<br>
-sudoreset=1 # Reset sudo before PKGBUILD<br>
-layout="new" # Old or new look of buildaur<br>
-color="true" # Toggels colored output<br>
+Available variables:
+- yellow="\033[33;1m" # Color yellow
+- red="\033[31;1m" # Color red
+- thic="\033[1m" # Bold text
+- proto="https" # Protocol to be used at downloads
+- editor="nano" # Editor to edit PKGBUILD
+- compmeth=".tar.zst" # Compression method of package
+- mode="normal" # Default mode
+- showPKGBUILD=1 # Print out PKGBUILD before build process
+- showDiff=0 # Print out diffs between former and current PKGBUILD version before build process
+- ask_warn_inst=0 # Ask to update packages which are higher than AUR
+- pcarg="" # Default arguments for pacman
+- mkopts="" # Default arguments for makepkg
+- replace_deps={"vte" : "vte-legacy"} # Items in dependency which should be replaced with another one
+Bash only options:
+- sudoreset=1 # Reset sudo before PKGBUILD
+- layout="new" # Old or new look of buildaur
+- color="true" # Toggels colored output
 
 # Blacklist
 
