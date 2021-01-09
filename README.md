@@ -126,6 +126,7 @@ Available variables:
 - pcarg="" # Default arguments for pacman
 - mkopts="" # Default arguments for makepkg
 - replace_deps={"vte" : "vte-legacy"} # Items in dependency which should be replaced with another one
+
 Bash only options:
 - sudoreset=1 # Reset sudo before PKGBUILD
 - layout="new" # Old or new look of buildaur
