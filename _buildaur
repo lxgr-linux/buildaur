@@ -3,9 +3,9 @@
 _arguments -C \
 	'(-h --help)'{-h,--help}\
 	'-S:pkg:( $(if [[ $words[3] != "" ]]; then buildaur -Qsqq $words[3]; fi) )'\
-	'-Q'{q,qq,' '}\
-	'-Qs'{q,qq,' '}\
-	'-Qi'\
+	'-Q'{q,qq,''}':pkg:( $(if [[ $words[3] != "" ]]; then buildaur -Qsqq $words[3]; fi) )'\
+	'-Qs'{q,qq,''}\
+	'-Qi:pkg:( $(if [[ $words[3] != "" ]]; then buildaur -Qsqq $words[3]; fi) )'\
 	'-Syu'\
 	'-asp'\
 	'-aspyu'\
