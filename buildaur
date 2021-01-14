@@ -251,6 +251,10 @@ def install(pkgs):
         except:
             pass
     pkgs=depends+[pkgs]
+    allpkgs=[]
+    for arr in pkgs:
+        for pkg in arr:
+            allpkgs+=[pkg.name]+pkg.depends+pkg.makedepends
     # remove double pkgbases
     for arr in pkgs:
         for i in arr:
@@ -318,10 +322,11 @@ def install(pkgs):
                 arch="any" if "any" in this.pkgdata["arch"] else platform.machine()
                 # versioning for packages with multiple packagenames
                 for pkgname in this.pkgdata["pkgnames"]:
-                    pkgpathes.append(os.getcwd()+"/"+pkgname+"-"+this.pkgdata["ver"]+"-"+arch+".pkg"+compmeth)
+                    if pkgname in allpkgs:
+                        pkgpathes.append(os.getcwd()+"/"+pkgname+"-"+this.pkgdata["ver"]+"-"+arch+".pkg"+compmeth)
                 os.chdir(home)
                 print("")
-        # installing packages
+            # installing packages
             if options.install:
                 print(trans["installing"])
                 inststring=""
