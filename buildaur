@@ -152,9 +152,10 @@ def update(willinst=[]):
         install(willinst)
 
 class Package():
-    def __init__(self, cutted, pkg):
+    def __init__(self, cutted, pkg, is_dep=False):
         global pkg_obs
         splitted=cutted[pkg]
+        self.is_dep=is_dep
         self.num=pkg
         for name, sname in zip(["name", "ver", "votes", "outdate", "desc", "depends", "makedepends", "optdepends", "license", "url", "maintainer", "submitted", "modified", "popularity", "keywords" ,"pkgbase", "provides", "conflicts"], ["Name", "Version", "NumVotes", "OutOfDate", "Description", "Depends", "MakeDepends", "OptDepends", "License", "URL", "Maintainer", "FirstSubmitted", "LastModified", "Popularity", "Keywords", "PackageBase", "Provides", "Conflicts"]):
             try:
@@ -328,11 +329,17 @@ def install(pkgs):
                 print("")
             # installing packages
             if options.install:
+                for pkg in arr:
+                    if pkg.is_dep == True:
+                        asdep="--asdeps"
+                    else:
+                        asdep=""
+                        break
                 print(trans["installing"])
                 inststring=""
                 for path in pkgpathes:
                     inststring+=path+" "
-                os.system("sudo pacman -U "+pcarg+" "+inststring)
+                os.system("sudo pacman -U "+pcarg+" "+asdep+" "+inststring)
             else:
                 print(trans["created"])
                 for path in pkgpathes:
@@ -365,7 +372,7 @@ def deps(pkgs, do_install=True, quiet=False):
                 os.chdir(curdir)
             else:
                 rescount, cutted=info(resolve(deps, quiet=True))
-                deps=[Package(cutted, i) for i in range(rescount)]
+                deps=[Package(cutted, i, True) for i in range(rescount)]
                 return deps
     return []
 
