@@ -329,12 +329,9 @@ def install(pkgs):
                 print("")
             # installing packages
             if options.install:
-                for pkg in arr:
-                    if pkg.is_dep == True:
-                        asdep="--asdeps"
-                    else:
-                        asdep=""
-                        break
+                asdep=""
+                if all([pkg.is_dep for pkg in arr]):
+                    asdep="--asdeps"
                 print(trans["installing"])
                 inststring=""
                 for path in pkgpathes:
