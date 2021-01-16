@@ -257,7 +257,7 @@ def install(pkgs):
     if ask not in [trans["yes"].capitalize(), trans["yes"], trans["no"].capitalize(), trans["no"], ""]:
         try:
             exec("global askarr; askarr="+ask)
-            if type(askarr) is list:
+            if type(askarr) is list and sorted(askarr) < len(pkgs):
                 pkgs=[pkgs[i] for i in range(len(pkgs)) if i in askarr]
                 ask=trans["yes"]
         except:
