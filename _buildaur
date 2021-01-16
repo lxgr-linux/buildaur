@@ -1,5 +1,6 @@
-#compdef buildaur
+#compdef buildaur bla buildaur.sh
 
+_buildaur_comp(){
 _arguments -C \
 	'(-h --help)'{-h,--help}\
 	'-S:pkg:( $(if [[ $words[3] != "" ]]; then buildaur -Qsqq $words[3]; fi) )'\
@@ -15,3 +16,6 @@ _arguments -C \
 	'(-l --license)'{-l,--license}\
 	'--make-chroot'\
 	'--about'
+}
+
+_buildaur_comp
