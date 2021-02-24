@@ -15,16 +15,16 @@ def branch(pkgs):
     if len(pkgs) != 0:
         alldeps.append(deps(pkgs, do_install=False, quiet=True))
     if len(alldeps) != 0:
-        alldeps+=branch(alldeps[0])
+        alldeps += branch(alldeps[0])
     return alldeps
 
 def tree(names):
-    ret=[arr for arr in branch(names) if len(arr) != 0]
+    ret = [arr for arr in branch(names) if len(arr) != 0]
     ret.reverse()
     for i in range(len(ret)):
         for pkg in ret[i]:
             for arr in ret[i+1:]:
-                namearr=[pkg.name for pkg in arr]
+                namearr = [pkg.name for pkg in arr]
                 if pkg.name in namearr:
                     del arr[namearr.index(pkg.name)]
     return ret
@@ -32,10 +32,10 @@ def tree(names):
 def rem_double_pkgbases(pkgs):
     for arr in pkgs:
         for i in arr:
-            count=0
+            count = 0
             for j in [pkg.pkgbase for pkg in arr]:
                 if i.pkgbase == j:
-                    count+=1
+                    count += 1
             for a in range(count-1):
                 del arr[[pkg.pkgbase for pkg in arr].index(i.pkgbase)]
     return pkgs
@@ -48,32 +48,32 @@ def options(string, optlen):
     for op in opts:
         if string.find(op) != -1:
              exec(opts[op])
-             optlen+=len(op)
+             optlen += len(op)
     if optlen != len(string):
         print(trans["error_opts"]%(red, string))
         exit(1)
 
 def liner(length, names, sep=""):
     width, height = os.get_terminal_size()
-    lens=0
+    lens = 0
     for name in names:
         if lens+len(name)+2 < width-length:
             print(name+"  ", end="")
-            lens+=len(name)+2
+            lens += len(name)+2
         else:
-            lens=len(name)+2
+            lens = len(name)+2
             print("\n"+(length-len(sep))*" "+sep+name+"  ", end="")
     print("")
 
 def sorter(ver1, ver2):
-    arr1=ver1.split("-")[0].split(".")
-    arr2=ver2.split("-")[0].split(".")
+    arr1 = ver1.split("-")[0].split(".")
+    arr2 = ver2.split("-")[0].split(".")
     for i in range(sorted([len(arr2), len(arr1)])[1]):
-        a=arr1[i] if i < len(arr1) else "0"
-        b=arr2[i] if i < len(arr2) else "0"
-        arg1=len(b)*"0"+a
-        arg2=len(a)*"0"+b
-        arrs=[arg1, arg2]
+        a = arr1[i] if i < len(arr1) else "0"
+        b = arr2[i] if i < len(arr2) else "0"
+        arg1 = len(b)*"0"+a
+        arg2 = len(a)*"0"+b
+        arrs = [arg1, arg2]
         if sorted(arrs)[0] == arg2 and arg1 != arg2:
             return ver1
         elif sorted(arrs)[0] == arg1 and arg1 != arg2:
@@ -84,21 +84,21 @@ def sorter(ver1, ver2):
         return ver2
 
 def resolve(pkgs, type="multiinfo", quiet=False, searchby="name"):
-    res=[]
-    pkgss=[pkgs[(i*200)-200:i*200] for i in range(math.ceil(len(pkgs)/200+1))][1:]  # cut pkglists in 200 pkgs bytes
+    res = []
+    pkgss = [pkgs[(i*200)-200:i*200] for i in range(math.ceil(len(pkgs)/200+1))][1:]  # cut pkglists in 200 pkgs bytes
     print(trans["downloading"]+"\n" if not quiet else "", end="", flush=True)
     for i, pkgs in enumerate(pkgss):
-        url=proto+"://aur.archlinux.org/rpc/?v=5&type="+type
+        url = proto+"://aur.archlinux.org/rpc/?v=5&type="+type
         if len(pkgs) == 0:
             exit()
         if not quiet and len(pkgss) > 1:
             progressbar.progress(i+1, len(pkgss), trans["downloading2"])
-        pkgs=[pkg.replace("+", "%2B") for pkg in pkgs]
+        pkgs = [pkg.replace("+", "%2B") for pkg in pkgs]
         if type == "search":
-            url+="&by="+searchby+"&arg="+pkgs[0]
+            url += "&by="+searchby+"&arg="+pkgs[0]
         else:
             for pkg in pkgs:
-                url+="&arg[]="+pkg
+                url += "&arg[]="+pkg
         try:
             res.append(str(urllib.request.urlopen(url).read()))
         except:
@@ -107,39 +107,39 @@ def resolve(pkgs, type="multiinfo", quiet=False, searchby="name"):
     return res
 
 def info(ress, quiet=False):
-    rescount=0
-    cutted=[]
+    rescount = 0
+    cutted = []
     for res in ress:
         exec("info.utf_res="+res)
-        jsons=json.loads(info.utf_res.decode())
-        rescount+=int(jsons["resultcount"])
-        cutted+=jsons["results"]
+        jsons = json.loads(info.utf_res.decode())
+        rescount += int(jsons["resultcount"])
+        cutted += jsons["results"]
     return rescount, cutted
 
 def aspinfo(pkgs, quiet=False):
-    rescount=0
-    cutted=[]
+    rescount = 0
+    cutted = []
     print(trans["update_asp"])
     os.system("asp update 2>/dev/null")
     print(trans["collecting"]+"\n" if not quiet else "", end="", flush=True)
     for i, pkg in enumerate(pkgs):
-        this=LocalInfo(True, pkg)
-        pkgver=this.pkgdata["ver"]
+        this = LocalInfo(True, pkg)
+        pkgver = this.pkgdata["ver"]
         if pkgver != "-":
             cutted.append({"Name": pkg, "Version": pkgver, "Description": "some pkg from asp", "OutOfDate": "None", "PackageBase": pkg})
-            rescount+=1
+            rescount += 1
         if not quiet:
             progressbar.progress(i+1, int(len(pkgs)), "Collecting "+pkg+"...")
     return rescount, cutted
 
 def update(willinst=[]):
-    msg=[]
-    pkgs=get_local_pkgs()
-    res=resolve(pkgs)
-    rescount, cutted=info(res, False)
-    rescount, cutted=aspinfo([pkg for pkg in pkgs if pkg not in [Package(cutted, i).name for i in range(int(rescount))]]) if mode == "asp" else (rescount, cutted)
+    msg = []
+    pkgs = get_local_pkgs()
+    res = resolve(pkgs)
+    rescount, cutted = info(res, False)
+    rescount, cutted = aspinfo([pkg for pkg in pkgs if pkg not in [Package(cutted, i).name for i in range(int(rescount))]]) if mode == "asp" else (rescount, cutted)
     print(trans["checking"])
-    pkgs=[Package(cutted, i) for i in range(int(rescount))]
+    pkgs = [Package(cutted, i) for i in range(int(rescount))]
     for i, pkg in enumerate(pkgs):
         progressbar.progress(i+1, int(rescount), trans["checking1"]%(pkg.name))
         if pkg.name[-4:] == "-git" and rebuild_git:
@@ -165,34 +165,34 @@ def update(willinst=[]):
 class Package():
     def __init__(self, cutted, pkg, is_dep=False):
         global pkg_obs
-        splitted=cutted[pkg]
-        self.is_dep=is_dep
-        self.num=pkg
+        splitted = cutted[pkg]
+        self.is_dep = is_dep
+        self.num = pkg
         for name, sname in zip(["name", "ver", "votes", "outdate", "desc", "depends", "makedepends", "optdepends", "license", "url", "maintainer", "submitted", "modified", "popularity", "keywords" ,"pkgbase", "provides", "conflicts"], ["Name", "Version", "NumVotes", "OutOfDate", "Description", "Depends", "MakeDepends", "OptDepends", "License", "URL", "Maintainer", "FirstSubmitted", "LastModified", "Popularity", "Keywords", "PackageBase", "Provides", "Conflicts"]):
             try:
                 exec("self."+name+"=splitted[sname]")
             except:
                 exec("self."+name+"=['None']")
         try:
-            pkg=localdb.get_pkg(splitted["Name"])
-            self.localver=pkg.version
+            pkg = localdb.get_pkg(splitted["Name"])
+            self.localver = pkg.version
         except:
-            self.localver="---"
+            self.localver = "---"
         if self.keywords == []:
-            self.keywords=["None"]
+            self.keywords = ["None"]
         pkg_obs.append(self)
 
 
 class LocalInfo():
     def __init__(self, asp=False, pkg=""):
-        path="/usr/share/buildaur/outputter.sh"
+        path = "/usr/share/buildaur/outputter.sh"
         exec("self.pkgdata="+os.popen(path+" asp "+pkg if asp else path).read().split("\n")[0])
 
 
 def infoout(res, quiet=False, veryquiet=False):
-    rescount, cutted=info(res, True)
+    rescount, cutted = info(res, True)
     for i in range(int(rescount)):
-        pkg=Package(cutted, i)
+        pkg = Package(cutted, i)
         if veryquiet:
             print(pkg.name)
         elif quiet:
@@ -204,7 +204,7 @@ def infoout(res, quiet=False, veryquiet=False):
 def detailinfo(res):
     rescount, cutted=info(res, True)
     for i in range(int(rescount)):
-        pkg=Package(cutted, i)
+        pkg = Package(cutted, i)
         for name, value in zip(trans["info_single"], [pkg.name, pkg.pkgbase, pkg.ver, pkg.localver, pkg.desc, pkg.maintainer, pkg.url, datetime.utcfromtimestamp(int(pkg.submitted)).strftime('%Y-%m-%d %H:%M:%S'), datetime.utcfromtimestamp(int(pkg.modified)).strftime('%Y-%m-%d %H:%M:%S'), pkg.popularity, pkg.votes, pkg.outdate if str(pkg.outdate) == 'None' else datetime.utcfromtimestamp(int(pkg.outdate)).strftime('%Y-%m-%d %H:%M:%S')]):
             print(trans["info_single"][name]+(trans["max_name_len"]-len(trans["info_single"][name]))*" "+": "+str(value))
         for name, value in zip(trans["info_arrays"], [pkg.provides, pkg.conflicts, pkg.license, pkg.keywords, pkg.depends, pkg.makedepends, pkg.optdepends]):
@@ -213,11 +213,11 @@ def detailinfo(res):
         print("")
 
 def install(pkgs):
-    start_pkgs=pkgs.copy()
-    pkgs=[pkg for pkg in pkg_obs if pkg.name in start_pkgs]
+    start_pkgs = pkgs.copy()
+    pkgs = [pkg for pkg in pkg_obs if pkg.name in start_pkgs]
     if len(pkgs) != len(start_pkgs):
-        rescount, cutted=aspinfo(start_pkgs, True) if mode == "asp" else info(resolve(start_pkgs), True)
-        pkgs=[Package(cutted, i) for i in range(int(rescount))]
+        rescount, cutted = aspinfo(start_pkgs, True) if mode == "asp" else info(resolve(start_pkgs), True)
+        pkgs = [Package(cutted, i) for i in range(int(rescount))]
 
     if len(pkgs) != len(start_pkgs):
         for pkg in start_pkgs:
@@ -230,14 +230,14 @@ def install(pkgs):
         print(trans["nothing"])
         exit(0)
     # Searching for unresolved dependecies
-    line=[pkg.name+"-"+pkg.ver for pkg in pkgs]
+    line = [pkg.name+"-"+pkg.ver for pkg in pkgs]
     if not (deps_from_local_file or mode == "asp"):
         print(trans["checking_deps"])
-        depends=tree(pkgs)
+        depends = tree(pkgs)
         for arr in depends:
-            line+=[pkg.name+"-"+pkg.ver+" [dep]" for pkg in arr]
+            line += [pkg.name+"-"+pkg.ver+" [dep]" for pkg in arr]
     else:
-        depends=[]
+        depends = []
     # Checking packages for atributes
     for pkg in pkgs:
         if pkg.ver == pkg.localver:
@@ -253,27 +253,27 @@ def install(pkgs):
     # asking to continue
     print("\n"+trans["packages"]%str(len(line)), end='')
     liner(len(trans["packages"]%str(len(line))), line)
-    ask=input(trans["continue"]) if options.confirm else trans["yes"]
+    ask = input(trans["continue"]) if options.confirm else trans["yes"]
     if ask not in [trans["yes"].capitalize(), trans["yes"], trans["no"].capitalize(), trans["no"], ""]:
         try:
             exec("global askarr; askarr="+ask)
             if type(askarr) is list and sorted(askarr)[-1] < len(pkgs):
-                pkgs=[pkgs[i] for i in range(len(pkgs)) if i in askarr]
-                ask=trans["yes"]
+                pkgs = [pkgs[i] for i in range(len(pkgs)) if i in askarr]
+                ask = trans["yes"]
         except:
             pass
-    pkgs=depends+[pkgs]
-    allpkgs=[]
+    pkgs = depends+[pkgs]
+    allpkgs = []
     for arr in pkgs:
         for pkg in arr:
-            allpkgs+=[pkg.name]+pkg.depends+pkg.makedepends
+            allpkgs += [pkg.name]+pkg.depends+pkg.makedepends
     # remove double pkgbases
-    pkgs=rem_double_pkgbases(pkgs)
+    pkgs = rem_double_pkgbases(pkgs)
     if ask == trans["yes"].capitalize() or ask == trans["yes"] or ask == "":
         for arr in pkgs:
             print("")
-            max=str(len(arr))
-            pkgpathes=[]
+            max = str(len(arr))
+            pkgpathes = []
             for i, pkg in enumerate(arr):
                 # full makeprocess
                 print(trans["making"]%(str(i+1), max, thic, pkg.pkgbase))
@@ -297,7 +297,7 @@ def install(pkgs):
                     if showPKGBUILD:
                         print(trans["print_pkgb"]%(file))
                         print("\033[37m"+str(open(file, "rt").read())+"\033[0m", end="")
-                    ask=input(trans["edit"]%(file)) if options.confirm else trans["no"]
+                    ask = input(trans["edit"]%(file)) if options.confirm else trans["no"]
                     if ask in [trans["yes"], trans["yes"].capitalize()]:
                         os.system(editor+" "+file)
                         print(trans["goingon"])
@@ -323,8 +323,8 @@ def install(pkgs):
                 # Hooks
                 hooks("posthooks")
                 # Defining pkgpath
-                this=LocalInfo()
-                arch="any" if "any" in this.pkgdata["arch"] else platform.machine()
+                this = LocalInfo()
+                arch = "any" if "any" in this.pkgdata["arch"] else platform.machine()
                 # versioning for packages with multiple packagenames
                 for pkgname in this.pkgdata["pkgnames"]:
                     if pkgname in allpkgs:
@@ -333,13 +333,13 @@ def install(pkgs):
                 print("")
             # installing packages
             if options.install:
-                asdep=""
+                asdep = ""
                 if all([pkg.is_dep for pkg in arr]):
-                    asdep="--asdeps"
+                    asdep = "--asdeps"
                 print(trans["installing"])
-                inststring=""
+                inststring = ""
                 for path in pkgpathes:
-                    inststring+=path+" "
+                    inststring += path+" "
                 os.system(legitimator+" pacman -U "+pcarg+" "+asdep+" "+inststring)
             else:
                 print(trans["created"])
@@ -352,33 +352,33 @@ def deps(pkgs, do_install=True, quiet=False):
     global replace_deps, deps_from_local_file
     if mode == "asp":
         return
-    handle=Handle(".", "/var/lib/pacman")
-    localdb=handle.get_localdb()
+    handle = Handle(".", "/var/lib/pacman")
+    localdb = handle.get_localdb()
     print(trans["checking_deps"]+"\n" if not quiet else "", end="", flush=True)
-    this=LocalInfo() if deps_from_local_file else ""
-    depends=[]
+    this = LocalInfo() if deps_from_local_file else ""
+    depends = []
     for pkg in pkgs:
-        depends+=pkg.depends+pkg.makedepends
-    depends=this.pkgdata["deps"]+this.pkgdata["makedeps"] if deps_from_local_file else depends
-    depends=[pkg for pkg in [dep.split(">")[0].split("<")[0].split("=")[0] for dep in [dep if dep not in replace_deps else replace_deps[dep] for dep in depends if dep != "None"]] if str(localdb.get_pkg(pkg)) == "None"]
+        depends += pkg.depends+pkg.makedepends
+    depends = this.pkgdata["deps"]+this.pkgdata["makedeps"] if deps_from_local_file else depends
+    depends = [pkg for pkg in [dep.split(">")[0].split("<")[0].split("=")[0] for dep in [dep if dep not in replace_deps else replace_deps[dep] for dep in depends if dep != "None"]] if str(localdb.get_pkg(pkg)) == "None"]
     if len(depends) > 0:
         rescount, cutted=info(resolve(depends, quiet=True), True)
         if int(rescount) != 0:
-            deps=[Package(cutted, i).name for i in range(int(rescount))]
+            deps = [Package(cutted, i).name for i in range(int(rescount))]
             if do_install:
-                curdir=os.getcwd()
+                curdir = os.getcwd()
                 os.chdir(home)
                 install(deps)
                 print("")
                 os.chdir(curdir)
             else:
-                rescount, cutted=info(resolve(deps, quiet=True))
-                deps=[Package(cutted, i, True) for i in range(rescount)]
+                rescount, cutted = info(resolve(deps, quiet=True))
+                deps = [Package(cutted, i, True) for i in range(rescount)]
                 return deps
     return []
 
 def list_hooks():
-    hooktypes=["prehooks", "posthooks", "prerunhooks", "postrunhooks", "hooks"]
+    hooktypes = ["prehooks", "posthooks", "prerunhooks", "postrunhooks", "hooks"]
     for hookdir in hooktypes:
         print(trans["hooks_off"] if hookdir == "hooks" else ":: "+hookdir+":")
         for hook in sorted(os.listdir("/etc/buildaur/"+hookdir)):
@@ -388,7 +388,7 @@ def list_hooks():
 def hook_activate(hooks):
     for hook in hooks:
         if hook in os.listdir('/etc/buildaur/hooks/'):
-            hooktype=os.popen('. /etc/buildaur/hooks/'+hook+' 2>/dev/null; echo $type').read().split("\n")[0]
+            hooktype = os.popen('. /etc/buildaur/hooks/'+hook+' 2>/dev/null; echo $type').read().split("\n")[0]
             os.system(legitimator+' mv /etc/buildaur/hooks/'+hook+' /etc/buildaur/'+hooktype+'hooks/ 2>/dev/null')
             print(trans["hooks_on"]%hook)
         else:
@@ -397,12 +397,12 @@ def hook_activate(hooks):
 def hook_deactivate(hooks):
     hooktypes=["prehooks", "posthooks", "prerunhooks", "postrunhooks"]
     for hook in hooks:
-        a=0
+        a = 0
         for hookdir in hooktypes:
             if hook in os.listdir("/etc/buildaur/"+hookdir):
                 os.system(legitimator+' mv  /etc/buildaur/'+hookdir+'/'+hook+' /etc/buildaur/hooks/ 2>/dev/null')
                 print(trans["hooks_off1"]%hook)
-                a=1
+                a = 1
         if a != 1:
             print(trans["error_hook_not_found"]%(red, hook))
 
@@ -414,7 +414,7 @@ def help():
             print("      "+arg+(18-len(arg))*" "+": "+trans["help"][type]["content"][arg])
 
 def hooks(type):
-    hooks=os.popen("ls /etc/buildaur/"+type).read().split('\n')[:-1]
+    hooks = os.popen("ls /etc/buildaur/"+type).read().split('\n')[:-1]
     if len(hooks) > 0:
         print(trans["running_hook"]%type)
         for hook in hooks:
@@ -437,51 +437,49 @@ def main():
         update(args[2:])
     elif args[1][:6] == "-aspyu":
         options(args[1], 6)
-        mode="asp"
+        mode = "asp"
         update(args[2:])
     elif args[1][:2] == "-S":
         options(args[1], 2)
-        pkgs=args[2:]
+        pkgs = args[2:]
         if len(pkgs) == 0:
             print(trans["error_no_pkgs"]%red)
             exit(1)
         install(pkgs)
     elif args[1][:4] == "-asp":
         options(args[1], 4)
-        pkgs=args[2:]
+        pkgs = args[2:]
         if len(pkgs) == 0:
             print(trans["error_no_pkgs"]%red)
             exit(1)
-        mode="asp"
+        mode = "asp"
         install(pkgs)
     elif args[1] in ["-Q", "-Qq", "-Qqq"]:
-        pkgs=get_local_pkgs() if len(args[2:]) == 0 else args[2:]
-        res=resolve(pkgs, quiet=True if "qq" in args[1] else False)
+        pkgs = get_local_pkgs() if len(args[2:]) == 0 else args[2:]
+        res = resolve(pkgs, quiet=True if "qq" in args[1] else False)
         for arg, option in zip(["-Q", "-Qq", "-Qqq"], ["infoout(res)", "infoout(res, quiet=True)", "infoout(res, veryquiet=True)"]):
             if args[1] == arg:
                 exec(option)
     elif args[1] in ["-Qs", "-Qsq", "-Qsqq"]:
-        searchby="name"
-        pkgs=args[2:]
+        searchby = "name"
+        pkgs = args[2:]
         try:
-            secarg=args[2]
+            secarg = args[2]
         except:
             exit()
         if secarg == "--by":
             if args[3] in ["name", "name-desc", "maintainer", "depends", "makedepends", "optdepends", "checkdepends"]:
-                searchby=args[3]
+                searchby = args[3]
             else:
                 print(trans["error_search"]%(red, args[3]))
             del pkgs[0:2]
         for pkg in pkgs:
-            res=resolve([pkg], type="search", searchby=searchby, quiet=True if "qq" in args[1] else False)
+            res = resolve([pkg], type="search", searchby=searchby, quiet=True if "qq" in args[1] else False)
             for arg, option in zip(["-Qs", "-Qsq", "-Qsqq"], ["infoout(res)", "infoout(res, quiet=True)", "infoout(res, veryquiet=True)"]):
                 if args[1] == arg:
                     exec(option)
     elif args[1] == "-Qi":
-        pkgs=get_local_pkgs() if len(args[2:]) == 0 else args[2:]
-        res=resolve(pkgs, quiet=True)
-        detailinfo(res)
+        detailinfo(resolve(get_local_pkgs() if len(args[2:]) == 0 else args[2:], quiet=True))
     elif args[1] in ["-h", "--help"]:
         help()
     elif args[1] == "--about":
@@ -493,20 +491,20 @@ def main():
     elif args[1] == "--listhooks":
         list_hooks()
     elif args[1] == "--hook-activate":
-        hooks=[]
+        hooks = []
         if args[2] == "all":
-            hooks+=os.listdir("/etc/buildaur/hooks")
+            hooks += os.listdir("/etc/buildaur/hooks")
         else:
-            hooks=args[2:]
+            hooks = args[2:]
         hook_activate(hooks)
     elif args[1] == "--hook-deactivate":
-        hooks=[]
+        hooks = []
         if args[2] == "all":
-            hooktypes=["prehooks", "posthooks", "prerunhooks", "postrunhooks"]
+            hooktypes = ["prehooks", "posthooks", "prerunhooks", "postrunhooks"]
             for hookdir in hooktypes:
-                hooks+=os.listdir("/etc/buildaur/"+hookdir)
+                hooks += os.listdir("/etc/buildaur/"+hookdir)
         else:
-            hooks=args[2:]
+            hooks = args[2:]
         hook_deactivate(hooks)
     elif args[1] == "--clear":
         print(trans["cleaning"])
@@ -518,12 +516,12 @@ def main():
         os.system(legitimator+' rm -rf ~/chroot 2>/dev/null; mkdir ~/chroot; export CHROOT=$HOME/chroot; mkarchroot $CHROOT/root base-devel; echo "export CHROOT=$HOME/chroot" >> $HOME/.bashrc; exit 0')
     elif args[1] == "--show":
         try:
-            secarg=args[2]
+            secarg = args[2]
         except:
             print(trans["error_pkgs_opts"]%red)
             exit(1)
-        pkgs=args
-        arg=args[1]
+        pkgs = args
+        arg = args[1]
         if secarg == "--diff":
             del pkgs[0:3]
             if len(pkgs) == 0:
@@ -531,10 +529,10 @@ def main():
                 exit(1)
         else:
             del pkgs[0:2]
-        rescount, cutted=info(resolve(pkgs, quiet=True), True)
+        rescount, cutted = info(resolve(pkgs, quiet=True), True)
         for i in range(int(rescount)):
             os.chdir(home+"/.cache/buildaur/build")
-            pkg=Package(cutted, i)
+            pkg = Package(cutted, i)
             os.system("rm -rf ./%s 2>/dev/null; git clone %s://aur.archlinux.org/%s 2>/dev/null"%(pkg.pkgbase, proto, pkg.pkgbase))
             os.chdir(os.getcwd()+"/"+pkg.pkgbase)
             if secarg == "--diff":
@@ -545,33 +543,34 @@ def main():
         print(trans["error_opts"]%(red, args[1]))
 
 # global home and pathchecking
-home=str(Path.home())
+home = str(Path.home())
 Path(home+"/.cache/buildaur/build").mkdir(parents=True, exist_ok=True)
 # colors
-yellow="\033[33;1m"
-red="\033[31;1m"
-thic="\033[1m"
+yellow = "\033[33;1m"
+red = "\033[31;1m"
+thic = "\033[1m"
 # config file
-trans=trans[os.environ["LANG"][:2] if os.environ["LANG"][:2] in ["en", "de"] else "en"]
-options.confirm=options.install=options.color=True
-deps_from_local_file=options.chroot=False
-replace_deps={"vte" : "vte-legacy"}
-proto="https"
-editor="nano"
-compmeth=".tar.zst"
-mode="normal"
-showPKGBUILD=True
-rebuild_git=showDiff=ask_warn_inst=False
-pcarg=mkopts=""
-handle=Handle(".", "/var/lib/pacman")
-localdb=handle.get_localdb()
-legitimator="sudo"
-args=sys.argv
-black=[]
-pkg_obs=[]
+trans = trans[os.environ["LANG"][:2] if os.environ["LANG"][:2] in ["en", "de"] else "en"]
+options.confirm = options.install=options.color=True
+deps_from_local_file = options.chroot=False
+replace_deps = {"vte" : "vte-legacy"}
+proto = "https"
+editor = "nano"
+compmeth = ".tar.zst"
+mode = "normal"
+showPKGBUILD = True
+rebuild_git = showDiff = ask_warn_inst=False
+pcarg = mkopts = ""
+handle = Handle(".", "/var/lib/pacman")
+localdb = handle.get_localdb()
+legitimator = "sudo"
+args = sys.argv
+black = []
+pkg_obs = []
 
 if __name__ == "__main__":
-    conf=open("/etc/buildaur/buildaur.conf").read()
+    with open("/etc/buildaur/buildaur.conf") as file:
+        conf = file.read()
     try:
         exec(conf)
     except:
