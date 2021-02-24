@@ -340,7 +340,7 @@ def install(pkgs):
                 inststring=""
                 for path in pkgpathes:
                     inststring+=path+" "
-                os.system("sudo pacman -U "+pcarg+" "+asdep+" "+inststring)
+                os.system(legitimator+" pacman -U "+pcarg+" "+asdep+" "+inststring)
             else:
                 print(trans["created"])
                 for path in pkgpathes:
@@ -389,7 +389,7 @@ def hook_activate(hooks):
     for hook in hooks:
         if hook in os.listdir('/etc/buildaur/hooks/'):
             hooktype=os.popen('. /etc/buildaur/hooks/'+hook+' 2>/dev/null; echo $type').read().split("\n")[0]
-            os.system('sudo mv /etc/buildaur/hooks/'+hook+' /etc/buildaur/'+hooktype+'hooks/ 2>/dev/null')
+            os.system(legitimator+' mv /etc/buildaur/hooks/'+hook+' /etc/buildaur/'+hooktype+'hooks/ 2>/dev/null')
             print(trans["hooks_on"]%hook)
         else:
             print(trans["error_not_found"]%(red, hook))
@@ -400,7 +400,7 @@ def hook_deactivate(hooks):
         a=0
         for hookdir in hooktypes:
             if hook in os.listdir("/etc/buildaur/"+hookdir):
-                os.system('sudo mv  /etc/buildaur/'+hookdir+'/'+hook+' /etc/buildaur/hooks/ 2>/dev/null')
+                os.system(legitimator+' mv  /etc/buildaur/'+hookdir+'/'+hook+' /etc/buildaur/hooks/ 2>/dev/null')
                 print(trans["hooks_off1"]%hook)
                 a=1
         if a != 1:
@@ -515,7 +515,7 @@ def main():
         print(":: Done!")
     elif args[1] == "--make-chroot":
         print(trans["creating_chroot"])
-        os.system('sudo rm -rf ~/chroot 2>/dev/null; mkdir ~/chroot; export CHROOT=$HOME/chroot; mkarchroot $CHROOT/root base-devel; echo "export CHROOT=$HOME/chroot" >> $HOME/.bashrc; exit 0')
+        os.system(legitimator+' rm -rf ~/chroot 2>/dev/null; mkdir ~/chroot; export CHROOT=$HOME/chroot; mkarchroot $CHROOT/root base-devel; echo "export CHROOT=$HOME/chroot" >> $HOME/.bashrc; exit 0')
     elif args[1] == "--show":
         try:
             secarg=args[2]
@@ -565,6 +565,7 @@ rebuild_git=showDiff=ask_warn_inst=False
 pcarg=mkopts=""
 handle=Handle(".", "/var/lib/pacman")
 localdb=handle.get_localdb()
+legitimator="sudo"
 args=sys.argv
 black=[]
 pkg_obs=[]
