@@ -163,8 +163,8 @@ def update(willinst=[]):
         install(willinst)
 
 class Package():
+    pkg_obs = []
     def __init__(self, cutted, pkg, is_dep=False):
-        global pkg_obs
         splitted = cutted[pkg]
         self.is_dep = is_dep
         self.num = pkg
@@ -180,7 +180,7 @@ class Package():
             self.localver = "---"
         if self.keywords == []:
             self.keywords = ["None"]
-        pkg_obs.append(self)
+        Package.pkg_obs.append(self)
 
 
 class LocalInfo():
@@ -214,7 +214,7 @@ def detailinfo(res):
 
 def install(pkgs):
     start_pkgs = pkgs.copy()
-    pkgs = [pkg for pkg in pkg_obs if pkg.name in start_pkgs]
+    pkgs = [pkg for pkg in Package.pkg_obs if pkg.name in start_pkgs]
     if len(pkgs) != len(start_pkgs):
         rescount, cutted = aspinfo(start_pkgs, True) if mode == "asp" else info(resolve(start_pkgs), True)
         pkgs = [Package(cutted, i) for i in range(int(rescount))]
@@ -566,7 +566,6 @@ localdb = handle.get_localdb()
 legitimator = "sudo"
 args = sys.argv
 black = []
-pkg_obs = []
 
 if __name__ == "__main__":
     with open("/etc/buildaur/buildaur.conf") as file:
