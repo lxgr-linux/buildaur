@@ -110,8 +110,7 @@ def info(ress, quiet=False):
     rescount = 0
     cutted = []
     for res in ress:
-        info.utf_res = eval(res)
-        jsons = json.loads(info.utf_res.decode())
+        jsons = json.loads(eval(res).decode())
         rescount += int(jsons["resultcount"])
         cutted += jsons["results"]
     return rescount, cutted
