@@ -110,7 +110,7 @@ def info(ress, quiet=False):
     rescount = 0
     cutted = []
     for res in ress:
-        exec("info.utf_res="+res)
+        info.utf_res = eval(res)
         jsons = json.loads(info.utf_res.decode())
         rescount += int(jsons["resultcount"])
         cutted += jsons["results"]
@@ -186,7 +186,7 @@ class Package():
 class LocalInfo():
     def __init__(self, asp=False, pkg=""):
         path = "/usr/share/buildaur/outputter.sh"
-        exec("self.pkgdata="+os.popen(path+" asp "+pkg if asp else path).read().split("\n")[0])
+        self.pkgdata = eval(os.popen(path+" asp "+pkg if asp else path).read().split("\n")[0])
 
 
 def infoout(res, quiet=False, veryquiet=False):
@@ -256,7 +256,8 @@ def install(pkgs):
     ask = input(trans["continue"]) if options.confirm else trans["yes"]
     if ask not in [trans["yes"].capitalize(), trans["yes"], trans["no"].capitalize(), trans["no"], ""]:
         try:
-            exec("global askarr; askarr="+ask)
+            askarr = eval(ask)
+            #exec("global askarr; askarr="+ask)
             if type(askarr) is list and sorted(askarr)[-1] < len(pkgs):
                 pkgs = [pkgs[i] for i in range(len(pkgs)) if i in askarr]
                 ask = trans["yes"]
