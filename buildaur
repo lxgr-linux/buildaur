@@ -9,6 +9,11 @@ from buildaur_translations import *
 from pyalpm import Handle
 from pathlib import Path
 from datetime import datetime
+try:
+    import gnureadline as readline
+except ImportError:
+    import readline
+
 
 def branch(pkgs):
     alldeps=[]
@@ -568,6 +573,8 @@ args = sys.argv
 black = []
 
 if __name__ == "__main__":
+    readline.parse_and_bind('tab: complete')
+    readline.parse_and_bind('set editing-mode vi')
     with open("/etc/buildaur/buildaur.conf") as file:
         conf = file.read()
     try:
