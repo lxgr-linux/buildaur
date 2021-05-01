@@ -126,6 +126,7 @@ Available variables:
 - pcarg="" # Default arguments for pacman
 - mkopts="" # Default arguments for makepkg
 - replace_deps={"vte" : "vte-legacy"} # Items in dependency which should be replaced with another one
+- black=[] # Blacklist, package names in this list will be excluded at updates. The names have to be python strings and seperated by commas. black=["brave-bin", "cava"]
 
 Bash only options:
 - sudoreset=1 # Reset sudo before PKGBUILD
@@ -135,6 +136,7 @@ Bash only options:
 # Blacklist
 
 The blacklist stored in /usr/share/buildaur/blacklist contains package names which are excluded in updates.
+This has been replaced in the python version, see the config file options.
 
 # Bash version
 
