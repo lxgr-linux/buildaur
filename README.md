@@ -36,49 +36,49 @@ $ makepkg -si
 
 Like most other shell programs buildaur has some options which can be used to specify what the program should exactly do:
 
-buildaur - An AUR helper with asp support<br>
-Usage: /usr/bin/buildaur <option> <string><br>
-   General options:<br>
-      -S                : Installs a package<br>
-      -Q                : Lists installed packages or searches for ones in the AUR<br>
-      -Qs               : Search the AUR<br>
-      -Qi               : Gives detailed package information<br>
-      -Syu              : Updates all AUR packages<br>
-      -asp              : Builds a package from source using asp (usefull for archlinux arm)<br>
-      -aspyu            : Updates all asp packages (usefull for archlinux arm)<br>
-      --show            : Shows the PKGBUILD of a given package<br>
-      --clear           : Cleanes build dir<br>
-      -v|--version      : Displays version of this program<br>
-      -l|--license      : Displays license of this program<br>
-      --make-chroot     : Creates a chroot dir which can be used for building packages<br>
-      --about           : Displays an about text<br>
-<br>
-   Additional options for -S,-R,-Syu,-asp,-aspyu:<br>
-      n                 : Doesn't ask questions<br>
-      spgp              : Skips pgp checks of sourcecode<br>
-      ch                : Builds the package in a clean chroot (you may run into some problems using this on archlinux arm!)<br>
-      di                : Just builds the package<br>
-      co                : Toggles colored output on and off<br>
-      dlf               : Pulls dependencies from PKGBUILD<br>
-      git               : Updates all -git packages at updates<br>
-<br>
-<br>
-   Additional options for --show:<br>
-      --diff            : Outputs diff between current pkgbuildver and former pkgbuildver<br>
-<br>
-   Additional options for -Q,-Qs<br>
-      q                 : Just outputs pknames and vers<br>
-      qq                : JUST outputs pknames<br>
-      --by              : Defines the value that should be searched by (values: name name-desc maintainer depends makedepends optdepends checkdepends)<br>
-<br>
-   Hookoptions:<br>
-      --listhooks       : Lists all available and installed hooks<br>
-      --hook-activate   : Activates a hook<br>
-      --hook-deactivate : Deactivates a hook<br>
-<br>
-   Help options:<br>
-      -h|--help         : Displays this help-dialog<br>
-<br>
+```
+buildaur - An AUR helper with asp support
+Usage: /usr/bin/buildaur <option> <string>
+   General options:
+      -S                : Installs a package
+      -Q                : Lists installed packages or searches for ones in the AUR
+      -Qs               : Searches the AUR
+      -Qi               : Gives detailed package information
+      -Syu              : Updates all AUR packages
+      -asp              : Builds a package from source using asp (useful for archlinux arm)
+      -aspyu            : Updates all asp packages (useful for archlinux arm)
+      --show            : Shows the PKGBUILD of a given package
+      --clear           : Cleans build dir
+      -v|--version      : Displays version of this program
+      -l|--license      : Displays license of this program
+      --make-chroot     : Creates a chroot dir which can be used for building packages
+      --about           : Displays an about text
+
+   Additional options for -S,-R,-Syu,-asp,-aspyu:
+      n                 : Doesn't ask questions
+      spgp              : Skips pgp checks of sourcecode
+      ch                : Builds the package in a clean chroot (you may run into some problems using this on archlinux arm!)
+      di                : Just builds the package
+      co                : Toggles colored output on and off
+      dlf               : Pulls dependencies from PKGBUILD
+      git               : Updates all -git packages at updates
+
+   Additional options for --show:
+      --diff            : Outputs diff between current pkgbuildver and former pkgbuildver
+
+   Additional options for -Q,-Qs
+      q                 : Just outputs pknames and vers
+      qq                : JUST outputs pknames
+      --by              : Defines the value that should be searched by (values: name name-desc maintainer depends makedepends optdepends checkdepends)
+
+   Hook options:
+      --listhooks       : Lists all available and installed hooks
+      --hook-activate   : Activates a hook
+      --hook-deactivate : Deactivates a hook
+
+   Help options:
+      -h|--help         : Displays this help-dialog
+```
 
 Examples:<br>
     buildaur -S cava    : Installes the package 'cava'<br>
