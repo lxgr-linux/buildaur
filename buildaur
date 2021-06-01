@@ -298,17 +298,20 @@ def install(pkgs):
                     print(trans["print_pkgdiff"])
                     os.system('git diff '+os.popen('git log --pretty=format:"%h" | head -2 | xargs').read().split(" ")[1])
                     print("\033[37m"+os.popen('git diff '+os.popen('git log --pretty=format:"%h" | head -2 | xargs').read().split(" ")[1]).read()+"\033[0m", end="")
-                for file in [file for file in os.listdir() if (file[0] != "." and file[-4:] not in [".jpg", ".png", ".svg", "r.gz"])]:
-                    if showPKGBUILD:
-                        print(trans["print_pkgb"]%(file))
-                        print("\033[37m"+str(open(file, "rt").read())+"\033[0m", end="")
-                    ask = input(trans["edit"]%(file)) if options.confirm else trans["no"]
-                    if ask in [trans["yes"], trans["yes"].capitalize()]:
-                        os.system(editor+" "+file)
-                        print(trans["goingon"])
-                    if ask in [trans["cancel"], trans["cancel"].capitalize()]:
-                        print(trans["exiting"])
-                        exit()
+                for file in [file for file in os.listdir() if file[0] != "."]:
+                    try:
+                        if showPKGBUILD:
+                            print(trans["print_pkgb"]%(file))
+                            print("\033[37m"+str(open(file, "rt").read())+"\033[0m", end="")
+                        ask = input(trans["edit"]%(file)) if options.confirm else trans["no"]
+                        if ask in [trans["yes"], trans["yes"].capitalize()]:
+                            os.system(editor+" "+file)
+                            print(trans["goingon"])
+                        if ask in [trans["cancel"], trans["cancel"].capitalize()]:
+                            print(trans["exiting"])
+                            exit()
+                    except UnicodeDecodeError:
+                        print("  Unable to print file")
                 hooks("prehooks")
                 if deps_from_local_file or mode == "asp":
                     deps([pkg])
