@@ -48,15 +48,18 @@ def rem_double_pkgbases(pkgs):
     return pkgs
 
 def get_local_pkgs():
+    #t = time.time()
     if get_from_syncdb:
         config = configparser.ConfigParser(allow_no_value=True)
         config.read("/etc/pacman.conf")
         arr = []
         for i in [j for j in config.sections() if j != "options"]:
              arr += handle.register_syncdb(i, 0).search(".*")
-        return [pkg.name for pkg in localdb.search(".*") if pkg.name not in [i.name for i in arr]]
+        a = list(set([pkg.name for pkg in localdb.search(".*")]) - set([i.name for i in arr]))
     else:
-        return [pkg.name for pkg in localdb.search(".*") if pkg.packager == "Unknown Packager"]
+        a = [pkg.name for pkg in localdb.search(".*") if pkg.packager == "Unknown Packager"]
+    #print(time.time()-t)
+    return a
 
 def options(string, optlen):
     opts={'n' : 'global pcarg; options.confirm=False; pcarg+=" --noconfirm"', 'di' : 'options.install=False', 'co' : 'global yellow, red, thic, mkopts; mkopts+=" -m"; yellow=red=thic=""', 'spgp' : 'global mkopts; mkopts+=" --skippgpcheck"', 'ch' : 'options.chroot=True', 'dlf' : 'global deps_from_local_file; deps_from_local_file=True', 'git' : 'global rebuild_git; rebuild_git=True'}
@@ -577,7 +580,8 @@ editor = "nano"
 compmeth = ".tar.zst"
 mode = "normal"
 showPKGBUILD = True
-rebuild_git = showDiff = get_from_syncdb = ask_warn_inst = False
+rebuild_git = showDiff = ask_warn_inst = False
+get_from_syncdb = True
 pcarg = mkopts = ""
 handle = Handle(".", "/var/lib/pacman")
 localdb = handle.get_localdb()
