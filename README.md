@@ -122,6 +122,7 @@ Available variables:
 - mode="normal" # Default mode
 - showPKGBUILD=1 # Print out PKGBUILD before build process
 - showDiff=0 # Print out diffs between former and current PKGBUILD version before build process
+- get_from_syncdb=True # True: buildaur gets AUR-packages via syncdbs (slow)(This may be usefull when having 3rd party repositorys) False: buildaur gets AUR-packages via packager (fast)
 - ask_warn_inst=0 # Ask to update packages which are higher than AUR
 - pcarg="" # Default arguments for pacman
 - mkopts="" # Default arguments for makepkg
