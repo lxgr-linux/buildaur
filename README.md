@@ -128,6 +128,7 @@ Available variables:
 - mkopts="" # Default arguments for makepkg
 - replace_deps={"vte" : "vte-legacy"} # Items in dependency which should be replaced with another one
 - black=[] # Blacklist, package names in this list will be excluded at updates. The names have to be python strings and seperated by commas. black=["brave-bin", "cava"]
+- `printer` # The printer/executable that will be used to print the contents of AUR files. Example: [`bat -P`](https://github.com/sharkdp/bat)
 
 Bash only options:
 - sudoreset=1 # Reset sudo before PKGBUILD
