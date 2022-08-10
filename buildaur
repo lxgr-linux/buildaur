@@ -315,7 +315,10 @@ def install(pkgs):
                     try:
                         if showPKGBUILD:
                             print(trans["print_pkgb"]%(file))
-                            print("\033[37m"+str(open(file, "rt").read())+"\033[0m", end="")
+                            if printer is None:
+                                print("\033[37m" + str(open(file, "rt").read()) + "\033[0m", end="")
+                            else:
+                                os.system(f"{printer} {file}")
                         ask = input(trans["edit"]%(file)) if options.confirm else trans["no"]
                         if ask in [trans["yes"], trans["yes"].capitalize()]:
                             os.system(editor+" "+file)
@@ -588,6 +591,7 @@ localdb = handle.get_localdb()
 legitimator = "sudo"
 args = sys.argv
 black = []
+printer = None
 
 if __name__ == "__main__":
     readline.parse_and_bind('tab: complete')
