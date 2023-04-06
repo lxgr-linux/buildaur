@@ -46,7 +46,7 @@ progress(){
 
 options(){
 	installindex=i
-	if [[ $(echo $1 | egrep co) != "" ]]
+	if [[ $(echo $1 | grep -E co) != "" ]]
 	then
 		if [[ $color = true ]]
 		then
@@ -58,17 +58,17 @@ options(){
 		((argleng--)); ((argleng--))
 		colorer
 	fi
-	if [[ $(echo $1 | egrep n) != "" ]]
+	if [[ $(echo $1 | grep -E n) != "" ]]
 	then
 		ask=--noconfirm
 		((argleng--))
 	fi
-	if [[ $(echo $1 | egrep spgp) != "" ]]
+	if [[ $(echo $1 | grep -E spgp) != "" ]]
 	then
 		pgp=--skippgpcheck
 		((argleng--)); ((argleng--)); ((argleng--)); ((argleng--))
 	fi
-	if [[ $(echo $1 | egrep ch) != "" ]]
+	if [[ $(echo $1 | grep -E ch) != "" ]]
 	then
 		buildchroot=yes
 		if [[ $(uname -m) = armv7l ]]
@@ -77,7 +77,7 @@ options(){
 		fi
 		((argleng--)); ((argleng--))
 	fi
-	if [[ $(echo $1 | egrep di) != "" ]]
+	if [[ $(echo $1 | grep -E di) != "" ]]
 	then
 		installindex=""
 		((argleng--)); ((argleng--))
@@ -213,9 +213,9 @@ info(){
 			then
 				echo $pac
 			else
-				declare $(echo "$aspinfo" | egrep pkgver | head -1)
-				declare $(echo "$aspinfo" | egrep pkgrel | head -1)
-				declare "$(echo "$aspinfo" | egrep pkgdesc | head -1)"
+				declare $(echo "$aspinfo" | grep -E pkgver | head -1)
+				declare $(echo "$aspinfo" | grep -E pkgrel | head -1)
+				declare "$(echo "$aspinfo" | grep -E pkgdesc | head -1)"
 				ver=$(pacman -Qqi $pac | xargs 2>/dev/null | awk {'print $6'})
 				echo "  $pac $pkgver-$pkgrel (local: $ver)"
 				echo "     $(echo $pkgdesc | sed 's/"//g')"
@@ -360,8 +360,8 @@ preinst(){
 		then
 			echo ":: Updating ASP packagelist..."
 			asp update 2>/dev/null >/dev/null
-			aspout=$(echo "$(asp show $key 2>/dev/null)" | egrep pkgver | head -1)
-			aspoutrel=$(echo "$(asp show $key 2>/dev/null)" | egrep pkgrel | head -1)
+			aspout=$(echo "$(asp show $key 2>/dev/null)" | grep -E pkgver | head -1)
+			aspoutrel=$(echo "$(asp show $key 2>/dev/null)" | grep -E pkgrel | head -1)
 			ver=$(pacman -Qqi $key 2>/dev/null| xargs 2>/dev/null | awk {'print $6'})
 			pkgver=0
 		 	if [[ $aspout = "" ]]
@@ -593,7 +593,7 @@ new_checker(){
 	  ver=$(pacman -Qqi $name | xargs 2>/dev/null | awk {'print $6'})
 		remotever=$(echo $cutted | cut -d'"' -f16)
 		progress $count $fullcount "Checking packages $name..."
-		if [[ $remotever = "$ver" ]] || [[ $(echo "$black" | egrep -xE $name) = "$name" ]]
+		if [[ $remotever = "$ver" ]] || [[ $(echo "$black" | grep -xE $name) = "$name" ]]
 		then
 			printf "" >/dev/null
 		elif [[ $(echo -e "$ver\n$remotever" | sort -V | xargs | awk {'print $1'}) = $ver ]]
@@ -621,12 +621,12 @@ new_checker(){
 		then
 			pkgver=$(pacman -Qqi $pac | xargs 2>/dev/null | awk {'print $6'})
 		else
-			if [[ $(asp list-all | egrep -Ex $pac) != "" ]]
+			if [[ $(asp list-all | grep -E -Ex $pac) != "" ]]
 			then
-				declare $(echo "$aspinfo" | egrep pkgver | head -1)
-				declare $(echo "$aspinfo" | egrep pkgrel | head -1)
+				declare $(echo "$aspinfo" | grep -E pkgver | head -1)
+				declare $(echo "$aspinfo" | grep -E pkgrel | head -1)
 				ver=$(pacman -Qqi $pac | xargs 2>/dev/null | awk {'print $6'})
-				if [[ $(echo ${black[*]} | sed -e 's/ /\n/g'| egrep -xE $pac) = "$pac" ]] || [[ $pkgver-$pkgrel = "$ver" ]]
+				if [[ $(echo ${black[*]} | sed -e 's/ /\n/g'| grep -E -xE $pac) = "$pac" ]] || [[ $pkgver-$pkgrel = "$ver" ]]
 				then
 					printf "" >/dev/null
 				elif [[ $(echo -e "$ver\n$pkgver-$pkgrel" | sort -V | xargs | awk {'print $1'}) = $ver ]]
@@ -674,7 +674,7 @@ old_checker(){
 	  then
 	  ver="--- "
 	  fi
-		if [[ $(echo ${black[*]} | sed -e 's/ /\n/g'| egrep -xE $name) = "$name" ]]
+		if [[ $(echo ${black[*]} | sed -e 's/ /\n/g'| grep -E -xE $name) = "$name" ]]
 		then
 			echo "($count/$resultcount) $name-$ver is out of date! $remotever is available! But it's on the blacklist and will not be updated!"
 		elif [[ $remotever = "$ver" ]]
@@ -711,12 +711,12 @@ old_checker(){
 			pkgver=$(pacman -Qqi $pac | xargs 2>/dev/null | awk {'print $6'})
 			echo "($count/${#localpacs[*]}) $pac-$ver is not installed from ASP!"
 		else
-			aspout=$(echo "$aspinfo" | egrep pkgver | head -1)
-			aspoutrel=$(echo "$aspinfo" | egrep pkgrel | head -1)
+			aspout=$(echo "$aspinfo" | grep -E pkgver | head -1)
+			aspoutrel=$(echo "$aspinfo" | grep -E pkgrel | head -1)
 			declare $aspout
 			declare $aspoutrel
 			ver=$(pacman -Qqi $pac | xargs 2>/dev/null | awk {'print $6'})
-			if [[ $(echo ${black[*]} | sed -e 's/ /\n/g'| egrep -xE $pac) = "$pac" ]]
+			if [[ $(echo ${black[*]} | sed -e 's/ /\n/g'| grep -E -xE $pac) = "$pac" ]]
 			then
 				echo "($count/${#localpacs[*]})) $pac-$pkgver-$pkgrel is out of date! $pkgver-$pkgrel is available! But it's on the blacklist and will not be updated!"
 			elif [[ $pkgver-$pkgrel = "$ver" ]]

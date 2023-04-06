@@ -9,8 +9,8 @@ if [[ $1 = "-u" ]]
 then
   . /etc/buildaur/buildaur.conf
   content="$(cat ./PKGBUILD)"
-  mal[0]="$(echo "$content" | egrep -n  "rm -rf /")"
-  # new code detections can be added here e.g. mal[1]="$(echo "$content" | egrep -n  "malicious code")"
+  mal[0]="$(echo "$content" | grep -E -n  "rm -rf /")"
+  # new code detections can be added here e.g. mal[1]="$(echo "$content" | grep -E -n  "malicious code")"
   if [[ ${mal[@]} !=  "" ]]
   then
     for mali in "${mal[@]}"
