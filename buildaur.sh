@@ -659,6 +659,8 @@ old_checker(){
 	willinst=()
 	aurpacs=()
 	errorcount=0
+	willinst=()
+	aurpacs=()
 	counter=0
 	count=1
 	echo ":: Checking installed AUR packages..."
